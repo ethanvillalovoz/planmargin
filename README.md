@@ -4,9 +4,9 @@
 
 PlanMargin is an independent research and engineering project that searches for the smallest realistic change to a recorded driving scenario that exposes an avoidable planner failure.
 
-> **Current status:** Stage 0 — feasibility. WOMD access and a deterministic
-> Waymax baseline are being validated; no planner-performance claims have been
-> made.
+> **Current status:** Stage 0 — feasibility. WOMD access, deterministic Waymax
+> replay, scenario selection, and one bounded non-ego speed mutation are
+> validated; no planner-performance claims have been made.
 
 ## The problem
 
@@ -81,7 +81,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 
 - [x] Validate credential-safe WOMD access and replay one scenario twice
 - [x] Select and replay ten WOMD interaction scenarios in Waymax
-- [ ] Apply one bounded speed or timing mutation
+- [x] Apply one bounded speed or timing mutation
 - [ ] Run tested and reference controllers
 - [ ] Export trajectories and evaluation metrics
 - [ ] Produce the first original-versus-counterfactual visualization
@@ -94,6 +94,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 
 See the [local setup guide](docs/setup.md),
 [scenario-selection protocol](docs/scenario-selection.md),
+[speed-mutation protocol](docs/speed-mutation.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md) for details.

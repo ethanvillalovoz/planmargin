@@ -48,6 +48,7 @@ outputs/
 runs/
 experiments/**/scenario-selection.json
 experiments/**/waymax-smoke-test.json
+experiments/**/speed-mutation-smoke-test.json
 *.tfrecord
 *.tfrecords
 *.parquet

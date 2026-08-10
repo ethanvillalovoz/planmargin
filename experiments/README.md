@@ -18,8 +18,7 @@ records are ignored. Public experiment notes are limited to methodology and
 permitted aggregate results. Complete local manifests belong under the ignored
 `artifacts/` directory.
 
-The completed access and deterministic-baseline evidence is recorded under
-[`stage-0/`](stage-0/), including the
-[ten-scenario selection report](stage-0/scenario-selection.md). The first
-planned mutation experiment is
-`exp-0001-waymax-mutation-smoke-test`.
+The completed access, deterministic-baseline, scenario-selection, and first
+mutation evidence is recorded under [`stage-0/`](stage-0/), including the
+[ten-scenario selection report](stage-0/scenario-selection.md) and the
+[bounded speed-mutation report](stage-0/speed-mutation.md).

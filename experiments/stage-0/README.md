@@ -52,11 +52,13 @@ learned planner, mutation logic, scenario representativeness, planner quality,
 or safety. Metric aggregates exclude padded object slots and are not used as a
 project claim; only the SDC baseline values are integrity checks.
 
-That next step is now complete. The
+The scenario-selection step is also complete. The
 [ten-scenario selection report](scenario-selection.md) records the bounded
 preferred-family probe, declared fallback decision, and deterministic baseline
-validation. The next experiment can introduce the first bounded lead-vehicle
-mutation.
+validation. The subsequent
+[speed-mutation report](speed-mutation.md) records the first accepted bounded
+lead-vehicle mutation. The next experiment can run distinct tested and
+reference controllers under identical original and mutated trajectories.
 
 ## Dataset attribution
 
