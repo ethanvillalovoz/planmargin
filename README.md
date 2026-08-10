@@ -99,6 +99,7 @@ See the [local setup guide](docs/setup.md),
 [speed-mutation protocol](docs/speed-mutation.md),
 [controller-comparison protocol](docs/controller-comparison.md),
 [rollout-record protocol](docs/rollout-record.md),
+[trajectory-visualization protocol](docs/trajectory-visualization.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md) for details.

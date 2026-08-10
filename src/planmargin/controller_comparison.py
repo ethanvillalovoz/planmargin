@@ -41,6 +41,10 @@ TRAJECTORY_FIELDS = (
     "vel_y",
     "valid",
 )
+ROADGRAPH_TYPES_FOR_VISUALIZATION = frozenset(
+    {1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19}
+)
+SCENE_PADDING_M = 12.0
 
 
 @dataclass(frozen=True)
@@ -157,6 +161,8 @@ def evaluate_rollout(
     sdc_valid_all_steps: bool,
     final_timestep: int,
     expected_final_timestep: int,
+    first_failure_timestep: int | None = None,
+    first_failure_reasons: list[str] | None = None,
 ) -> dict[str, Any]:
     """Evaluate one policy outcome without coupling it to the other policy."""
     failure_reasons: list[str] = []
@@ -176,6 +182,8 @@ def evaluate_rollout(
         "sdc_valid_all_steps": sdc_valid_all_steps,
         "final_timestep": final_timestep,
         "expected_final_timestep": expected_final_timestep,
+        "first_failure_timestep": first_failure_timestep,
+        "first_failure_reasons": first_failure_reasons or [],
     }
 
 
@@ -240,6 +248,179 @@ def trace_is_complete(
     return bool(trace) and all(
         len(values) == expected_states for values in trace.values()
     )
+
+
+def _actor_track(scenario: Any, object_index: int) -> dict[str, list[Any]]:
+    trajectory = scenario.log_trajectory
+    start = speed_mutation.CURRENT_TIMESTEP
+    stop = start + scenario_selection.NUM_FUTURE_STEPS + 1
+    indices = np.arange(start, stop)
+    return {
+        "timestep": indices.astype(int).tolist(),
+        "x_m": np.asarray(trajectory.x)[object_index, indices]
+        .astype(float)
+        .round(6)
+        .tolist(),
+        "y_m": np.asarray(trajectory.y)[object_index, indices]
+        .astype(float)
+        .round(6)
+        .tolist(),
+        "yaw_rad": np.asarray(trajectory.yaw)[object_index, indices]
+        .astype(float)
+        .round(6)
+        .tolist(),
+        "length_m": np.asarray(trajectory.length)[object_index, indices]
+        .astype(float)
+        .round(6)
+        .tolist(),
+        "width_m": np.asarray(trajectory.width)[object_index, indices]
+        .astype(float)
+        .round(6)
+        .tolist(),
+        "valid": np.asarray(trajectory.valid)[object_index, indices]
+        .astype(bool)
+        .tolist(),
+    }
+
+
+def _actor_dimensions(scenario: Any, object_index: int) -> dict[str, float]:
+    trajectory = scenario.log_trajectory
+    valid = np.asarray(trajectory.valid)[object_index]
+
+    def median_positive(field: str) -> float:
+        values = np.asarray(getattr(trajectory, field))[object_index]
+        selected = values[valid & np.isfinite(values) & (values > 0.0)]
+        if selected.size == 0:
+            raise ValueError(f"No valid {field} for actor {object_index}.")
+        return round(float(np.median(selected)), 6)
+
+    return {
+        "length_m": median_positive("length"),
+        "width_m": median_positive("width"),
+    }
+
+
+def _scene_bounds(
+    rollouts: dict[str, dict[str, Any]],
+    target_tracks: dict[str, dict[str, list[Any]]],
+) -> dict[str, float]:
+    xs: list[float] = []
+    ys: list[float] = []
+    for variant in ("original", "mutated"):
+        for role in ("tested", "reference"):
+            trace = rollouts[variant][role]["trajectory"]
+            xs.extend(
+                float(value)
+                for value, valid in zip(trace["x_m"], trace["valid"])
+                if valid and math.isfinite(value)
+            )
+            ys.extend(
+                float(value)
+                for value, valid in zip(trace["y_m"], trace["valid"])
+                if valid and math.isfinite(value)
+            )
+    for track in target_tracks.values():
+        xs.extend(
+            float(value)
+            for value, valid in zip(track["x_m"], track["valid"])
+            if valid and math.isfinite(value)
+        )
+        ys.extend(
+            float(value)
+            for value, valid in zip(track["y_m"], track["valid"])
+            if valid and math.isfinite(value)
+        )
+    if not xs or not ys:
+        raise ValueError("Scene context has no valid actor positions.")
+    return {
+        "min_x_m": round(min(xs) - SCENE_PADDING_M, 6),
+        "max_x_m": round(max(xs) + SCENE_PADDING_M, 6),
+        "min_y_m": round(min(ys) - SCENE_PADDING_M, 6),
+        "max_y_m": round(max(ys) + SCENE_PADDING_M, 6),
+    }
+
+
+def _roadgraph_features(
+    scenario: Any, bounds: dict[str, float]
+) -> list[dict[str, Any]]:
+    points = scenario.roadgraph_points
+    x_values = np.asarray(points.x)
+    y_values = np.asarray(points.y)
+    ids = np.asarray(points.ids)
+    types = np.asarray(points.types)
+    valid = np.asarray(points.valid, dtype=bool)
+    visible = (
+        valid
+        & np.isin(types, list(ROADGRAPH_TYPES_FOR_VISUALIZATION))
+        & (x_values >= bounds["min_x_m"])
+        & (x_values <= bounds["max_x_m"])
+        & (y_values >= bounds["min_y_m"])
+        & (y_values <= bounds["max_y_m"])
+    )
+    grouped: dict[tuple[int, int], dict[str, Any]] = {}
+    for x_m, y_m, feature_id, feature_type in zip(
+        x_values[visible], y_values[visible], ids[visible], types[visible]
+    ):
+        key = (int(feature_id), int(feature_type))
+        feature = grouped.setdefault(
+            key,
+            {
+                "feature_type": int(feature_type),
+                "x_m": [],
+                "y_m": [],
+            },
+        )
+        feature["x_m"].append(round(float(x_m), 4))
+        feature["y_m"].append(round(float(y_m), 4))
+    return [
+        feature
+        for feature in grouped.values()
+        if len(feature["x_m"]) >= 2
+    ]
+
+
+def build_scene_context(
+    original_scenario: Any,
+    mutated_scenario: Any,
+    mutated_object_index: int,
+    rollouts: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Build the bounded spatial context needed by record-only visualization."""
+    sdc_indices = np.flatnonzero(
+        np.asarray(original_scenario.object_metadata.is_sdc, dtype=bool)
+    )
+    if sdc_indices.size != 1:
+        raise ValueError(f"Expected one SDC, found {sdc_indices.size}.")
+    sdc_index = int(sdc_indices[0])
+    target_tracks = {
+        "original": _actor_track(original_scenario, mutated_object_index),
+        "counterfactual": _actor_track(
+            mutated_scenario, mutated_object_index
+        ),
+    }
+    bounds = _scene_bounds(rollouts, target_tracks)
+    object_types = np.asarray(
+        original_scenario.object_metadata.object_types
+    )
+    return {
+        "coordinate_frame": "WOMD scenario-local Cartesian coordinates",
+        "units": "meters",
+        "bounds_m": bounds,
+        "roadgraph_features": _roadgraph_features(
+            original_scenario, bounds
+        ),
+        "actors": {
+            "sdc": {
+                "object_type": int(object_types[sdc_index]),
+                **_actor_dimensions(original_scenario, sdc_index),
+            },
+            "mutation_target": {
+                "object_type": int(object_types[mutated_object_index]),
+                "original": target_tracks["original"],
+                "counterfactual": target_tracks["counterfactual"],
+            },
+        },
+    }
 
 
 class ControllerRunner:
@@ -312,20 +493,34 @@ class ControllerRunner:
         max_sdc_overlap = 0.0
         max_sdc_offroad = 0.0
         sdc_valid_all_steps = True
+        first_failure_timestep: int | None = None
+        first_failure_reasons: list[str] = []
 
         for step_index in range(scenario_selection.NUM_TRAJECTORY_STEPS):
             overlap_values = np.asarray(self._overlap(state).value)
             offroad_values = np.asarray(self._offroad(state).value)
+            current_overlap = float(overlap_values[sdc_index])
+            current_offroad = float(offroad_values[sdc_index])
             max_sdc_overlap = max(
-                max_sdc_overlap, float(overlap_values[sdc_index])
+                max_sdc_overlap, current_overlap
             )
             max_sdc_offroad = max(
-                max_sdc_offroad, float(offroad_values[sdc_index])
+                max_sdc_offroad, current_offroad
             )
             current_valid = bool(
                 np.asarray(state.current_sim_trajectory.valid)[sdc_index, 0]
             )
             sdc_valid_all_steps = sdc_valid_all_steps and current_valid
+            step_failure_reasons: list[str] = []
+            if current_overlap > 0.0:
+                step_failure_reasons.append("sdc_overlap")
+            if current_offroad > 0.0:
+                step_failure_reasons.append("sdc_offroad")
+            if not current_valid:
+                step_failure_reasons.append("sdc_invalid")
+            if step_failure_reasons and first_failure_timestep is None:
+                first_failure_timestep = int(state.timestep)
+                first_failure_reasons = step_failure_reasons
             self._append_state(trace, state, sdc_index)
             if step_index == scenario_selection.NUM_FUTURE_STEPS:
                 break
@@ -337,14 +532,23 @@ class ControllerRunner:
             speed_mutation.CURRENT_TIMESTEP
             + scenario_selection.NUM_FUTURE_STEPS
         )
+        final_timestep = int(state.timestep)
+        if (
+            final_timestep != expected_final_timestep
+            and first_failure_timestep is None
+        ):
+            first_failure_timestep = final_timestep
+            first_failure_reasons = ["rollout_incomplete"]
         return {
             "trajectory_sha256": _trace_hash(trace),
             "outcome": evaluate_rollout(
                 max_sdc_overlap=max_sdc_overlap,
                 max_sdc_offroad=max_sdc_offroad,
                 sdc_valid_all_steps=sdc_valid_all_steps,
-                final_timestep=int(state.timestep),
+                final_timestep=final_timestep,
                 expected_final_timestep=expected_final_timestep,
+                first_failure_timestep=first_failure_timestep,
+                first_failure_reasons=first_failure_reasons,
             ),
             "trajectory": trace,
         }
@@ -562,6 +766,12 @@ def run(
     report["mutation_scenario_validation"] = mutation_validation
     report["finding"] = finding
     report["rollouts"] = rollouts
+    report["scene_context"] = build_scene_context(
+        scenario,
+        mutated_scenario,
+        object_index,
+        rollouts,
+    )
     report["status"] = "passed" if comparison_ready else "rejected"
     report["total_seconds"] = round(time.perf_counter() - started, 6)
     report["process_peak_rss_bytes"] = _peak_rss_bytes()

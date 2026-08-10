@@ -31,12 +31,60 @@ def _rollout(role: str, offset: float) -> dict[str, object]:
         "outcome": {
             "success": True,
             "failure_reasons": [],
+            "max_sdc_overlap": 0.0,
+            "max_sdc_offroad": 0.0,
             "final_timestep": 90,
+            "expected_final_timestep": 90,
+            "first_failure_timestep": None,
+            "first_failure_reasons": [],
         },
         "trajectory": {
             "timestep": [10, 11],
             "x_m": [offset, offset + 1.0],
+            "y_m": [0.0, 0.5],
+            "yaw_rad": [0.0, 0.1],
+            "speed_mps": [5.0, 5.1],
             "valid": [True, True],
+        },
+    }
+
+
+def _actor_track(offset: float) -> dict[str, list[object]]:
+    return {
+        "timestep": [10, 11],
+        "x_m": [offset, offset + 1.0],
+        "y_m": [2.0, 2.5],
+        "yaw_rad": [0.0, 0.1],
+        "length_m": [4.5, 4.5],
+        "width_m": [2.0, 2.0],
+        "valid": [True, True],
+    }
+
+
+def _scene_context() -> dict[str, object]:
+    return {
+        "coordinate_frame": "Synthetic local Cartesian coordinates",
+        "units": "meters",
+        "bounds_m": {
+            "min_x_m": -5.0,
+            "max_x_m": 10.0,
+            "min_y_m": -5.0,
+            "max_y_m": 10.0,
+        },
+        "roadgraph_features": [
+            {
+                "feature_type": 2,
+                "x_m": [-5.0, 10.0],
+                "y_m": [0.0, 0.0],
+            }
+        ],
+        "actors": {
+            "sdc": {"object_type": 1, "length_m": 4.8, "width_m": 2.0},
+            "mutation_target": {
+                "object_type": 1,
+                "original": _actor_track(0.0),
+                "counterfactual": _actor_track(0.5),
+            },
         },
     }
 
@@ -83,6 +131,7 @@ def _source(*, status: str = "passed") -> dict[str, object]:
         },
         "limitations": ["Synthetic test only."],
         "finding": {"policy_specific_avoidable_failure": False},
+        "scene_context": _scene_context(),
         "rollouts": {
             "original": {
                 "tested": _rollout("tested", 0.0),
@@ -99,7 +148,7 @@ def _source(*, status: str = "passed") -> dict[str, object]:
 def test_valid_export_contains_four_linked_rollout_records() -> None:
     collection = rollout_record.export_collection(_source())
 
-    assert collection["schema_version"] == "1.0.0"
+    assert collection["schema_version"] == "1.1.0"
     assert collection["collection_status"] == "complete"
     assert len(collection["records"]) == 4
     assert collection["comparison_finding"] == {
@@ -218,6 +267,17 @@ def test_invalid_candidate_without_specific_reason_gets_explicit_fallback() -> N
     ]
 
 
+def test_early_invalid_candidate_can_omit_scene_context() -> None:
+    source = _source(status="rejected")
+    source.pop("rollouts")
+    source.pop("scene_context")
+
+    collection = rollout_record.export_collection(source)
+
+    assert collection["scene_context"] is None
+    assert rollout_record.validate_collection(collection) == []
+
+
 def test_invalid_candidate_names_failed_acceptance_gates() -> None:
     source = _source(status="rejected")
     source["acceptance"] = {
@@ -302,7 +362,7 @@ def test_committed_json_schema_matches_exporter_constants() -> None:
     schema_path = (
         Path(__file__).parents[1]
         / "schemas"
-        / "rollout-record-collection-v1.schema.json"
+        / "rollout-record-collection-v1.1.schema.json"
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
@@ -319,7 +379,7 @@ def test_committed_json_schema_accepts_exported_collections(
     schema_path = (
         Path(__file__).parents[1]
         / "schemas"
-        / "rollout-record-collection-v1.schema.json"
+        / "rollout-record-collection-v1.1.schema.json"
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
@@ -337,7 +397,7 @@ def test_committed_json_schema_rejects_inconsistent_mutation_state() -> None:
     schema_path = (
         Path(__file__).parents[1]
         / "schemas"
-        / "rollout-record-collection-v1.schema.json"
+        / "rollout-record-collection-v1.1.schema.json"
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     collection = rollout_record.export_collection(_source())

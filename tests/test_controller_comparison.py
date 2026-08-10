@@ -1,5 +1,9 @@
 """Data-free tests for independent controller outcome evaluation."""
 
+from types import SimpleNamespace
+
+import numpy as np
+
 from planmargin import controller_comparison
 
 
@@ -75,6 +79,21 @@ def test_failure_reasons_are_evaluated_independently() -> None:
     ]
 
 
+def test_outcome_retains_first_failure_state() -> None:
+    result = controller_comparison.evaluate_rollout(
+        max_sdc_overlap=1.0,
+        max_sdc_offroad=0.0,
+        sdc_valid_all_steps=True,
+        final_timestep=90,
+        expected_final_timestep=90,
+        first_failure_timestep=42,
+        first_failure_reasons=["sdc_overlap"],
+    )
+
+    assert result["first_failure_timestep"] == 42
+    assert result["first_failure_reasons"] == ["sdc_overlap"]
+
+
 def test_policy_specific_finding_requires_all_four_outcomes() -> None:
     finding = controller_comparison.comparison_finding(
         tested_original=_outcome(True),
@@ -136,3 +155,71 @@ def test_trace_completeness_checks_every_field() -> None:
     assert controller_comparison.trace_is_complete(complete, 2) is True
     assert controller_comparison.trace_is_complete(incomplete, 2) is False
     assert controller_comparison.trace_is_complete({}, 0) is False
+
+
+def _synthetic_scenario(*, target_offset: float) -> SimpleNamespace:
+    steps = 91
+    x = np.zeros((2, steps), dtype=np.float32)
+    y = np.zeros((2, steps), dtype=np.float32)
+    x[0] = np.linspace(0.0, 20.0, steps)
+    x[1] = np.linspace(4.0 + target_offset, 24.0 + target_offset, steps)
+    y[1] = 2.0
+    trajectory = SimpleNamespace(
+        x=x,
+        y=y,
+        yaw=np.zeros((2, steps), dtype=np.float32),
+        length=np.full((2, steps), 4.5, dtype=np.float32),
+        width=np.full((2, steps), 2.0, dtype=np.float32),
+        valid=np.ones((2, steps), dtype=bool),
+    )
+    roadgraph = SimpleNamespace(
+        x=np.array([-5.0, 0.0, 5.0, 10.0, 15.0, 50.0]),
+        y=np.zeros(6),
+        ids=np.array([1, 1, 1, 1, 1, 2]),
+        types=np.array([2, 2, 2, 2, 2, 2]),
+        valid=np.ones(6, dtype=bool),
+    )
+    metadata = SimpleNamespace(
+        is_sdc=np.array([True, False]),
+        object_types=np.array([1, 1]),
+    )
+    return SimpleNamespace(
+        log_trajectory=trajectory,
+        roadgraph_points=roadgraph,
+        object_metadata=metadata,
+    )
+
+
+def test_scene_context_aligns_roadgraph_and_mutation_target_tracks() -> None:
+    original = _synthetic_scenario(target_offset=0.0)
+    mutated = _synthetic_scenario(target_offset=1.0)
+    trace = {
+        "x_m": [0.0, 20.0],
+        "y_m": [0.0, 0.0],
+        "valid": [True, True],
+    }
+    rollouts = {
+        variant: {
+            role: {"trajectory": trace}
+            for role in ("tested", "reference")
+        }
+        for variant in ("original", "mutated")
+    }
+
+    context = controller_comparison.build_scene_context(
+        original, mutated, 1, rollouts
+    )
+
+    assert context["units"] == "meters"
+    assert context["roadgraph_features"] == [
+        {
+            "feature_type": 2,
+            "x_m": [-5.0, 0.0, 5.0, 10.0, 15.0],
+            "y_m": [0.0, 0.0, 0.0, 0.0, 0.0],
+        }
+    ]
+    target = context["actors"]["mutation_target"]
+    assert target["counterfactual"]["x_m"][0] == (
+        target["original"]["x_m"][0] + 1.0
+    )
+    assert "feature_id" not in context["roadgraph_features"][0]

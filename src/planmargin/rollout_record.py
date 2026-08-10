@@ -6,13 +6,14 @@ import argparse
 import copy
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 SCHEMA_URI = (
     "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/"
-    "schemas/rollout-record-collection-v1.schema.json"
+    "schemas/rollout-record-collection-v1.1.schema.json"
 )
 COLLECTION_TYPE = "planmargin.rollout_record_collection"
 RECORD_TYPE = "planmargin.rollout_record"
@@ -47,7 +48,7 @@ RECORD_REQUIRED_FIELDS = {
 
 
 class RecordValidationError(ValueError):
-    """Raised when an exported collection violates the v1 contract."""
+    """Raised when an exported collection violates the v1.1 contract."""
 
 
 def _canonical_json(value: Any) -> str:
@@ -288,7 +289,7 @@ def _invalid_record(
 
 
 def export_collection(source: dict[str, Any]) -> dict[str, Any]:
-    """Transform a controller-comparison report into v1 rollout records."""
+    """Transform a controller-comparison report into v1.1 rollout records."""
     comparison_key = _comparison_key(source)
     has_rollouts = all(
         source.get("rollouts", {}).get(variant, {}).get(role) is not None
@@ -318,6 +319,7 @@ def export_collection(source: dict[str, Any]) -> dict[str, Any]:
         "collection_status": collection_status,
         "comparison_key": comparison_key,
         "comparison_finding": copy.deepcopy(source.get("finding", {})),
+        "scene_context": copy.deepcopy(source.get("scene_context")),
         "records": records,
     }
     errors = validate_collection(collection)
@@ -326,13 +328,97 @@ def export_collection(source: dict[str, Any]) -> dict[str, Any]:
     return collection
 
 
+def _validate_actor_track(track: Any, prefix: str) -> list[str]:
+    if not isinstance(track, dict):
+        return [f"{prefix} must be an object"]
+    fields = (
+        "timestep",
+        "x_m",
+        "y_m",
+        "yaw_rad",
+        "length_m",
+        "width_m",
+        "valid",
+    )
+    values = [track.get(field) for field in fields]
+    if any(not isinstance(value, list) for value in values):
+        return [f"{prefix} fields must be arrays"]
+    lengths = {len(value) for value in values}
+    if lengths == {0} or len(lengths) != 1:
+        return [f"{prefix} arrays must be non-empty and equal-length"]
+    return []
+
+
+def _validate_scene_context(scene: Any) -> list[str]:
+    prefix = "scene_context"
+    if not isinstance(scene, dict):
+        return [f"{prefix} must be an object"]
+    errors: list[str] = []
+    if not scene.get("coordinate_frame") or scene.get("units") != "meters":
+        errors.append(f"{prefix} coordinate frame is incomplete")
+    bounds = scene.get("bounds_m")
+    bound_names = ("min_x_m", "max_x_m", "min_y_m", "max_y_m")
+    if not isinstance(bounds, dict) or any(
+        not isinstance(bounds.get(name), (int, float))
+        or not math.isfinite(bounds[name])
+        for name in bound_names
+    ):
+        errors.append(f"{prefix} bounds are incomplete")
+    elif (
+        bounds["min_x_m"] >= bounds["max_x_m"]
+        or bounds["min_y_m"] >= bounds["max_y_m"]
+    ):
+        errors.append(f"{prefix} bounds are not ordered")
+    features = scene.get("roadgraph_features")
+    if not isinstance(features, list) or not features:
+        errors.append(f"{prefix} roadgraph is missing")
+    else:
+        for index, feature in enumerate(features):
+            feature_prefix = f"{prefix}.roadgraph_features[{index}]"
+            if not isinstance(feature, dict):
+                errors.append(f"{feature_prefix} must be an object")
+                continue
+            x_values = feature.get("x_m")
+            y_values = feature.get("y_m")
+            if (
+                not isinstance(feature.get("feature_type"), int)
+                or not isinstance(x_values, list)
+                or not isinstance(y_values, list)
+                or len(x_values) < 2
+                or len(x_values) != len(y_values)
+            ):
+                errors.append(f"{feature_prefix} geometry is invalid")
+    actors = scene.get("actors")
+    if not isinstance(actors, dict):
+        errors.append(f"{prefix} actors are missing")
+        return errors
+    sdc = actors.get("sdc")
+    if not isinstance(sdc, dict) or any(
+        not isinstance(sdc.get(name), (int, float)) or sdc[name] <= 0.0
+        for name in ("length_m", "width_m")
+    ):
+        errors.append(f"{prefix} SDC dimensions are missing")
+    target = actors.get("mutation_target")
+    if not isinstance(target, dict):
+        errors.append(f"{prefix} mutation target is missing")
+    else:
+        for variant in ("original", "counterfactual"):
+            errors.extend(
+                _validate_actor_track(
+                    target.get(variant),
+                    f"{prefix}.actors.mutation_target.{variant}",
+                )
+            )
+    return errors
+
+
 def validate_collection(collection: dict[str, Any]) -> list[str]:
-    """Return every structural error found in a v1 collection."""
+    """Return every structural error found in a v1.1 collection."""
     errors: list[str] = []
     if collection.get("$schema") != SCHEMA_URI:
-        errors.append("collection schema URI is not the v1 URI")
+        errors.append("collection schema URI is not the v1.1 URI")
     if collection.get("schema_version") != SCHEMA_VERSION:
-        errors.append("collection schema_version is not 1.0.0")
+        errors.append("collection schema_version is not 1.1.0")
     if collection.get("record_type") != COLLECTION_TYPE:
         errors.append("collection record_type is invalid")
     if not isinstance(collection.get("comparison_finding"), dict):
@@ -485,6 +571,7 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
     if len(record_ids) != len(set(record_ids)):
         errors.append("record_id values are not unique")
     if collection.get("collection_status") == "complete":
+        errors.extend(_validate_scene_context(collection.get("scene_context")))
         expected_pairs = {
             (variant, role)
             for variant in EXPORTED_VARIANTS.values()
@@ -495,6 +582,9 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
         if len(records) != 4:
             errors.append("complete collection must contain exactly four records")
     elif collection.get("collection_status") == "invalid_candidate":
+        scene_context = collection.get("scene_context")
+        if scene_context is not None:
+            errors.extend(_validate_scene_context(scene_context))
         if len(records) != 1 or records[0].get("status") != "invalid":
             errors.append("invalid_candidate collection must contain one invalid record")
     else:

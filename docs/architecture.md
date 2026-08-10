@@ -64,6 +64,11 @@ The Stage 0 implementation serializes this contract as the versioned
 trajectories remain in ignored local artifacts; only the JSON Schema and
 privacy-safe aggregate report are committed.
 
+The first consumer is the deterministic
+[trajectory-visualization protocol](trajectory-visualization.md): a static,
+responsive SVG comparison that exercises the record boundary before the API
+and Angular debugger exist.
+
 ## Zero-cost execution
 
 - Apple-silicon Mac: primary development, preprocessing, C++, DuckDB, Beam Direct Runner, frontend, and PyTorch MPS
