@@ -1,0 +1,33 @@
+[project]
+name = "planmargin"
+version = "0.1.0"
+description = "Counterfactual stress testing for autonomous-driving planners"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "waymo-waymax @ git+https://github.com/waymo-research/waymax.git@a64dfec9be8576b60d9cecc94f406d9812d4a7d0",
+]
+
+[project.scripts]
+planmargin-waymax-smoke-test = "planmargin.smoke_test:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4,<9",
+  "ruff>=0.12,<0.13",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
