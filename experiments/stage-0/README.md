@@ -60,8 +60,10 @@ validation. The subsequent
 lead-vehicle mutation. The subsequent
 [controller-comparison report](controller-comparison.md) validates distinct
 tested and reference configurations under identical original and mutated
-trajectories. The next experiment can formalize the versioned rollout record
-needed for visualization and later search.
+trajectories. The subsequent
+[rollout-record report](rollout-record.md) validates the versioned private
+export. The next experiment can render the first original-versus-counterfactual
+comparison directly from that record.
 
 ## Dataset attribution
 

@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/rollout-record-collection-v1.schema.json",
+  "title": "PlanMargin rollout record collection v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "record_type",
+    "collection_status",
+    "comparison_key",
+    "comparison_finding",
+    "records"
+  ],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/rollout-record-collection-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.rollout_record_collection"},
+    "collection_status": {"enum": ["complete", "invalid_candidate"]},
+    "comparison_key": {"type": "string", "pattern": "^cmp_[0-9a-f]{64}$"},
+    "comparison_finding": {"type": "object"},
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/rolloutRecord"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"collection_status": {"const": "complete"}}, "required": ["collection_status"]},
+      "then": {"properties": {"records": {"minItems": 4, "maxItems": 4}}}
+    },
+    {
+      "if": {"properties": {"collection_status": {"const": "invalid_candidate"}}, "required": ["collection_status"]},
+      "then": {"properties": {"records": {"minItems": 1, "maxItems": 1}}}
+    }
+  ],
+  "$defs": {
+    "rolloutRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "record_id",
+        "comparison_key",
+        "record_kind",
+        "status",
+        "variant",
+        "scenario",
+        "controller_set",
+        "controller_role",
+        "controller",
+        "mutation",
+        "metric_configuration",
+        "outcome",
+        "acceptance_gate_results",
+        "reproducibility",
+        "trajectory",
+        "provenance",
+        "rejection_reasons",
+        "limitations"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "planmargin.rollout_record"},
+        "record_id": {"type": "string", "pattern": "^rec_[0-9a-f]{64}$"},
+        "comparison_key": {"type": "string", "pattern": "^cmp_[0-9a-f]{64}$"},
+        "record_kind": {"enum": ["rollout", "invalid_candidate"]},
+        "status": {"enum": ["completed", "invalid"]},
+        "variant": {"enum": ["original", "counterfactual"]},
+        "scenario": {
+          "type": "object",
+          "required": ["name", "version", "split", "scenario_id"],
+          "additionalProperties": true
+        },
+        "controller_set": {
+          "type": "object",
+          "required": ["tested", "reference"],
+          "additionalProperties": false,
+          "properties": {
+            "tested": {"type": "object"},
+            "reference": {"type": "object"}
+          }
+        },
+        "controller_role": {"type": ["string", "null"], "enum": ["tested", "reference", null]},
+        "controller": {"type": ["object", "null"]},
+        "mutation": {
+          "type": "object",
+          "required": ["applied", "parameters", "rejection_reasons"],
+          "additionalProperties": true,
+          "properties": {"applied": {"type": "boolean"}}
+        },
+        "metric_configuration": {"type": "object"},
+        "outcome": {"type": ["object", "null"]},
+        "acceptance_gate_results": {"type": "object"},
+        "reproducibility": {"type": ["object", "null"]},
+        "trajectory": {"type": ["object", "null"]},
+        "provenance": {
+          "type": "object",
+          "required": ["git_revision", "seed", "runtime", "hardware_class"],
+          "additionalProperties": true
+        },
+        "rejection_reasons": {"type": "array", "items": {"type": "string"}},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "completed"}}, "required": ["status"]},
+          "then": {
+            "properties": {
+              "record_kind": {"const": "rollout"},
+              "controller_role": {"enum": ["tested", "reference"]},
+              "controller": {"type": "object"},
+              "outcome": {"type": "object"},
+              "reproducibility": {"type": "object"},
+              "trajectory": {"type": "object"},
+              "rejection_reasons": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "invalid"}}, "required": ["status"]},
+          "then": {
+            "properties": {
+              "record_kind": {"const": "invalid_candidate"},
+              "controller_role": {"type": "null"},
+              "controller": {"type": "null"},
+              "outcome": {"type": "null"},
+              "reproducibility": {"type": "null"},
+              "trajectory": {"type": "null"},
+              "rejection_reasons": {"minItems": 1}
+            }
+          }
+        }
+      ]
+    }
+  }
+}
