@@ -28,19 +28,26 @@ If the evidence does not support these hypotheses, the negative result will be r
 
 ### Initial scenario family
 
-Unprotected left turns involving the self-driving car and one oncoming vehicle.
+The Stage 0 feasibility family is lead-vehicle braking involving the
+self-driving car and one same-route lead vehicle.
 
-The Stage 0 fallback is a longitudinal following scenario with a braking lead vehicle. The fallback is used if left-turn mining or Waymax interaction behavior cannot be validated quickly.
+A bounded one-shard probe found seven strict left-turn/oncoming candidates,
+fewer than the ten required by the predeclared selection protocol, so the
+lead-braking fallback was activated on August 9, 2026. Unprotected left turns
+remain the preferred later extension but are not mixed into the feasibility
+set. See [the selection protocol](scenario-selection.md).
 
 ### Mutation parameters
 
-The first search space is intentionally two-dimensional:
+The fallback search space is intentionally two-dimensional:
 
 ```text
-theta = [arrival_time_offset, speed_multiplier]
+theta = [braking_onset_offset, speed_multiplier]
 ```
 
-The changed vehicle must remain on its recorded spatial route. Braking-onset offset may be added only after the initial experiment works.
+The changed lead vehicle must remain on its recorded spatial route. If the
+left-turn family is revisited, its corresponding search space will use arrival
+time offset and speed multiplier.
 
 ### Tested and reference controllers
 
@@ -150,4 +157,3 @@ Version one will not:
 - use an LLM inside the planner or metric computation;
 - make Gaussian splatting part of the critical path; or
 - process the entire dataset solely to claim scale.
-
