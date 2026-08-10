@@ -90,6 +90,10 @@ The validator requires:
 - exactly four variant/role pairs for a complete collection; and
 - ordered scene bounds, roadgraph features, SDC dimensions, and equal-length
   mutation-target tracks for a complete collection; and
+- canonical SHA-256 agreement for every SDC trajectory and the complete scene
+  context, so edits to the evidence cannot retain valid audit identifiers;
+- equal-length, finite trajectory arrays and internally consistent success,
+  failure-reason, failure-time, and final-timestep fields; and
 - explicit rejection reasons with no trajectory or outcome for invalid
   candidates.
 

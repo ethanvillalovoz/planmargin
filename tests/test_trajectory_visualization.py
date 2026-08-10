@@ -20,6 +20,7 @@ def test_render_contains_two_accessible_directly_labeled_panels() -> None:
     assert "Reference SDC" in rendered
     assert "Mutation target" in rendered
     assert "Outcome and failure-time audit" in rendered
+    assert rendered.count('data-label="SDC valid">Yes') == 4
 
 
 def test_render_has_responsive_text_fallback_without_remote_dependencies() -> None:

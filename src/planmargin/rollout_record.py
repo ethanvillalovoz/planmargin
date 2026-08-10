@@ -60,9 +60,12 @@ def _canonical_json(value: Any) -> str:
     )
 
 
+def _content_sha256(value: Any) -> str:
+    return hashlib.sha256(_canonical_json(value).encode()).hexdigest()
+
+
 def _stable_id(prefix: str, value: Any) -> str:
-    digest = hashlib.sha256(_canonical_json(value).encode()).hexdigest()
-    return f"{prefix}_{digest}"
+    return f"{prefix}_{_content_sha256(value)}"
 
 
 def _is_stable_id(value: Any, prefix: str) -> bool:
@@ -312,6 +315,7 @@ def export_collection(source: dict[str, Any]) -> dict[str, Any]:
         records = [_invalid_record(source, comparison_key=comparison_key)]
         collection_status = "invalid_candidate"
 
+    scene_context = copy.deepcopy(source.get("scene_context"))
     collection = {
         "$schema": SCHEMA_URI,
         "schema_version": SCHEMA_VERSION,
@@ -319,7 +323,12 @@ def export_collection(source: dict[str, Any]) -> dict[str, Any]:
         "collection_status": collection_status,
         "comparison_key": comparison_key,
         "comparison_finding": copy.deepcopy(source.get("finding", {})),
-        "scene_context": copy.deepcopy(source.get("scene_context")),
+        "scene_context": scene_context,
+        "scene_context_sha256": (
+            _content_sha256(scene_context)
+            if scene_context is not None
+            else None
+        ),
         "records": records,
     }
     errors = validate_collection(collection)
@@ -346,7 +355,143 @@ def _validate_actor_track(track: Any, prefix: str) -> list[str]:
     lengths = {len(value) for value in values}
     if lengths == {0} or len(lengths) != 1:
         return [f"{prefix} arrays must be non-empty and equal-length"]
-    return []
+    errors: list[str] = []
+    timesteps = track["timestep"]
+    timesteps_are_integers = all(
+        not isinstance(value, bool) and isinstance(value, int)
+        for value in timesteps
+    )
+    if not timesteps_are_integers or any(
+        right <= left for left, right in zip(timesteps, timesteps[1:])
+    ):
+        errors.append(f"{prefix} timesteps must be strictly increasing integers")
+    numeric_fields_are_finite = True
+    for field in ("x_m", "y_m", "yaw_rad", "length_m", "width_m"):
+        field_is_finite = all(
+            not isinstance(value, bool)
+            and isinstance(value, (int, float))
+            and math.isfinite(value)
+            for value in track[field]
+        )
+        if not field_is_finite:
+            errors.append(f"{prefix}.{field} must contain finite numbers")
+            numeric_fields_are_finite = False
+    valid_values_are_booleans = all(
+        isinstance(value, bool) for value in track["valid"]
+    )
+    if not valid_values_are_booleans:
+        errors.append(f"{prefix}.valid must contain booleans")
+    elif not any(track["valid"]):
+        errors.append(f"{prefix} must contain at least one valid state")
+    if numeric_fields_are_finite and valid_values_are_booleans and any(
+        (length <= 0.0 or width <= 0.0)
+        for length, width, valid in zip(
+            track["length_m"], track["width_m"], track["valid"]
+        )
+        if valid
+    ):
+        errors.append(f"{prefix} valid states require positive dimensions")
+    return errors
+
+
+def _validate_trajectory(trajectory: Any, prefix: str) -> list[str]:
+    if not isinstance(trajectory, dict):
+        return [f"{prefix} must be an object"]
+    fields = ("timestep", "x_m", "y_m", "yaw_rad", "speed_mps", "valid")
+    values = [trajectory.get(field) for field in fields]
+    if any(not isinstance(value, list) for value in values):
+        return [f"{prefix} fields must be arrays"]
+    lengths = {len(value) for value in values}
+    if lengths == {0} or len(lengths) != 1:
+        return [f"{prefix} arrays must be non-empty and equal-length"]
+    errors: list[str] = []
+    timesteps = trajectory["timestep"]
+    timesteps_are_integers = all(
+        not isinstance(value, bool) and isinstance(value, int)
+        for value in timesteps
+    )
+    if not timesteps_are_integers or any(
+        right <= left for left, right in zip(timesteps, timesteps[1:])
+    ):
+        errors.append(f"{prefix} timesteps must be strictly increasing integers")
+    for field in ("x_m", "y_m", "yaw_rad", "speed_mps"):
+        if any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            for value in trajectory[field]
+        ):
+            errors.append(f"{prefix}.{field} must contain finite numbers")
+    if any(not isinstance(value, bool) for value in trajectory["valid"]):
+        errors.append(f"{prefix}.valid must contain booleans")
+    elif not any(trajectory["valid"]):
+        errors.append(f"{prefix} must contain at least one valid state")
+    return errors
+
+
+def _validate_outcome(
+    outcome: Any, trajectory: Any, prefix: str
+) -> list[str]:
+    if not isinstance(outcome, dict):
+        return [f"{prefix} must be an object"]
+    errors: list[str] = []
+    success = outcome.get("success")
+    failure_reasons = outcome.get("failure_reasons")
+    first_timestep = outcome.get("first_failure_timestep")
+    first_reasons = outcome.get("first_failure_reasons")
+    if not isinstance(success, bool):
+        errors.append(f"{prefix}.success must be a boolean")
+    if not isinstance(failure_reasons, list) or any(
+        not isinstance(value, str) or not value
+        for value in failure_reasons
+    ):
+        errors.append(f"{prefix}.failure_reasons must contain strings")
+    if not isinstance(first_reasons, list) or any(
+        not isinstance(value, str) or not value for value in first_reasons
+    ):
+        errors.append(f"{prefix}.first_failure_reasons must contain strings")
+    for field in ("max_sdc_overlap", "max_sdc_offroad"):
+        value = outcome.get(field)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or value < 0.0
+        ):
+            errors.append(f"{prefix}.{field} must be a finite non-negative number")
+    for field in ("final_timestep", "expected_final_timestep"):
+        value = outcome.get(field)
+        if isinstance(value, bool) or not isinstance(value, int):
+            errors.append(f"{prefix}.{field} must be an integer")
+    if not isinstance(outcome.get("sdc_valid_all_steps"), bool):
+        errors.append(f"{prefix}.sdc_valid_all_steps must be a boolean")
+    if success is True and (
+        failure_reasons or first_timestep is not None or first_reasons
+    ):
+        errors.append(f"{prefix} successful rollout cannot contain failures")
+    if success is False:
+        if not failure_reasons:
+            errors.append(f"{prefix} failed rollout requires failure reasons")
+        if isinstance(first_timestep, bool) or not isinstance(first_timestep, int):
+            errors.append(f"{prefix} failed rollout requires a first failure timestep")
+        if not first_reasons:
+            errors.append(f"{prefix} failed rollout requires first failure reasons")
+        elif (
+            isinstance(failure_reasons, list)
+            and all(isinstance(value, str) for value in failure_reasons)
+            and all(isinstance(value, str) for value in first_reasons)
+            and not set(first_reasons).issubset(failure_reasons)
+        ):
+            errors.append(f"{prefix} first failure reasons must be aggregate failures")
+    if isinstance(trajectory, dict) and isinstance(trajectory.get("timestep"), list):
+        timesteps = trajectory["timestep"]
+        if timesteps:
+            if outcome.get("final_timestep") != timesteps[-1]:
+                errors.append(f"{prefix} final timestep does not match trajectory")
+            if isinstance(first_timestep, int) and not isinstance(first_timestep, bool):
+                if first_timestep not in timesteps:
+                    errors.append(f"{prefix} first failure timestep is not in trajectory")
+    return errors
 
 
 def _validate_scene_context(scene: Any) -> list[str]:
@@ -423,6 +568,19 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
         errors.append("collection record_type is invalid")
     if not isinstance(collection.get("comparison_finding"), dict):
         errors.append("comparison_finding must be an object")
+    scene_context = collection.get("scene_context")
+    scene_context_sha256 = collection.get("scene_context_sha256")
+    if scene_context is None:
+        if scene_context_sha256 is not None:
+            errors.append("scene_context_sha256 must be null without scene context")
+    else:
+        try:
+            expected_scene_hash = _content_sha256(scene_context)
+        except (TypeError, ValueError):
+            errors.append("scene_context cannot be hashed as canonical JSON")
+        else:
+            if scene_context_sha256 != expected_scene_hash:
+                errors.append("scene_context_sha256 does not match scene context")
     comparison_key = collection.get("comparison_key")
     if not _is_stable_id(comparison_key, "cmp"):
         errors.append("comparison_key is missing or invalid")
@@ -533,12 +691,26 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
                 and mutation.get("applied") != expected_applied
             ):
                 errors.append(f"{prefix} mutation application is inconsistent")
-            if record.get("outcome") is None:
-                errors.append(f"{prefix} completed outcome is missing")
-            if record.get("trajectory") is None:
-                errors.append(f"{prefix} completed trajectory is missing")
-            if record.get("reproducibility") is None:
+            outcome = record.get("outcome")
+            trajectory = record.get("trajectory")
+            reproducibility = record.get("reproducibility")
+            errors.extend(_validate_trajectory(trajectory, f"{prefix}.trajectory"))
+            errors.extend(_validate_outcome(outcome, trajectory, f"{prefix}.outcome"))
+            if not isinstance(reproducibility, dict):
                 errors.append(f"{prefix} reproducibility is missing")
+            elif isinstance(trajectory, dict):
+                try:
+                    expected_trajectory_hash = _content_sha256(trajectory)
+                except (TypeError, ValueError):
+                    errors.append(f"{prefix} trajectory cannot be hashed as canonical JSON")
+                else:
+                    if (
+                        reproducibility.get("trajectory_sha256")
+                        != expected_trajectory_hash
+                    ):
+                        errors.append(
+                            f"{prefix} trajectory_sha256 does not match trajectory"
+                        )
             if record.get("rejection_reasons"):
                 errors.append(f"{prefix} completed record has rejections")
             if role in ROLES and variant in EXPORTED_VARIANTS.values():
@@ -571,7 +743,7 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
     if len(record_ids) != len(set(record_ids)):
         errors.append("record_id values are not unique")
     if collection.get("collection_status") == "complete":
-        errors.extend(_validate_scene_context(collection.get("scene_context")))
+        errors.extend(_validate_scene_context(scene_context))
         expected_pairs = {
             (variant, role)
             for variant in EXPORTED_VARIANTS.values()
@@ -582,7 +754,6 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
         if len(records) != 4:
             errors.append("complete collection must contain exactly four records")
     elif collection.get("collection_status") == "invalid_candidate":
-        scene_context = collection.get("scene_context")
         if scene_context is not None:
             errors.extend(_validate_scene_context(scene_context))
         if len(records) != 1 or records[0].get("status") != "invalid":

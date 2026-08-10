@@ -380,6 +380,7 @@ def _metrics_rows(records: dict[tuple[str, str], dict[str, Any]]) -> str:
         for role in ("tested", "reference"):
             outcome = records[(variant, role)]["outcome"]
             status = "Pass" if outcome["success"] else "Fail"
+            sdc_valid = "Yes" if outcome["sdc_valid_all_steps"] else "No"
             failure = outcome.get("first_failure_timestep")
             failure_text = "None" if failure is None else f"t={failure}"
             rows.append(
@@ -389,6 +390,7 @@ def _metrics_rows(records: dict[tuple[str, str], dict[str, Any]]) -> str:
                 f'<td data-label="Outcome"><span class="status status-{status.lower()}">{status}</span></td>'
                 f'<td data-label="Max overlap">{_number(outcome.get("max_sdc_overlap"))}</td>'
                 f'<td data-label="Max offroad">{_number(outcome.get("max_sdc_offroad"))}</td>'
+                f'<td data-label="SDC valid">{sdc_valid}</td>'
                 f'<td data-label="First failure">{_text(failure_text)}</td>'
                 f'<td data-label="Final timestep">{_text(outcome.get("final_timestep"))}</td>'
                 "</tr>"
@@ -505,7 +507,7 @@ def render_html(collection: dict[str, Any]) -> str:
   <div class="table-wrap">
     <table>
       <caption>Outcome and failure-time audit</caption>
-      <thead><tr><th>Variant</th><th>Controller</th><th>Outcome</th><th>Max overlap</th><th>Max offroad</th><th>First failure</th><th>Final t</th></tr></thead>
+      <thead><tr><th>Variant</th><th>Controller</th><th>Outcome</th><th>Max overlap</th><th>Max offroad</th><th>SDC valid</th><th>First failure</th><th>Final t</th></tr></thead>
       <tbody>{_metrics_rows(records)}</tbody>
     </table>
   </div>

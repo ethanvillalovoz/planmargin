@@ -23,8 +23,8 @@ cost without adding information at this stage.
 - the reference SDC is a dashed orange path and footprint;
 - the mutation target is a dotted purple path and footprint;
 - a red cross marks the first failing state when one exists; and
-- a visible table reports outcome, overlap, offroad, first failure, and final
-  timestep for all four rollouts.
+- a visible table reports outcome, overlap, offroad, all-step SDC validity,
+  first failure, and final timestep for all four rollouts.
 
 Color is redundant with line pattern and direct labels. Each SVG has a title
 and long description, and the metric table provides the non-visual path. At
@@ -44,7 +44,10 @@ uv run --frozen planmargin-render-trajectory-comparison \
 
 The generator has no network or browser-runtime dependency. Parsing, scales,
 oriented-box geometry, SVG rendering, labels, annotations, and the text table
-are deterministic Python functions covered by synthetic tests.
+are deterministic Python functions covered by synthetic tests. Regeneration
+first verifies the canonical hashes of all four SDC trajectories and the
+collection-level scene context, along with trajectory shape and failure-time
+consistency.
 
 ## Privacy and limitations
 

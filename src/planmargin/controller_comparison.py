@@ -800,6 +800,25 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _command_summary(report: dict[str, Any], output: Path) -> dict[str, Any]:
+    rollouts = report.get("rollouts", {})
+    rollout_count = 0
+    if isinstance(rollouts, dict):
+        rollout_count = sum(
+            1
+            for variant in rollouts.values()
+            if isinstance(variant, dict)
+            for rollout in variant.values()
+            if isinstance(rollout, dict)
+        )
+    return {
+        "status": report.get("status"),
+        "rollout_count": rollout_count,
+        "scene_context_exported": isinstance(report.get("scene_context"), dict),
+        "output": str(output),
+    }
+
+
 def main() -> None:
     args = _parse_args()
     report = run(
@@ -813,7 +832,7 @@ def main() -> None:
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(rendered, encoding="utf-8")
-    print(rendered, end="")
+    print(json.dumps(_command_summary(report, args.output), indent=2, sort_keys=True))
     if report["status"] != "passed":
         raise SystemExit(1)
 

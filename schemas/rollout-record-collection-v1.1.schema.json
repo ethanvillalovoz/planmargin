@@ -12,6 +12,7 @@
     "comparison_key",
     "comparison_finding",
     "scene_context",
+    "scene_context_sha256",
     "records"
   ],
   "properties": {
@@ -27,6 +28,10 @@
         {"type": "null"}
       ]
     },
+    "scene_context_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "records": {
       "type": "array",
       "minItems": 1,
@@ -39,6 +44,7 @@
       "then": {
         "properties": {
           "scene_context": {"$ref": "#/$defs/sceneContext"},
+          "scene_context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
           "records": {
             "minItems": 4,
             "maxItems": 4,
@@ -56,6 +62,12 @@
       "if": {"properties": {"collection_status": {"const": "invalid_candidate"}}, "required": ["collection_status"]},
       "then": {
         "properties": {
+          "scene_context_sha256": {
+            "oneOf": [
+              {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              {"type": "null"}
+            ]
+          },
           "records": {
             "minItems": 1,
             "maxItems": 1,
@@ -294,17 +306,40 @@
     "outcome": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["success", "failure_reasons", "max_sdc_overlap", "max_sdc_offroad", "final_timestep", "expected_final_timestep", "first_failure_timestep", "first_failure_reasons"],
+      "required": ["success", "failure_reasons", "max_sdc_overlap", "max_sdc_offroad", "sdc_valid_all_steps", "final_timestep", "expected_final_timestep", "first_failure_timestep", "first_failure_reasons"],
       "properties": {
         "success": {"type": "boolean"},
         "failure_reasons": {"type": "array", "items": {"type": "string"}},
         "max_sdc_overlap": {"type": "number"},
         "max_sdc_offroad": {"type": "number"},
+        "sdc_valid_all_steps": {"type": "boolean"},
         "final_timestep": {"type": "integer"},
         "expected_final_timestep": {"type": "integer"},
         "first_failure_timestep": {"type": ["integer", "null"]},
-        "first_failure_reasons": {"type": "array", "items": {"type": "string"}}
-      }
+        "first_failure_reasons": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"success": {"const": true}}, "required": ["success"]},
+          "then": {
+            "properties": {
+              "failure_reasons": {"maxItems": 0},
+              "first_failure_timestep": {"type": "null"},
+              "first_failure_reasons": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"success": {"const": false}}, "required": ["success"]},
+          "then": {
+            "properties": {
+              "failure_reasons": {"minItems": 1},
+              "first_failure_timestep": {"type": "integer"},
+              "first_failure_reasons": {"minItems": 1}
+            }
+          }
+        }
+      ]
     },
     "trajectory": {
       "type": "object",

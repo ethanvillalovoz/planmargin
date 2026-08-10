@@ -1,5 +1,6 @@
 """Data-free tests for independent controller outcome evaluation."""
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -155,6 +156,30 @@ def test_trace_completeness_checks_every_field() -> None:
     assert controller_comparison.trace_is_complete(complete, 2) is True
     assert controller_comparison.trace_is_complete(incomplete, 2) is False
     assert controller_comparison.trace_is_complete({}, 0) is False
+
+
+def test_command_summary_does_not_echo_private_report_content() -> None:
+    report = {
+        "status": "passed",
+        "dataset": {"scenario_id": "private-scenario-id"},
+        "scene_context": {"roadgraph_features": [{"x_m": [1.0, 2.0]}]},
+        "rollouts": {
+            variant: {role: {"trajectory": {}} for role in ("tested", "reference")}
+            for variant in ("original", "mutated")
+        },
+    }
+
+    summary = controller_comparison._command_summary(
+        report, Path("artifacts/stage-0/controller-comparison.json")
+    )
+
+    assert summary == {
+        "status": "passed",
+        "rollout_count": 4,
+        "scene_context_exported": True,
+        "output": "artifacts/stage-0/controller-comparison.json",
+    }
+    assert "private-scenario-id" not in str(summary)
 
 
 def _synthetic_scenario(*, target_offset: float) -> SimpleNamespace:

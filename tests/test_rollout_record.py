@@ -20,12 +20,20 @@ def _controller(role: str) -> dict[str, object]:
 
 
 def _rollout(role: str, offset: float) -> dict[str, object]:
+    trajectory = {
+        "timestep": [10, 11],
+        "x_m": [offset, offset + 1.0],
+        "y_m": [0.0, 0.5],
+        "yaw_rad": [0.0, 0.1],
+        "speed_mps": [5.0, 5.1],
+        "valid": [True, True],
+    }
     return {
         "controller": _controller(role),
         "outputs_identical": True,
         "first_rollout_seconds": 1.0,
         "second_rollout_seconds": 0.5,
-        "trajectory_sha256": f"trajectory-{role}-{offset}",
+        "trajectory_sha256": rollout_record._content_sha256(trajectory),
         "non_sdc_input_sha256": f"input-{offset}",
         "input_unchanged_after_rollout": True,
         "outcome": {
@@ -33,19 +41,13 @@ def _rollout(role: str, offset: float) -> dict[str, object]:
             "failure_reasons": [],
             "max_sdc_overlap": 0.0,
             "max_sdc_offroad": 0.0,
-            "final_timestep": 90,
-            "expected_final_timestep": 90,
+            "sdc_valid_all_steps": True,
+            "final_timestep": 11,
+            "expected_final_timestep": 11,
             "first_failure_timestep": None,
             "first_failure_reasons": [],
         },
-        "trajectory": {
-            "timestep": [10, 11],
-            "x_m": [offset, offset + 1.0],
-            "y_m": [0.0, 0.5],
-            "yaw_rad": [0.0, 0.1],
-            "speed_mps": [5.0, 5.1],
-            "valid": [True, True],
-        },
+        "trajectory": trajectory,
     }
 
 
@@ -190,9 +192,11 @@ def test_export_is_deterministic() -> None:
 def test_record_id_changes_when_trajectory_changes() -> None:
     first = rollout_record.export_collection(_source())
     changed_source = _source()
-    changed_source["rollouts"]["original"]["tested"][
-        "trajectory_sha256"
-    ] = "different-trajectory"
+    changed_rollout = changed_source["rollouts"]["original"]["tested"]
+    changed_rollout["trajectory"]["x_m"][0] = 42.0
+    changed_rollout["trajectory_sha256"] = rollout_record._content_sha256(
+        changed_rollout["trajectory"]
+    )
     second = rollout_record.export_collection(changed_source)
 
     first_record = next(
@@ -275,7 +279,69 @@ def test_early_invalid_candidate_can_omit_scene_context() -> None:
     collection = rollout_record.export_collection(source)
 
     assert collection["scene_context"] is None
+    assert collection["scene_context_sha256"] is None
     assert rollout_record.validate_collection(collection) == []
+
+
+def test_validator_rejects_tampered_trajectory_content() -> None:
+    collection = rollout_record.export_collection(_source())
+    collection["records"][0]["trajectory"]["x_m"][0] = 999.0
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any("trajectory_sha256 does not match trajectory" in error for error in errors)
+
+
+def test_validator_rejects_tampered_scene_context() -> None:
+    collection = rollout_record.export_collection(_source())
+    collection["scene_context"]["roadgraph_features"][0]["x_m"][0] = 999.0
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert "scene_context_sha256 does not match scene context" in errors
+
+
+def test_validator_rejects_unequal_trajectory_arrays() -> None:
+    collection = rollout_record.export_collection(_source())
+    collection["records"][0]["trajectory"]["valid"].pop()
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any("trajectory arrays must be non-empty and equal-length" in error for error in errors)
+
+
+def test_validator_rejects_failure_without_first_failure_state() -> None:
+    collection = rollout_record.export_collection(_source())
+    outcome = collection["records"][0]["outcome"]
+    outcome["success"] = False
+    outcome["failure_reasons"] = ["sdc_overlap"]
+    outcome["max_sdc_overlap"] = 1.0
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any("failed rollout requires a first failure timestep" in error for error in errors)
+    assert any("failed rollout requires first failure reasons" in error for error in errors)
+
+
+def test_validator_reports_malformed_arrays_without_raising() -> None:
+    collection = rollout_record.export_collection(_source())
+    trajectory = collection["records"][0]["trajectory"]
+    trajectory["timestep"] = [10, "bad"]
+    trajectory["valid"] = [False, False]
+    track = collection["scene_context"]["actors"]["mutation_target"]["original"]
+    track["length_m"] = ["bad", "bad"]
+    outcome = collection["records"][0]["outcome"]
+    outcome["success"] = False
+    outcome["failure_reasons"] = [{"invalid": "reason"}]
+    outcome["first_failure_timestep"] = 11
+    outcome["first_failure_reasons"] = [{"invalid": "reason"}]
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any("timesteps must be strictly increasing integers" in error for error in errors)
+    assert any("must contain at least one valid state" in error for error in errors)
+    assert any("length_m must contain finite numbers" in error for error in errors)
+    assert any("failure_reasons must contain strings" in error for error in errors)
 
 
 def test_invalid_candidate_names_failed_acceptance_gates() -> None:
