@@ -407,7 +407,12 @@ def _update_hash(digest: Any, state: Any) -> None:
 class MutationValidator:
     """Run the mutated scenario and audit initial, map, and replay gates."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, *, require_mutated_object_valid_all_steps: bool = True
+    ) -> None:
+        self._require_mutated_object_valid_all_steps = (
+            require_mutated_object_valid_all_steps
+        )
         dynamics_model = dynamics.StateDynamics()
         self._environment = env.BaseEnvironment(
             dynamics_model=dynamics_model,
@@ -501,7 +506,10 @@ class MutationValidator:
             rejection_reasons.append("initial_mutated_object_overlap")
         if first["max_mutated_object_offroad"] > 0:
             rejection_reasons.append("mutated_object_offroad")
-        if not first["mutated_object_valid_all_steps"]:
+        if (
+            self._require_mutated_object_valid_all_steps
+            and not first["mutated_object_valid_all_steps"]
+        ):
             rejection_reasons.append("mutated_object_became_invalid")
         expected_final_timestep = (
             CURRENT_TIMESTEP + scenario_selection.NUM_FUTURE_STEPS
