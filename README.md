@@ -4,7 +4,9 @@
 
 PlanMargin is an independent research and engineering project that searches for the smallest realistic change to a recorded driving scenario that exposes an avoidable planner failure.
 
-> **Current status:** Stage 0 — feasibility. The experiment is specified, but no performance claims have been made yet.
+> **Current status:** Stage 0 — feasibility. WOMD access and a deterministic
+> Waymax baseline are being validated; no planner-performance claims have been
+> made.
 
 ## The problem
 
@@ -77,6 +79,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 
 ## Roadmap
 
+- [x] Validate credential-safe WOMD access and replay one scenario twice
 - [ ] Load and replay ten WOMD scenarios in Waymax
 - [ ] Apply one bounded speed or timing mutation
 - [ ] Run tested and reference controllers
@@ -89,7 +92,9 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [ ] Add scalable processing and profiling
 - [ ] Build the engineer-facing scenario debugger
 
-See the [project specification](docs/project-spec.md), [architecture](docs/architecture.md), and [initial scope decision](docs/decisions/0001-project-scope.md) for details.
+See the [local setup guide](docs/setup.md), [project specification](docs/project-spec.md),
+[architecture](docs/architecture.md), and
+[initial scope decision](docs/decisions/0001-project-scope.md) for details.
 
 ## Reproducibility principles
 
@@ -105,5 +110,8 @@ PlanMargin is an independent project and is **not affiliated with, endorsed by, 
 
 Waymo Open Dataset and Waymax access are governed by their respective terms and non-commercial-use conditions. Users are responsible for obtaining access and accepting those terms. Raw data, credentials, and restricted artifacts must never be committed here. See [data/README.md](data/README.md).
 
-The original code in this repository is licensed under the Apache License 2.0. Third-party software and datasets retain their own licenses.
+This software was made using the Waymo Open Dataset, provided by Waymo LLC
+under the [Waymo Dataset License Agreement for Non-Commercial Use](https://waymo.com/open/terms/),
+and access and use are governed by that agreement.
 
+The original code in this repository is licensed under the Apache License 2.0. Third-party software and datasets retain their own licenses.

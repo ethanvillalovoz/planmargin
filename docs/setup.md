@@ -1,0 +1,80 @@
+# Local setup and WOMD access
+
+This workflow streams one scenario from a fixed Waymo Open Motion Dataset
+(WOMD) validation shard. It does not download the complete dataset, commit raw
+records, or place Google credentials in this repository.
+
+## 1. Review the data terms
+
+Before accessing WOMD, review the current
+[Waymo Dataset License Agreement for Non-Commercial Use](https://waymo.com/open/terms/)
+and the [Waymo Open Dataset FAQ](https://waymo.com/open/faq/). As reviewed for
+Stage 0 on August 9, 2026, the published agreement is dated March 2025. Among
+other conditions, it limits use to non-commercial purposes, requires specified
+attribution for derivative IP, restricts redistribution, and incorporates the
+Waymo website terms. The official terms—not this summary—govern all use.
+
+Use the official [download and access page](https://waymo.com/open/download/)
+to sign in and obtain access. Downloading or using the dataset constitutes
+agreement to the published terms.
+
+## 2. Configure credentials outside the repository
+
+Install the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install), then
+authenticate both the CLI and Application Default Credentials (ADC):
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+```
+
+The `gcloud` configuration and ADC file belong in their operating-system user
+configuration locations. Do not copy either into this repository and never
+commit an access token, service-account key, or credential JSON file.
+
+Run the metadata-only access check:
+
+```bash
+./scripts/verify_womd_access.sh
+```
+
+The command prints only the dataset version, split, shard name, object size,
+and boolean authentication status. It intentionally suppresses account names
+and tokens.
+
+## 3. Create the pinned Python environment
+
+Install [uv](https://docs.astral.sh/uv/), then run:
+
+```bash
+uv sync --frozen
+```
+
+The lockfile pins the complete transitive environment. Waymax itself is pinned
+to commit `a64dfec9be8576b60d9cecc94f406d9812d4a7d0`. The project uses Python 3.11
+because the system Python may be newer than TensorFlow supports.
+
+## 4. Run the deterministic smoke test
+
+```bash
+uv run planmargin-waymax-smoke-test \
+  --output artifacts/stage-0/waymax-smoke-test.json
+```
+
+The command streams only the first TFExample from validation shard
+`00000-of-00150`, preserves its `scenario/id`, completes the unmodified
+eight-second rollout twice, and fails if the trajectory hashes differ. It
+exports only a small report containing configuration, timing, peak process
+memory, hashes, and aggregate Waymax metrics.
+
+The default output path is ignored by Git. The checked-in Stage 0 report under
+`experiments/stage-0/` is intentionally limited to metadata and aggregate
+results. Raw WOMD data remains governed by its own license and must not be
+committed.
+
+## Optional local cache
+
+For later experiments, individual authorized shards may be copied under
+`data/raw/`; everything below `data/` except its README is ignored. Prefer
+streaming for this smoke test because a single compressed validation shard is
+about 770 MB and only its first record is needed.
