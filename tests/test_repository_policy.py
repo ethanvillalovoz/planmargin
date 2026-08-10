@@ -16,6 +16,10 @@ def test_per_scenario_womd_reports_are_not_committed() -> None:
         / "experiments"
         / "stage-0"
         / "waymax-smoke-test.json",
+        REPOSITORY_ROOT
+        / "experiments"
+        / "stage-0"
+        / "speed-mutation-smoke-test.json",
     )
 
     assert all(not path.exists() for path in prohibited_reports)
