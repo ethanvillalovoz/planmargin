@@ -13,6 +13,7 @@ dependencies = [
 planmargin-waymax-smoke-test = "planmargin.smoke_test:main"
 planmargin-select-scenarios = "planmargin.scenario_selection:main"
 planmargin-speed-mutation-smoke-test = "planmargin.speed_mutation:main"
+planmargin-controller-comparison = "planmargin.controller_comparison:main"
 
 [dependency-groups]
 dev = [

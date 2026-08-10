@@ -60,10 +60,18 @@ dimension remains future work. See the
 The feasibility spike will compare:
 
 - Waymax's built-in route-following IDM policy;
-- a deterministic custom conflict-aware route-following controller; and
+- an explicitly parameterized conservative IDM technical reference; and
 - optionally, a modified planner configuration representing a regression.
 
-The reference is a conservative technical controller, not a legal or human-driver model. A small learned planner may be added later, but it is not required for the core result.
+The Stage 0 reference lowers desired speed and acceleration while increasing
+spacing, time headway, desired closing gap, and lookahead. Both current
+controllers share Waymax's IDM implementation, so this first comparison tests
+configuration-specific behavior rather than independent planning algorithms.
+The reference is a conservative technical controller, not a legal or
+human-driver model. See the
+[controller-comparison protocol](controller-comparison.md). A custom controller
+or small learned planner may be added later, but neither is required for the
+first harness result.
 
 ## Acceptance gates
 
