@@ -23,4 +23,6 @@ mutation evidence is recorded under [`stage-0/`](stage-0/), including the
 [ten-scenario selection report](stage-0/scenario-selection.md) and the
 [bounded speed-mutation report](stage-0/speed-mutation.md). The
 [controller-comparison report](stage-0/controller-comparison.md) records the
-first tested-versus-reference harness run and its negative finding.
+first tested-versus-reference harness run and its negative finding. The
+[rollout-record report](stage-0/rollout-record.md) validates the versioned
+private export that will feed visualization and later analysis.

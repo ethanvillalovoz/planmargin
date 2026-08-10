@@ -59,10 +59,14 @@ Every rollout result should be traceable to:
 - hardware class
 - start, completion, and failure status
 
+The Stage 0 implementation serializes this contract as the versioned
+[rollout-record collection](rollout-record.md). Restricted identifiers and
+trajectories remain in ignored local artifacts; only the JSON Schema and
+privacy-safe aggregate report are committed.
+
 ## Zero-cost execution
 
 - Apple-silicon Mac: primary development, preprocessing, C++, DuckDB, Beam Direct Runner, frontend, and PyTorch MPS
 - CPU JAX: deterministic smoke tests and reduced batches
 - Colab Free: optional accelerated batches with resumable shards
 - GitHub Actions: small fixture-based checks only; no restricted data
-
