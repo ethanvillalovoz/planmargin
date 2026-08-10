@@ -20,23 +20,73 @@ def _controller(role: str) -> dict[str, object]:
 
 
 def _rollout(role: str, offset: float) -> dict[str, object]:
+    trajectory = {
+        "timestep": [10, 11],
+        "x_m": [offset, offset + 1.0],
+        "y_m": [0.0, 0.5],
+        "yaw_rad": [0.0, 0.1],
+        "speed_mps": [5.0, 5.1],
+        "valid": [True, True],
+    }
     return {
         "controller": _controller(role),
         "outputs_identical": True,
         "first_rollout_seconds": 1.0,
         "second_rollout_seconds": 0.5,
-        "trajectory_sha256": f"trajectory-{role}-{offset}",
+        "trajectory_sha256": rollout_record._content_sha256(trajectory),
         "non_sdc_input_sha256": f"input-{offset}",
         "input_unchanged_after_rollout": True,
         "outcome": {
             "success": True,
             "failure_reasons": [],
-            "final_timestep": 90,
+            "max_sdc_overlap": 0.0,
+            "max_sdc_offroad": 0.0,
+            "sdc_valid_all_steps": True,
+            "final_timestep": 11,
+            "expected_final_timestep": 11,
+            "first_failure_timestep": None,
+            "first_failure_reasons": [],
         },
-        "trajectory": {
-            "timestep": [10, 11],
-            "x_m": [offset, offset + 1.0],
-            "valid": [True, True],
+        "trajectory": trajectory,
+    }
+
+
+def _actor_track(offset: float) -> dict[str, list[object]]:
+    return {
+        "timestep": [10, 11],
+        "x_m": [offset, offset + 1.0],
+        "y_m": [2.0, 2.5],
+        "yaw_rad": [0.0, 0.1],
+        "length_m": [4.5, 4.5],
+        "width_m": [2.0, 2.0],
+        "valid": [True, True],
+    }
+
+
+def _scene_context() -> dict[str, object]:
+    return {
+        "coordinate_frame": "Synthetic local Cartesian coordinates",
+        "units": "meters",
+        "bounds_m": {
+            "min_x_m": -5.0,
+            "max_x_m": 10.0,
+            "min_y_m": -5.0,
+            "max_y_m": 10.0,
+        },
+        "roadgraph_features": [
+            {
+                "feature_type": 2,
+                "x_m": [-5.0, 10.0],
+                "y_m": [0.0, 0.0],
+            }
+        ],
+        "actors": {
+            "sdc": {"object_type": 1, "length_m": 4.8, "width_m": 2.0},
+            "mutation_target": {
+                "object_type": 1,
+                "original": _actor_track(0.0),
+                "counterfactual": _actor_track(0.5),
+            },
         },
     }
 
@@ -83,6 +133,7 @@ def _source(*, status: str = "passed") -> dict[str, object]:
         },
         "limitations": ["Synthetic test only."],
         "finding": {"policy_specific_avoidable_failure": False},
+        "scene_context": _scene_context(),
         "rollouts": {
             "original": {
                 "tested": _rollout("tested", 0.0),
@@ -99,7 +150,7 @@ def _source(*, status: str = "passed") -> dict[str, object]:
 def test_valid_export_contains_four_linked_rollout_records() -> None:
     collection = rollout_record.export_collection(_source())
 
-    assert collection["schema_version"] == "1.0.0"
+    assert collection["schema_version"] == "1.1.0"
     assert collection["collection_status"] == "complete"
     assert len(collection["records"]) == 4
     assert collection["comparison_finding"] == {
@@ -141,9 +192,11 @@ def test_export_is_deterministic() -> None:
 def test_record_id_changes_when_trajectory_changes() -> None:
     first = rollout_record.export_collection(_source())
     changed_source = _source()
-    changed_source["rollouts"]["original"]["tested"][
-        "trajectory_sha256"
-    ] = "different-trajectory"
+    changed_rollout = changed_source["rollouts"]["original"]["tested"]
+    changed_rollout["trajectory"]["x_m"][0] = 42.0
+    changed_rollout["trajectory_sha256"] = rollout_record._content_sha256(
+        changed_rollout["trajectory"]
+    )
     second = rollout_record.export_collection(changed_source)
 
     first_record = next(
@@ -216,6 +269,79 @@ def test_invalid_candidate_without_specific_reason_gets_explicit_fallback() -> N
     assert collection["records"][0]["rejection_reasons"] == [
         "comparison_not_ready"
     ]
+
+
+def test_early_invalid_candidate_can_omit_scene_context() -> None:
+    source = _source(status="rejected")
+    source.pop("rollouts")
+    source.pop("scene_context")
+
+    collection = rollout_record.export_collection(source)
+
+    assert collection["scene_context"] is None
+    assert collection["scene_context_sha256"] is None
+    assert rollout_record.validate_collection(collection) == []
+
+
+def test_validator_rejects_tampered_trajectory_content() -> None:
+    collection = rollout_record.export_collection(_source())
+    collection["records"][0]["trajectory"]["x_m"][0] = 999.0
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any("trajectory_sha256 does not match trajectory" in error for error in errors)
+
+
+def test_validator_rejects_tampered_scene_context() -> None:
+    collection = rollout_record.export_collection(_source())
+    collection["scene_context"]["roadgraph_features"][0]["x_m"][0] = 999.0
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert "scene_context_sha256 does not match scene context" in errors
+
+
+def test_validator_rejects_unequal_trajectory_arrays() -> None:
+    collection = rollout_record.export_collection(_source())
+    collection["records"][0]["trajectory"]["valid"].pop()
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any("trajectory arrays must be non-empty and equal-length" in error for error in errors)
+
+
+def test_validator_rejects_failure_without_first_failure_state() -> None:
+    collection = rollout_record.export_collection(_source())
+    outcome = collection["records"][0]["outcome"]
+    outcome["success"] = False
+    outcome["failure_reasons"] = ["sdc_overlap"]
+    outcome["max_sdc_overlap"] = 1.0
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any("failed rollout requires a first failure timestep" in error for error in errors)
+    assert any("failed rollout requires first failure reasons" in error for error in errors)
+
+
+def test_validator_reports_malformed_arrays_without_raising() -> None:
+    collection = rollout_record.export_collection(_source())
+    trajectory = collection["records"][0]["trajectory"]
+    trajectory["timestep"] = [10, "bad"]
+    trajectory["valid"] = [False, False]
+    track = collection["scene_context"]["actors"]["mutation_target"]["original"]
+    track["length_m"] = ["bad", "bad"]
+    outcome = collection["records"][0]["outcome"]
+    outcome["success"] = False
+    outcome["failure_reasons"] = [{"invalid": "reason"}]
+    outcome["first_failure_timestep"] = 11
+    outcome["first_failure_reasons"] = [{"invalid": "reason"}]
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any("timesteps must be strictly increasing integers" in error for error in errors)
+    assert any("must contain at least one valid state" in error for error in errors)
+    assert any("length_m must contain finite numbers" in error for error in errors)
+    assert any("failure_reasons must contain strings" in error for error in errors)
 
 
 def test_invalid_candidate_names_failed_acceptance_gates() -> None:
@@ -302,7 +428,7 @@ def test_committed_json_schema_matches_exporter_constants() -> None:
     schema_path = (
         Path(__file__).parents[1]
         / "schemas"
-        / "rollout-record-collection-v1.schema.json"
+        / "rollout-record-collection-v1.1.schema.json"
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
@@ -319,7 +445,7 @@ def test_committed_json_schema_accepts_exported_collections(
     schema_path = (
         Path(__file__).parents[1]
         / "schemas"
-        / "rollout-record-collection-v1.schema.json"
+        / "rollout-record-collection-v1.1.schema.json"
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
@@ -337,7 +463,7 @@ def test_committed_json_schema_rejects_inconsistent_mutation_state() -> None:
     schema_path = (
         Path(__file__).parents[1]
         / "schemas"
-        / "rollout-record-collection-v1.schema.json"
+        / "rollout-record-collection-v1.1.schema.json"
     )
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     collection = rollout_record.export_collection(_source())

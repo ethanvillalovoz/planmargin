@@ -51,6 +51,7 @@ experiments/**/waymax-smoke-test.json
 experiments/**/speed-mutation-smoke-test.json
 experiments/**/controller-comparison.json
 experiments/**/rollout-records.json
+experiments/**/trajectory-comparison.html
 *.tfrecord
 *.tfrecords
 *.parquet

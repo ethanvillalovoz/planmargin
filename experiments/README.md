@@ -25,4 +25,6 @@ mutation evidence is recorded under [`stage-0/`](stage-0/), including the
 [controller-comparison report](stage-0/controller-comparison.md) records the
 first tested-versus-reference harness run and its negative finding. The
 [rollout-record report](stage-0/rollout-record.md) validates the versioned
-private export that will feed visualization and later analysis.
+private export that will feed visualization and later analysis. The
+[trajectory-visualization report](stage-0/trajectory-visualization.md) records
+the first responsive spatial comparison generated only from that export.

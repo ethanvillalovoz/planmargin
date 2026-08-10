@@ -79,7 +79,9 @@ uv run --frozen planmargin-controller-comparison \
 ```
 
 The output contains restricted identifiers and per-scenario trajectories. It
-must stay under `artifacts/` and must never be committed.
+must stay under `artifacts/` and must never be committed. The command writes
+the full report only to that ignored file and prints a non-sensitive status
+summary to the terminal.
 
 ## Reference limitations
 

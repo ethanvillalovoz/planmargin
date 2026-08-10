@@ -2,7 +2,7 @@
 
 Issue #1 defines the smallest versioned record needed to reproduce and inspect
 a controller rollout. The contract is implemented by
-[`rollout-record-collection-v1.schema.json`](../schemas/rollout-record-collection-v1.schema.json)
+[`rollout-record-collection-v1.1.schema.json`](../schemas/rollout-record-collection-v1.1.schema.json)
 and by a deterministic structural validator in `planmargin.rollout_record`.
 
 ## Collection model
@@ -26,10 +26,10 @@ identifier in filenames or public reports. The collection also retains the
 comparison-level policy-specific finding computed from the four independent
 outcomes.
 
-The v1 collection and record types are:
+The current v1.1 collection and record types are:
 
 ```text
-schema_version: 1.0.0
+schema_version: 1.1.0
 collection type: planmargin.rollout_record_collection
 record type: planmargin.rollout_record
 ```
@@ -48,7 +48,13 @@ Each completed rollout record retains:
   hardware class;
 - non-SDC input and SDC trajectory hashes, repeatability result, input
   immutability result, and timings; and
-- the per-step SDC trajectory used by the next visualization milestone.
+- the per-step SDC trajectory and first-failure timestep; and
+- one collection-level, bounded scene context containing aligned roadgraph
+  geometry, SDC dimensions, and original/counterfactual mutation-target tracks.
+
+Schema 1.0.0 remains committed as the immutable initial contract. Version
+1.1.0 adds the minimum spatial context required to regenerate the Stage 0
+comparison without reopening WOMD.
 
 Original and counterfactual records retain the same accepted mutation
 configuration; the explicit `mutation.applied` field distinguishes whether it
@@ -76,12 +82,18 @@ The exporter uses canonical JSON hashing for comparison and record IDs and does
 not add timestamps, so the same source report produces the same collection.
 The validator requires:
 
-- the v1 schema URI and semantic version;
+- the v1.1 schema URI and semantic version;
 - one shared comparison key and unique record IDs, recomputed from their
   documented identity fields;
 - complete controller-set, dataset-version, Git-revision, seed, and hardware
   context;
 - exactly four variant/role pairs for a complete collection; and
+- ordered scene bounds, roadgraph features, SDC dimensions, and equal-length
+  mutation-target tracks for a complete collection; and
+- canonical SHA-256 agreement for every SDC trajectory and the complete scene
+  context, so edits to the evidence cannot retain valid audit identifiers;
+- equal-length, finite trajectory arrays and internally consistent success,
+  failure-reason, failure-time, and final-timestep fields; and
 - explicit rejection reasons with no trajectory or outcome for invalid
   candidates.
 
