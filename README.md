@@ -42,8 +42,8 @@ The first experiment will use a deliberately narrow scope:
 
 - **Data:** Waymo Open Motion Dataset (WOMD)
 - **Simulator:** Waymax
-- **Scenario family:** unprotected left turns, with lead-vehicle braking as the feasibility fallback
-- **Mutations:** arrival-time offset and speed multiplier for one non-ego vehicle
+- **Scenario family:** lead-vehicle braking, selected after the bounded unprotected-left-turn probe triggered the feasibility fallback
+- **Mutations:** braking-onset offset and speed multiplier for the lead vehicle
 - **Baseline:** uniform random search
 - **Proposed method:** constrained Bayesian optimization
 - **Primary metrics:** valid failure discovery rate, simulations to first valid failure, minimum mutation distance, realism pass rate, and reference-controller avoidability rate
@@ -80,7 +80,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 ## Roadmap
 
 - [x] Validate credential-safe WOMD access and replay one scenario twice
-- [ ] Load and replay ten WOMD scenarios in Waymax
+- [x] Select and replay ten WOMD interaction scenarios in Waymax
 - [ ] Apply one bounded speed or timing mutation
 - [ ] Run tested and reference controllers
 - [ ] Export trajectories and evaluation metrics
@@ -92,14 +92,18 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [ ] Add scalable processing and profiling
 - [ ] Build the engineer-facing scenario debugger
 
-See the [local setup guide](docs/setup.md), [project specification](docs/project-spec.md),
+See the [local setup guide](docs/setup.md),
+[scenario-selection protocol](docs/scenario-selection.md),
+[project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md) for details.
 
 ## Reproducibility principles
 
-- Every result must retain its scenario ID, code revision, configuration, seed, and metric definitions.
-- Original and derived Waymo data will not be committed to this repository.
+- Every local rollout result must retain its scenario ID, code revision,
+  configuration, seed, and metric definitions.
+- Raw and per-scenario derived Waymo data will not be committed. Public reports
+  contain only permitted aggregate results and data-free methodology.
 - Tiny synthetic fixtures will test geometry and evaluation behavior without requiring dataset access.
 - Unsuccessful experiments will be documented when they change the project direction.
 - Results will be reported with limitations rather than converted into unsupported safety claims.

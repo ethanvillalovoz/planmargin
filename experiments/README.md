@@ -13,8 +13,13 @@ Each experiment will receive a versioned configuration and a short report contai
 - results and uncertainty
 - limitations and follow-up decision
 
-Large outputs, checkpoints, and restricted data are ignored. Small aggregate tables may be committed only after confirming that their publication complies with the applicable dataset terms.
+Large outputs, checkpoints, raw data, identifiers, and per-scenario derived
+records are ignored. Public experiment notes are limited to methodology and
+permitted aggregate results. Complete local manifests belong under the ignored
+`artifacts/` directory.
 
 The completed access and deterministic-baseline evidence is recorded under
-[`stage-0/`](stage-0/). The first planned mutation experiment is
+[`stage-0/`](stage-0/), including the
+[ten-scenario selection report](stage-0/scenario-selection.md). The first
+planned mutation experiment is
 `exp-0001-waymax-mutation-smoke-test`.

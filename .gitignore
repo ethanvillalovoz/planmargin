@@ -46,6 +46,8 @@ artifacts/
 checkpoints/
 outputs/
 runs/
+experiments/**/scenario-selection.json
+experiments/**/waymax-smoke-test.json
 *.tfrecord
 *.tfrecords
 *.parquet
@@ -57,4 +59,3 @@ runs/
 *.log
 tmp/
 .tmp/
-
