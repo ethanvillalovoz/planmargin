@@ -62,8 +62,11 @@ lead-vehicle mutation. The subsequent
 tested and reference configurations under identical original and mutated
 trajectories. The subsequent
 [rollout-record report](rollout-record.md) validates the versioned private
-export. The next experiment can render the first original-versus-counterfactual
-comparison directly from that record.
+export. The subsequent
+[trajectory-visualization report](trajectory-visualization.md) validates the
+first original-versus-counterfactual comparison generated directly from that
+record. The next experiment can validate the initial scenario family before
+the random-search baseline is implemented.
 
 ## Dataset attribution
 

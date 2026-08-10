@@ -346,8 +346,11 @@ def _insight_title(records: dict[tuple[str, str], dict[str, Any]]) -> str:
 
 def _mutation_items(record: dict[str, Any]) -> str:
     parameters = record["mutation"]["parameters"]
+    mutation_name = str(
+        record["mutation"].get("mutation_type", "unknown")
+    ).replace("_", " ")
     items = [
-        ("Mutation", record["mutation"].get("mutation_type", "unknown")),
+        ("Mutation", mutation_name),
         *[(str(name).replace("_", " ").title(), value) for name, value in sorted(parameters.items())],
     ]
     return "".join(

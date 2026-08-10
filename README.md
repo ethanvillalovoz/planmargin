@@ -7,7 +7,8 @@ PlanMargin is an independent research and engineering project that searches for 
 > **Current status:** Stage 0 — feasibility. WOMD access, deterministic Waymax
 > replay, scenario selection, one bounded non-ego speed mutation, and the first
 > tested-versus-reference comparison harness are validated. A versioned private
-> rollout-record export now supports downstream visualization; no
+> rollout-record export and the first static spatial comparison are validated;
+> no
 > planner-performance claims have been made.
 
 ## The problem
@@ -86,7 +87,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Apply one bounded speed or timing mutation
 - [x] Run tested and reference controllers
 - [x] Export trajectories and evaluation metrics
-- [ ] Produce the first original-versus-counterfactual visualization
+- [x] Produce the first original-versus-counterfactual visualization
 - [ ] Validate the initial scenario family
 - [ ] Implement random-search baseline
 - [ ] Implement constrained Bayesian search
