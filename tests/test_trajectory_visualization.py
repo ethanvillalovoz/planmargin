@@ -76,3 +76,19 @@ def test_render_rejects_invalid_candidate_collection() -> None:
         match="complete collection",
     ):
         trajectory_visualization.render_html(collection)
+
+
+def test_invalid_states_split_trajectory_segments() -> None:
+    scene = _source()["scene_context"]
+    transform = trajectory_visualization._plot_transform(scene)
+
+    segments = trajectory_visualization._polyline_segments(
+        [0.0, 1.0, 2.0, 3.0],
+        [0.0, 1.0, 2.0, 3.0],
+        [True, True, False, True],
+        scene,
+        transform,
+    )
+
+    assert len(segments) == 1
+    assert len(segments[0].split()) == 2

@@ -173,9 +173,9 @@ def _synthetic_scenario(*, target_offset: float) -> SimpleNamespace:
         valid=np.ones((2, steps), dtype=bool),
     )
     roadgraph = SimpleNamespace(
-        x=np.array([-5.0, 0.0, 5.0, 10.0, 15.0, 50.0]),
+        x=np.array([-5.0, 0.0, 5.0, 50.0, 10.0, 15.0]),
         y=np.zeros(6),
-        ids=np.array([1, 1, 1, 1, 1, 2]),
+        ids=np.array([1, 1, 1, 1, 1, 1]),
         types=np.array([2, 2, 2, 2, 2, 2]),
         valid=np.ones(6, dtype=bool),
     )
@@ -214,12 +214,20 @@ def test_scene_context_aligns_roadgraph_and_mutation_target_tracks() -> None:
     assert context["roadgraph_features"] == [
         {
             "feature_type": 2,
-            "x_m": [-5.0, 0.0, 5.0, 10.0, 15.0],
-            "y_m": [0.0, 0.0, 0.0, 0.0, 0.0],
-        }
+            "x_m": [-5.0, 0.0, 5.0],
+            "y_m": [0.0, 0.0, 0.0],
+        },
+        {
+            "feature_type": 2,
+            "x_m": [10.0, 15.0],
+            "y_m": [0.0, 0.0],
+        },
     ]
     target = context["actors"]["mutation_target"]
     assert target["counterfactual"]["x_m"][0] == (
         target["original"]["x_m"][0] + 1.0
     )
-    assert "feature_id" not in context["roadgraph_features"][0]
+    assert all(
+        "feature_id" not in feature
+        for feature in context["roadgraph_features"]
+    )

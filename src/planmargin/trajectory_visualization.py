@@ -81,20 +81,26 @@ def _point(
     )
 
 
-def _polyline_points(
+def _polyline_segments(
     x_values: list[float],
     y_values: list[float],
     valid_values: list[bool] | None,
     scene: dict[str, Any],
     transform: tuple[float, float, float],
-) -> str:
-    points = []
+) -> list[str]:
+    segments: list[str] = []
+    points: list[str] = []
     for index, (x_m, y_m) in enumerate(zip(x_values, y_values)):
         if valid_values is not None and not valid_values[index]:
+            if len(points) >= 2:
+                segments.append(" ".join(points))
+            points = []
             continue
         x, y = _point(x_m, y_m, scene, transform)
         points.append(f"{x:.2f},{y:.2f}")
-    return " ".join(points)
+    if len(points) >= 2:
+        segments.append(" ".join(points))
+    return segments
 
 
 def _vehicle_polygon(
@@ -166,16 +172,17 @@ def _roadgraph_layer(
 ) -> str:
     marks = []
     for feature in scene["roadgraph_features"]:
-        points = _polyline_points(
+        segments = _polyline_segments(
             feature["x_m"],
             feature["y_m"],
             None,
             scene,
             transform,
         )
-        marks.append(
+        marks.extend(
             f'<polyline class="{_road_class(feature["feature_type"])}" '
             f'points="{points}" />'
+            for points in segments
         )
     return "".join(marks)
 
@@ -210,8 +217,12 @@ def _path_and_vehicle(
 ) -> str:
     role = record["controller_role"]
     trace = record["trajectory"]
-    points = _polyline_points(
+    segments = _polyline_segments(
         trace["x_m"], trace["y_m"], trace["valid"], scene, transform
+    )
+    path_marks = "".join(
+        f'<polyline class="trajectory trajectory-{role}" points="{points}" />'
+        for points in segments
     )
     index = _trace_index_at_or_before(trace, highlight_timestep)
     dimensions = scene["actors"]["sdc"]
@@ -230,7 +241,7 @@ def _path_and_vehicle(
     label_y = end_y - 9 if role == "tested" else end_y + 17
     label = "Tested SDC" if role == "tested" else "Reference SDC"
     return (
-        f'<polyline class="trajectory trajectory-{role}" points="{points}" />'
+        f"{path_marks}"
         f'<polygon class="vehicle vehicle-{role}" points="{polygon}" />'
         f'<text class="direct-label label-{role}" x="{end_x + 8:.2f}" '
         f'y="{label_y:.2f}">{label}</text>'
@@ -245,8 +256,12 @@ def _target_layer(
     highlight_timestep: int,
 ) -> str:
     track = scene["actors"]["mutation_target"][variant]
-    points = _polyline_points(
+    segments = _polyline_segments(
         track["x_m"], track["y_m"], track["valid"], scene, transform
+    )
+    path_marks = "".join(
+        f'<polyline class="trajectory trajectory-target" points="{points}" />'
+        for points in segments
     )
     index = _trace_index_at_or_before(track, highlight_timestep)
     polygon = _vehicle_polygon(
@@ -262,7 +277,7 @@ def _target_layer(
         track["x_m"][index], track["y_m"][index], scene, transform
     )
     return (
-        f'<polyline class="trajectory trajectory-target" points="{points}" />'
+        f"{path_marks}"
         f'<polygon class="vehicle vehicle-target" points="{polygon}" />'
         f'<text class="direct-label label-target" x="{x + 8:.2f}" '
         f'y="{y - 9:.2f}">Mutation target</text>'

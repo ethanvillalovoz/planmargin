@@ -357,26 +357,34 @@ def _roadgraph_features(
         & (y_values >= bounds["min_y_m"])
         & (y_values <= bounds["max_y_m"])
     )
-    grouped: dict[tuple[int, int], dict[str, Any]] = {}
-    for x_m, y_m, feature_id, feature_type in zip(
-        x_values[visible], y_values[visible], ids[visible], types[visible]
-    ):
-        key = (int(feature_id), int(feature_type))
-        feature = grouped.setdefault(
-            key,
-            {
-                "feature_type": int(feature_type),
+    features: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    current_key: tuple[int, int] | None = None
+
+    def finish_current() -> None:
+        nonlocal current
+        if current is not None and len(current["x_m"]) >= 2:
+            features.append(current)
+        current = None
+
+    for index, is_visible in enumerate(visible):
+        if not is_visible:
+            finish_current()
+            current_key = None
+            continue
+        key = (int(ids[index]), int(types[index]))
+        if key != current_key:
+            finish_current()
+            current = {
+                "feature_type": int(types[index]),
                 "x_m": [],
                 "y_m": [],
-            },
-        )
-        feature["x_m"].append(round(float(x_m), 4))
-        feature["y_m"].append(round(float(y_m), 4))
-    return [
-        feature
-        for feature in grouped.values()
-        if len(feature["x_m"]) >= 2
-    ]
+            }
+            current_key = key
+        current["x_m"].append(round(float(x_values[index]), 4))
+        current["y_m"].append(round(float(y_values[index]), 4))
+    finish_current()
+    return features
 
 
 def build_scene_context(
