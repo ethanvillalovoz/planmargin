@@ -1,0 +1,60 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# C++ and CMake
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+*.o
+*.a
+*.dylib
+
+# Node and Angular
+node_modules/
+.angular/
+coverage/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+
+# Dataset and generated artifacts
+data/*
+!data/README.md
+artifacts/
+checkpoints/
+outputs/
+runs/
+*.tfrecord
+*.tfrecords
+*.parquet
+*.arrow
+*.duckdb
+*.db
+
+# Logs and temporary files
+*.log
+tmp/
+.tmp/
+
