@@ -129,6 +129,14 @@ def _finite_summary(values: np.ndarray, valid: np.ndarray) -> dict[str, Any]:
 def _metric_summary(environment: Any, state: Any) -> dict[str, Any]:
     """Export small aggregates from Waymax's built-in final-state metrics."""
     is_sdc = np.asarray(state.object_metadata.is_sdc, dtype=bool)
+    object_valid = np.squeeze(
+        np.asarray(state.current_sim_trajectory.valid, dtype=bool), axis=-1
+    )
+    if object_valid.shape != is_sdc.shape:
+        raise RuntimeError(
+            "Object-valid and object-metadata masks have different shapes: "
+            f"{object_valid.shape} != {is_sdc.shape}."
+        )
     sdc_indices = np.flatnonzero(is_sdc)
     if sdc_indices.size != 1:
         raise RuntimeError(f"Expected exactly one SDC, found {sdc_indices.size}.")
@@ -137,7 +145,10 @@ def _metric_summary(environment: Any, state: Any) -> dict[str, Any]:
     summary: dict[str, Any] = {}
     for name, metric in environment.metrics(state).items():
         values = np.asarray(metric.value)
-        valid = np.asarray(metric.valid, dtype=bool)
+        # Some Waymax metrics, notably offroad, mark padded object slots as
+        # metric-valid. Exclude slots without a valid simulated object before
+        # computing research-facing aggregates.
+        valid = np.asarray(metric.valid, dtype=bool) & object_valid
         item = _finite_summary(values, valid)
         item["sdc_valid"] = bool(valid[sdc_index])
         item["sdc_value"] = (

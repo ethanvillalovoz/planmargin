@@ -37,10 +37,10 @@ The run passed. Both 80-step rollouts produced the same trajectory SHA-256:
 04ab310d021d465df898c0d138c7c3b53a80ea92bdae07b6c1dde76f8dbd793a
 ```
 
-The observed process peak resident memory was 1,525,153,792 bytes (about
-1.42 GiB). The first rollout, including JIT compilation, took 0.097 seconds;
-the warm repeat took 0.083 seconds. Streaming and parsing the first 2.75 MB
-record took 6.04 seconds during this run. These are feasibility observations,
+The observed process peak resident memory was 1,522,040,832 bytes (about
+1.42 GiB). The first rollout, including JIT compilation, took 0.110 seconds;
+the warm repeat took 0.087 seconds. Streaming and parsing the first 2.75 MB
+record took 4.78 seconds during this run. These are feasibility observations,
 not controlled performance benchmarks.
 
 At the final timestep, the SDC had zero built-in Waymax log divergence,
@@ -54,8 +54,8 @@ It contains no raw WOMD trajectory or map data.
 This result validates access, parsing, environment compatibility, full-horizon
 execution, and exact repeatability for one scenario. It does not validate a
 learned planner, mutation logic, scenario representativeness, planner quality,
-or safety. The offroad aggregate includes all metric-valid object slots and is
-not used as a project claim; only the SDC baseline value is the integrity check.
+or safety. Metric aggregates exclude padded object slots and are not used as a
+project claim; only the SDC baseline values are integrity checks.
 
 The next Stage 0 step is to select ten scenarios deliberately and verify that
 their baseline rollouts satisfy the same reproducibility contract before any

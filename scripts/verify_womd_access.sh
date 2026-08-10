@@ -20,18 +20,17 @@ if [[ "${active_account_count}" -lt 1 ]]; then
   exit 1
 fi
 
-# TensorFlow's gs:// reader uses Application Default Credentials (ADC).
-if ! gcloud auth application-default print-access-token >/dev/null 2>&1; then
-  echo "ERROR: ADC is unavailable; run 'gcloud auth application-default login'." >&2
-  exit 1
-fi
-
-size_bytes="$(
+# TensorFlow's gs:// reader uses Application Default Credentials (ADC), which
+# may represent a different identity from the active gcloud CLI account. Feed
+# the ADC token to gcloud through a process-substitution file descriptor so the
+# token is never printed, stored in the repository, or exposed as an argument.
+if ! size_bytes="$(
   gcloud storage objects describe "${shard_uri}" \
+    --access-token-file=<(gcloud auth application-default print-access-token 2>/dev/null) \
     --format='value(size)' 2>/dev/null
-)"
-if [[ -z "${size_bytes}" ]]; then
-  echo "ERROR: WOMD shard metadata could not be read." >&2
+)" || [[ -z "${size_bytes}" ]]; then
+  echo "ERROR: ADC could not read WOMD shard metadata." >&2
+  echo "Run 'gcloud auth application-default login' and confirm dataset access." >&2
   exit 1
 fi
 
@@ -40,5 +39,5 @@ printf 'split=validation\n'
 printf 'shard=00000-of-00150\n'
 printf 'size_bytes=%s\n' "${size_bytes}"
 printf 'active_account_configured=true\n'
-printf 'application_default_credentials_configured=true\n'
+printf 'application_default_credentials_dataset_access=true\n'
 printf 'access_check=passed\n'

@@ -1,6 +1,7 @@
 """Data-free unit tests for smoke-test reporting helpers."""
 
 import hashlib
+from types import SimpleNamespace
 
 import jax.numpy as jnp
 import numpy as np
@@ -33,3 +34,34 @@ def test_finite_summary_excludes_invalid_and_non_finite_values() -> None:
     )
 
     assert result == {"valid_count": 2, "mean": 2.0, "max": 3.0}
+
+
+def test_metric_summary_excludes_padded_object_slots() -> None:
+    state = SimpleNamespace(
+        object_metadata=SimpleNamespace(
+            is_sdc=np.array([True, False, False]),
+        ),
+        current_sim_trajectory=SimpleNamespace(
+            valid=np.array([[True], [False], [False]]),
+        ),
+    )
+    environment = SimpleNamespace(
+        metrics=lambda _: {
+            "offroad": SimpleNamespace(
+                value=np.array([0.0, 1.0, 1.0]),
+                valid=np.array([True, True, True]),
+            )
+        }
+    )
+
+    result = smoke_test._metric_summary(environment, state)
+
+    assert result == {
+        "offroad": {
+            "valid_count": 1,
+            "mean": 0.0,
+            "max": 0.0,
+            "sdc_valid": True,
+            "sdc_value": 0.0,
+        }
+    }

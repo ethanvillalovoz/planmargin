@@ -38,7 +38,8 @@ Run the metadata-only access check:
 ./scripts/verify_womd_access.sh
 ```
 
-The command prints only the dataset version, split, shard name, object size,
+The command uses ADC—not merely the active CLI identity—to read the shard's
+metadata. It prints only the dataset version, split, shard name, object size,
 and boolean authentication status. It intentionally suppresses account names
 and tokens.
 

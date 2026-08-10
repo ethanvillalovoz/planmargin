@@ -9,10 +9,10 @@
     },
     "offroad": {
       "max": 1.0,
-      "mean": 0.03125,
+      "mean": 0.2857142984867096,
       "sdc_valid": true,
       "sdc_value": 0.0,
-      "valid_count": 128
+      "valid_count": 14
     },
     "overlap": {
       "max": 0.0,
@@ -42,12 +42,12 @@
     "tensorflow": "2.21.0"
   },
   "performance": {
-    "data_load_seconds": 6.043665,
-    "first_rollout_seconds_including_jit": 0.096985,
-    "metric_seconds": 1.331908,
-    "process_peak_rss_bytes": 1525153792,
-    "second_rollout_seconds_warm": 0.082672,
-    "total_seconds": 7.74398
+    "data_load_seconds": 4.783902,
+    "first_rollout_seconds_including_jit": 0.109699,
+    "metric_seconds": 1.580803,
+    "process_peak_rss_bytes": 1522040832,
+    "second_rollout_seconds_warm": 0.087193,
+    "total_seconds": 6.771744
   },
   "publication_note": "This report contains configuration, a permitted identifier, hashes, and aggregate metrics only; it does not contain raw WOMD records.",
   "schema_version": 1,
