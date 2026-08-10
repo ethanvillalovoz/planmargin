@@ -29,6 +29,8 @@ def test_render_has_responsive_text_fallback_without_remote_dependencies() -> No
 
     assert "@media (max-width: 760px)" in rendered
     assert "<table>" in rendered
+    assert 'data-label="First failure"' in rendered
+    assert "tbody tr { display: grid" in rendered
     assert "<script" not in rendered
     assert "https://" not in rendered
     assert "synthetic-scenario" not in rendered

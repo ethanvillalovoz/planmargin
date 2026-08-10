@@ -370,12 +370,12 @@ def _metrics_rows(records: dict[tuple[str, str], dict[str, Any]]) -> str:
             rows.append(
                 "<tr>"
                 f'<th scope="row">{_text(variant.capitalize())}</th>'
-                f"<td>{_text(role.capitalize())}</td>"
-                f'<td><span class="status status-{status.lower()}">{status}</span></td>'
-                f"<td>{_number(outcome.get('max_sdc_overlap'))}</td>"
-                f"<td>{_number(outcome.get('max_sdc_offroad'))}</td>"
-                f"<td>{_text(failure_text)}</td>"
-                f"<td>{_text(outcome.get('final_timestep'))}</td>"
+                f'<td data-label="Controller">{_text(role.capitalize())}</td>'
+                f'<td data-label="Outcome"><span class="status status-{status.lower()}">{status}</span></td>'
+                f'<td data-label="Max overlap">{_number(outcome.get("max_sdc_overlap"))}</td>'
+                f'<td data-label="Max offroad">{_number(outcome.get("max_sdc_offroad"))}</td>'
+                f'<td data-label="First failure">{_text(failure_text)}</td>'
+                f'<td data-label="Final timestep">{_text(outcome.get("final_timestep"))}</td>'
                 "</tr>"
             )
     return "".join(rows)
@@ -455,7 +455,23 @@ def render_html(collection: dict[str, Any]) -> str:
     .status-pass {{ color: #17633a; background: #e8f5ed; }} .status-fail {{ color: #8f1d17; background: #fcebea; }}
     .notes {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; color: var(--muted); font-size: 12px; }}
     .notes p {{ margin: 0; }}
-    @media (max-width: 760px) {{ main {{ width: min(100% - 20px, 600px); margin-top: 18px; }} .panels {{ grid-template-columns: 1fr; }} .notes {{ grid-template-columns: 1fr; }} }}
+    @media (max-width: 760px) {{
+      main {{ width: calc(100% - 20px); max-width: 600px; margin-top: 18px; }}
+      .panels, .notes {{ grid-template-columns: 1fr; }}
+      .table-wrap {{ overflow: visible; }}
+      table, tbody {{ display: block; }}
+      caption {{ display: block; width: 100%; }}
+      thead {{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }}
+      tbody {{ padding: 0 14px 14px; }}
+      tbody tr {{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; padding: 14px 0; border-top: 1px solid #e7ebf0; }}
+      tbody th, tbody td {{ display: block; padding: 0; border: 0; white-space: normal; }}
+      tbody th {{ grid-column: 1 / -1; font-size: 14px; }}
+      tbody td::before {{ display: block; content: attr(data-label); margin-bottom: 2px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }}
+      .panel-title {{ font-size: 19px; }}
+      .panel-subtitle {{ font-size: 14px; }}
+      .direct-label {{ font-size: 15px; }}
+      .scale-bar text {{ font-size: 13px; }}
+    }}
     @media print {{ body {{ background: white; }} main {{ width: 100%; margin: 0; }} .panels {{ gap: 8px; }} }}
   </style>
 </head>
