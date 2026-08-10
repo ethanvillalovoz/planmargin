@@ -19,7 +19,8 @@ A successful controller comparison exports one collection with four records:
 Every record has a unique deterministic record ID derived from its schema
 version, comparison key, variant, controller, rollout Git revision, and
 trajectory hash. All four share the same deterministic comparison key, which
-is derived from private scenario identity and mutation configuration. The key
+is derived from private scenario identity, mutation-target object, mutation
+schema, and mutation configuration. The key
 links records—and remains stable across reruns—without exposing the source
 identifier in filenames or public reports. The collection also retains the
 comparison-level policy-specific finding computed from the four independent
@@ -65,7 +66,9 @@ It produces one `invalid_candidate` record with:
 - a non-empty, deduplicated rejection-reason list.
 
 If an upstream rejection lacks a specific reason, the exporter records
-`comparison_not_ready` rather than silently dropping the candidate.
+the names of any failed boolean acceptance gates. It uses
+`comparison_not_ready` only when neither the mutation validators nor the
+acceptance map provides a specific reason.
 
 ## Determinism and validation
 
@@ -74,7 +77,8 @@ not add timestamps, so the same source report produces the same collection.
 The validator requires:
 
 - the v1 schema URI and semantic version;
-- one shared comparison key and unique record IDs;
+- one shared comparison key and unique record IDs, recomputed from their
+  documented identity fields;
 - complete controller-set, dataset-version, Git-revision, seed, and hardware
   context;
 - exactly four variant/role pairs for a complete collection; and

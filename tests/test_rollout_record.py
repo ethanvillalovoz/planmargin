@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from planmargin import rollout_record
 
@@ -51,6 +52,7 @@ def _source(*, status: str = "passed") -> dict[str, object]:
             "scenario_id": "synthetic-scenario",
             "source_shard": "synthetic-shard",
             "record_index": 0,
+            "mutated_object_index": 2,
         },
         "mutation": {
             "schema_version": 1,
@@ -161,6 +163,18 @@ def test_record_id_changes_when_trajectory_changes() -> None:
     assert first_record["record_id"] != second_record["record_id"]
 
 
+def test_comparison_key_changes_when_mutation_target_changes() -> None:
+    first_source = _source()
+    first_source["dataset"]["mutated_object_index"] = 2
+    second_source = _source()
+    second_source["dataset"]["mutated_object_index"] = 3
+
+    first = rollout_record.export_collection(first_source)
+    second = rollout_record.export_collection(second_source)
+
+    assert first["comparison_key"] != second["comparison_key"]
+
+
 def test_records_retain_required_reproducibility_context() -> None:
     record = rollout_record.export_collection(_source())["records"][0]
 
@@ -204,6 +218,25 @@ def test_invalid_candidate_without_specific_reason_gets_explicit_fallback() -> N
     ]
 
 
+def test_invalid_candidate_names_failed_acceptance_gates() -> None:
+    source = _source(status="rejected")
+    source["acceptance"] = {
+        "mutation_core_accepted": True,
+        "all_rollouts_deterministic": False,
+        "identical_non_sdc_inputs_by_variant": {
+            "original": True,
+            "mutated": False,
+        },
+    }
+
+    collection = rollout_record.export_collection(source)
+
+    assert collection["records"][0]["rejection_reasons"] == [
+        "acceptance_gate_failed:all_rollouts_deterministic",
+        "acceptance_gate_failed:identical_non_sdc_inputs_by_variant.mutated",
+    ]
+
+
 def test_validator_detects_cross_collection_key_mismatch() -> None:
     collection = rollout_record.export_collection(_source())
     collection["records"][0]["comparison_key"] = "cmp_wrong"
@@ -220,6 +253,27 @@ def test_validator_rejects_malformed_collection_identifier() -> None:
     errors = rollout_record.validate_collection(collection)
 
     assert "comparison_key is missing or invalid" in errors
+
+
+def test_validator_rejects_well_formed_but_incorrect_identifiers() -> None:
+    collection = rollout_record.export_collection(_source())
+    forged_key = "cmp_" + "0" * 64
+    forged_record_id = "rec_" + "0" * 64
+    collection["comparison_key"] = forged_key
+    for record in collection["records"]:
+        record["comparison_key"] = forged_key
+        record["record_id"] = forged_record_id
+
+    errors = rollout_record.validate_collection(collection)
+
+    assert any(
+        "comparison_key does not match its identity" in error
+        for error in errors
+    )
+    assert any(
+        "record_id does not match its identity" in error
+        for error in errors
+    )
 
 
 def test_validator_detects_variant_mutation_mismatch() -> None:
@@ -256,6 +310,45 @@ def test_committed_json_schema_matches_exporter_constants() -> None:
     assert schema["properties"]["schema_version"]["const"] == (
         rollout_record.SCHEMA_VERSION
     )
+
+
+@pytest.mark.parametrize("status", ["passed", "rejected"])
+def test_committed_json_schema_accepts_exported_collections(
+    status: str,
+) -> None:
+    schema_path = (
+        Path(__file__).parents[1]
+        / "schemas"
+        / "rollout-record-collection-v1.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    source = _source(status=status)
+    if status == "rejected":
+        source["mutation"]["rejection_reasons"] = ["synthetic_rejection"]
+        source.pop("rollouts")
+
+    Draft202012Validator(schema).validate(
+        rollout_record.export_collection(source)
+    )
+
+
+def test_committed_json_schema_rejects_inconsistent_mutation_state() -> None:
+    schema_path = (
+        Path(__file__).parents[1]
+        / "schemas"
+        / "rollout-record-collection-v1.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    collection = rollout_record.export_collection(_source())
+    counterfactual = next(
+        record
+        for record in collection["records"]
+        if record["variant"] == "counterfactual"
+    )
+    counterfactual["mutation"]["applied"] = False
+
+    assert not Draft202012Validator(schema).is_valid(collection)
 
 
 def test_export_does_not_mutate_source_report() -> None:

@@ -73,10 +73,11 @@ def _is_stable_id(value: Any, prefix: str) -> bool:
     )
 
 
-def _comparison_key(source: dict[str, Any]) -> str:
-    dataset = source.get("dataset", {})
-    mutation = source.get("mutation", {})
-    identity = {
+def _comparison_identity(
+    dataset: dict[str, Any], mutation: dict[str, Any]
+) -> dict[str, Any]:
+    """Return the immutable scenario and mutation identity for one comparison."""
+    return {
         "dataset": {
             "name": dataset.get("name"),
             "version": dataset.get("version"),
@@ -84,13 +85,20 @@ def _comparison_key(source: dict[str, Any]) -> str:
             "scenario_id": dataset.get("scenario_id"),
             "source_shard": dataset.get("source_shard"),
             "record_index": dataset.get("record_index"),
+            "mutated_object_index": dataset.get("mutated_object_index"),
         },
         "mutation": {
+            "schema_version": mutation.get("schema_version"),
             "mutation_type": mutation.get("mutation_type"),
             "parameters": mutation.get("parameters", {}),
         },
     }
-    return _stable_id("cmp", identity)
+
+
+def _comparison_key(source: dict[str, Any]) -> str:
+    dataset = source.get("dataset", {})
+    mutation = source.get("mutation", {})
+    return _stable_id("cmp", _comparison_identity(dataset, mutation))
 
 
 def _controller_set(source: dict[str, Any]) -> dict[str, Any]:
@@ -131,6 +139,39 @@ def _mutation_record(
     return {"applied": applied, **mutation}
 
 
+def _record_identity(record: dict[str, Any]) -> dict[str, Any] | None:
+    provenance = record.get("provenance")
+    if not isinstance(provenance, dict):
+        return None
+    if record.get("status") == "completed":
+        controller = record.get("controller")
+        reproducibility = record.get("reproducibility")
+        if not isinstance(controller, dict) or not isinstance(
+            reproducibility, dict
+        ):
+            return None
+        return {
+            "schema_version": record.get("schema_version"),
+            "comparison_key": record.get("comparison_key"),
+            "variant": record.get("variant"),
+            "controller_role": record.get("controller_role"),
+            "controller_id": controller.get("controller_id"),
+            "git_revision": provenance.get("git_revision"),
+            "trajectory_sha256": reproducibility.get(
+                "trajectory_sha256"
+            ),
+        }
+    if record.get("status") == "invalid":
+        return {
+            "schema_version": record.get("schema_version"),
+            "comparison_key": record.get("comparison_key"),
+            "record_kind": record.get("record_kind"),
+            "git_revision": provenance.get("git_revision"),
+            "rejection_reasons": record.get("rejection_reasons"),
+        }
+    return None
+
+
 def _completed_record(
     source: dict[str, Any],
     *,
@@ -140,19 +181,9 @@ def _completed_record(
 ) -> dict[str, Any]:
     rollout = source["rollouts"][source_variant][role]
     variant = EXPORTED_VARIANTS[source_variant]
-    record_identity = {
-        "schema_version": SCHEMA_VERSION,
-        "comparison_key": comparison_key,
-        "variant": variant,
-        "controller_role": role,
-        "controller_id": rollout["controller"]["controller_id"],
-        "git_revision": source.get("environment", {}).get("git_commit"),
-        "trajectory_sha256": rollout["trajectory_sha256"],
-    }
-    return {
+    record = {
         "schema_version": SCHEMA_VERSION,
         "record_type": RECORD_TYPE,
-        "record_id": _stable_id("rec", record_identity),
         "comparison_key": comparison_key,
         "record_kind": "rollout",
         "status": "completed",
@@ -186,6 +217,24 @@ def _completed_record(
         "rejection_reasons": [],
         "limitations": copy.deepcopy(source.get("limitations", [])),
     }
+    record["record_id"] = _stable_id("rec", _record_identity(record))
+    return record
+
+
+def _failed_acceptance_reasons(
+    gates: dict[str, Any], *, prefix: str = ""
+) -> list[str]:
+    reasons: list[str] = []
+    for name in sorted(gates):
+        value = gates[name]
+        path = f"{prefix}.{name}" if prefix else name
+        if value is False:
+            reasons.append(f"acceptance_gate_failed:{path}")
+        elif isinstance(value, dict):
+            reasons.extend(
+                _failed_acceptance_reasons(value, prefix=path)
+            )
+    return reasons
 
 
 def _invalid_rejection_reasons(source: dict[str, Any]) -> list[str]:
@@ -197,6 +246,9 @@ def _invalid_rejection_reasons(source: dict[str, Any]) -> list[str]:
             "rejection_reasons", []
         )
     )
+    acceptance = source.get("acceptance", {})
+    if isinstance(acceptance, dict):
+        reasons.extend(_failed_acceptance_reasons(acceptance))
     if not reasons:
         reasons.append("comparison_not_ready")
     return list(dict.fromkeys(reasons))
@@ -206,17 +258,9 @@ def _invalid_record(
     source: dict[str, Any], *, comparison_key: str
 ) -> dict[str, Any]:
     reasons = _invalid_rejection_reasons(source)
-    record_identity = {
-        "schema_version": SCHEMA_VERSION,
-        "comparison_key": comparison_key,
-        "record_kind": "invalid_candidate",
-        "git_revision": source.get("environment", {}).get("git_commit"),
-        "rejection_reasons": reasons,
-    }
-    return {
+    record = {
         "schema_version": SCHEMA_VERSION,
         "record_type": RECORD_TYPE,
-        "record_id": _stable_id("rec", record_identity),
         "comparison_key": comparison_key,
         "record_kind": "invalid_candidate",
         "status": "invalid",
@@ -239,6 +283,8 @@ def _invalid_record(
         "rejection_reasons": reasons,
         "limitations": copy.deepcopy(source.get("limitations", [])),
     }
+    record["record_id"] = _stable_id("rec", _record_identity(record))
+    return record
 
 
 def export_collection(source: dict[str, Any]) -> dict[str, Any]:
@@ -324,6 +370,18 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
         scenario = record.get("scenario")
         if not isinstance(scenario, dict) or not scenario.get("version"):
             errors.append(f"{prefix} dataset version is missing")
+        elif (
+            not scenario.get("name")
+            or not scenario.get("split")
+            or not scenario.get("scenario_id")
+            or not scenario.get("source_shard")
+            or not isinstance(scenario.get("record_index"), int)
+        ):
+            errors.append(f"{prefix} scenario identity is incomplete")
+        if isinstance(scenario, dict) and not isinstance(
+            scenario.get("mutated_object_index"), int
+        ):
+            errors.append(f"{prefix} mutation target is missing")
         controller_set = record.get("controller_set")
         if not isinstance(controller_set, dict) or any(
             not isinstance(controller_set.get(role), dict)
@@ -334,10 +392,20 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
         mutation = record.get("mutation")
         if (
             not isinstance(mutation, dict)
+            or not isinstance(mutation.get("schema_version"), int)
+            or not mutation.get("mutation_type")
             or not isinstance(mutation.get("applied"), bool)
             or not isinstance(mutation.get("parameters"), dict)
         ):
             errors.append(f"{prefix} mutation context is incomplete")
+        if isinstance(scenario, dict) and isinstance(mutation, dict):
+            expected_key = _stable_id(
+                "cmp", _comparison_identity(scenario, mutation)
+            )
+            if comparison_key != expected_key:
+                errors.append(
+                    f"{prefix} comparison_key does not match its identity"
+                )
         if not isinstance(record.get("metric_configuration"), dict):
             errors.append(f"{prefix} metric configuration is missing")
         if not isinstance(record.get("acceptance_gate_results"), dict):
@@ -407,6 +475,12 @@ def validate_collection(collection: dict[str, Any]) -> list[str]:
                 errors.append(f"{prefix} invalid record has an outcome")
         else:
             errors.append(f"{prefix} status is invalid")
+
+        record_identity = _record_identity(record)
+        if record_identity is not None and _is_stable_id(record_id, "rec"):
+            expected_record_id = _stable_id("rec", record_identity)
+            if record_id != expected_record_id:
+                errors.append(f"{prefix} record_id does not match its identity")
 
     if len(record_ids) != len(set(record_ids)):
         errors.append("record_id values are not unique")

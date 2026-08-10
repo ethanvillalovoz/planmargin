@@ -29,11 +29,37 @@
   "allOf": [
     {
       "if": {"properties": {"collection_status": {"const": "complete"}}, "required": ["collection_status"]},
-      "then": {"properties": {"records": {"minItems": 4, "maxItems": 4}}}
+      "then": {
+        "properties": {
+          "records": {
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "allOf": [
+                {"$ref": "#/$defs/rolloutRecord"},
+                {"properties": {"status": {"const": "completed"}}}
+              ]
+            }
+          }
+        }
+      }
     },
     {
       "if": {"properties": {"collection_status": {"const": "invalid_candidate"}}, "required": ["collection_status"]},
-      "then": {"properties": {"records": {"minItems": 1, "maxItems": 1}}}
+      "then": {
+        "properties": {
+          "records": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "allOf": [
+                {"$ref": "#/$defs/rolloutRecord"},
+                {"properties": {"status": {"const": "invalid"}}}
+              ]
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
@@ -72,25 +98,40 @@
         "variant": {"enum": ["original", "counterfactual"]},
         "scenario": {
           "type": "object",
-          "required": ["name", "version", "split", "scenario_id"],
-          "additionalProperties": true
+          "required": ["name", "version", "split", "scenario_id", "source_shard", "record_index", "mutated_object_index"],
+          "additionalProperties": true,
+          "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "version": {"type": "string", "minLength": 1},
+            "split": {"type": "string", "minLength": 1},
+            "scenario_id": {"type": "string", "minLength": 1},
+            "source_shard": {"type": "string", "minLength": 1},
+            "record_index": {"type": "integer", "minimum": 0},
+            "mutated_object_index": {"type": "integer", "minimum": 0}
+          }
         },
         "controller_set": {
           "type": "object",
           "required": ["tested", "reference"],
           "additionalProperties": false,
           "properties": {
-            "tested": {"type": "object"},
-            "reference": {"type": "object"}
+            "tested": {"$ref": "#/$defs/controller"},
+            "reference": {"$ref": "#/$defs/controller"}
           }
         },
         "controller_role": {"type": ["string", "null"], "enum": ["tested", "reference", null]},
         "controller": {"type": ["object", "null"]},
         "mutation": {
           "type": "object",
-          "required": ["applied", "parameters", "rejection_reasons"],
+          "required": ["schema_version", "mutation_type", "applied", "parameters", "rejection_reasons"],
           "additionalProperties": true,
-          "properties": {"applied": {"type": "boolean"}}
+          "properties": {
+            "schema_version": {"type": "integer", "minimum": 1},
+            "mutation_type": {"type": "string", "minLength": 1},
+            "applied": {"type": "boolean"},
+            "parameters": {"type": "object"},
+            "rejection_reasons": {"type": "array", "items": {"type": "string"}}
+          }
         },
         "metric_configuration": {"type": "object"},
         "outcome": {"type": ["object", "null"]},
@@ -100,7 +141,21 @@
         "provenance": {
           "type": "object",
           "required": ["git_revision", "seed", "runtime", "hardware_class"],
-          "additionalProperties": true
+          "additionalProperties": true,
+          "properties": {
+            "git_revision": {"type": "string", "minLength": 1},
+            "seed": {"type": "integer"},
+            "runtime": {"type": "object"},
+            "hardware_class": {
+              "type": "object",
+              "required": ["platform", "machine", "jax_backend"],
+              "properties": {
+                "platform": {"type": "string", "minLength": 1},
+                "machine": {"type": "string", "minLength": 1},
+                "jax_backend": {"type": "string", "minLength": 1}
+              }
+            }
+          }
         },
         "rejection_reasons": {"type": "array", "items": {"type": "string"}},
         "limitations": {"type": "array", "items": {"type": "string"}}
@@ -112,7 +167,7 @@
             "properties": {
               "record_kind": {"const": "rollout"},
               "controller_role": {"enum": ["tested", "reference"]},
-              "controller": {"type": "object"},
+              "controller": {"$ref": "#/$defs/controller"},
               "outcome": {"type": "object"},
               "reproducibility": {"type": "object"},
               "trajectory": {"type": "object"},
@@ -121,20 +176,64 @@
           }
         },
         {
+          "if": {
+            "properties": {
+              "status": {"const": "completed"},
+              "variant": {"const": "original"}
+            },
+            "required": ["status", "variant"]
+          },
+          "then": {
+            "properties": {
+              "mutation": {
+                "properties": {"applied": {"const": false}}
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {"const": "completed"},
+              "variant": {"const": "counterfactual"}
+            },
+            "required": ["status", "variant"]
+          },
+          "then": {
+            "properties": {
+              "mutation": {
+                "properties": {"applied": {"const": true}}
+              }
+            }
+          }
+        },
+        {
           "if": {"properties": {"status": {"const": "invalid"}}, "required": ["status"]},
           "then": {
             "properties": {
               "record_kind": {"const": "invalid_candidate"},
+              "variant": {"const": "counterfactual"},
               "controller_role": {"type": "null"},
               "controller": {"type": "null"},
               "outcome": {"type": "null"},
               "reproducibility": {"type": "null"},
               "trajectory": {"type": "null"},
+              "mutation": {
+                "properties": {"applied": {"const": false}}
+              },
               "rejection_reasons": {"minItems": 1}
             }
           }
         }
       ]
+    },
+    "controller": {
+      "type": "object",
+      "required": ["controller_id"],
+      "additionalProperties": true,
+      "properties": {
+        "controller_id": {"type": "string", "minLength": 1}
+      }
     }
   }
 }
