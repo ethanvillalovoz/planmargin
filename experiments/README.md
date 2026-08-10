@@ -21,4 +21,6 @@ permitted aggregate results. Complete local manifests belong under the ignored
 The completed access, deterministic-baseline, scenario-selection, and first
 mutation evidence is recorded under [`stage-0/`](stage-0/), including the
 [ten-scenario selection report](stage-0/scenario-selection.md) and the
-[bounded speed-mutation report](stage-0/speed-mutation.md).
+[bounded speed-mutation report](stage-0/speed-mutation.md). The
+[controller-comparison report](stage-0/controller-comparison.md) records the
+first tested-versus-reference harness run and its negative finding.

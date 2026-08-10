@@ -57,8 +57,11 @@ The scenario-selection step is also complete. The
 preferred-family probe, declared fallback decision, and deterministic baseline
 validation. The subsequent
 [speed-mutation report](speed-mutation.md) records the first accepted bounded
-lead-vehicle mutation. The next experiment can run distinct tested and
-reference controllers under identical original and mutated trajectories.
+lead-vehicle mutation. The subsequent
+[controller-comparison report](controller-comparison.md) validates distinct
+tested and reference configurations under identical original and mutated
+trajectories. The next experiment can formalize the versioned rollout record
+needed for visualization and later search.
 
 ## Dataset attribution
 
