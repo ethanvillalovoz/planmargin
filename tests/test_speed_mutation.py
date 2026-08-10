@@ -45,7 +45,7 @@ def test_speed_multiplier_preserves_history_and_recorded_route() -> None:
     assert result.metrics["max_route_deviation_m"] == 0.0
 
 
-def test_identity_multiplier_reproduces_route_positions() -> None:
+def test_identity_multiplier_reproduces_every_trajectory_field() -> None:
     trajectory = _straight_trajectory()
 
     result = speed_mutation.mutate_route_speed(
@@ -54,8 +54,10 @@ def test_identity_multiplier_reproduces_route_positions() -> None:
     )
 
     assert result.accepted is True
-    assert result.x is not None
-    np.testing.assert_allclose(result.x, trajectory["x"], atol=1e-9)
+    for field in ("x", "y", "yaw", "vel_x", "vel_y"):
+        value = getattr(result, field)
+        assert value is not None
+        np.testing.assert_array_equal(value, trajectory[field])
 
 
 def test_out_of_bounds_multiplier_retains_rejection_reason() -> None:

@@ -207,42 +207,45 @@ def mutate_route_speed(
     if mutated_progress[-1] > route_progress[-1] + config.route_epsilon_m:
         return _rejected("mutated_progress_exceeds_recorded_route")
 
-    try:
-        mutated_xy = _interpolate_route(
-            mutated_progress,
-            route_progress,
-            route_xy,
-            config.route_epsilon_m,
-        )
-        mutated_yaw = _interpolate_route(
-            mutated_progress,
-            route_progress,
-            route_yaw,
-            config.route_epsilon_m,
-        )
-    except ValueError as error:
-        return _rejected(str(error))
-
     output_x = arrays[0].astype(np.float64, copy=True)
     output_y = arrays[1].astype(np.float64, copy=True)
     output_yaw = arrays[2].astype(np.float64, copy=True)
     output_vel_x = arrays[3].astype(np.float64, copy=True)
     output_vel_y = arrays[4].astype(np.float64, copy=True)
-    output_x[current_timestep:] = mutated_xy[:, 0]
-    output_y[current_timestep:] = mutated_xy[:, 1]
-    output_yaw[current_timestep:] = mutated_yaw
+    if config.speed_multiplier == 1.0:
+        mutated_xy = route_xy.copy()
+    else:
+        try:
+            mutated_xy = _interpolate_route(
+                mutated_progress,
+                route_progress,
+                route_xy,
+                config.route_epsilon_m,
+            )
+            mutated_yaw = _interpolate_route(
+                mutated_progress,
+                route_progress,
+                route_yaw,
+                config.route_epsilon_m,
+            )
+        except ValueError as error:
+            return _rejected(str(error))
 
-    future_displacements = np.diff(mutated_xy, axis=0)
-    future_velocity = future_displacements / TIME_INTERVAL_S
-    output_vel_x[current_timestep + 1 :] = future_velocity[:, 0]
-    output_vel_y[current_timestep + 1 :] = future_velocity[:, 1]
-    moving = np.linalg.norm(future_displacements, axis=1) > 1e-6
-    tangent_yaw = np.arctan2(
-        future_displacements[:, 1], future_displacements[:, 0]
-    )
-    output_yaw[current_timestep + 1 :] = np.where(
-        moving, tangent_yaw, mutated_yaw[1:]
-    )
+        output_x[current_timestep:] = mutated_xy[:, 0]
+        output_y[current_timestep:] = mutated_xy[:, 1]
+        output_yaw[current_timestep:] = mutated_yaw
+
+        future_displacements = np.diff(mutated_xy, axis=0)
+        future_velocity = future_displacements / TIME_INTERVAL_S
+        output_vel_x[current_timestep + 1 :] = future_velocity[:, 0]
+        output_vel_y[current_timestep + 1 :] = future_velocity[:, 1]
+        moving = np.linalg.norm(future_displacements, axis=1) > 1e-6
+        tangent_yaw = np.arctan2(
+            future_displacements[:, 1], future_displacements[:, 0]
+        )
+        output_yaw[current_timestep + 1 :] = np.where(
+            moving, tangent_yaw, mutated_yaw[1:]
+        )
 
     history_unchanged = bool(
         np.array_equal(output_x[: current_timestep + 1], arrays[0][: current_timestep + 1])
@@ -500,7 +503,13 @@ class MutationValidator:
             rejection_reasons.append("mutated_object_offroad")
         if not first["mutated_object_valid_all_steps"]:
             rejection_reasons.append("mutated_object_became_invalid")
-        if first["final_timestep"] != 90 or second["final_timestep"] != 90:
+        expected_final_timestep = (
+            CURRENT_TIMESTEP + scenario_selection.NUM_FUTURE_STEPS
+        )
+        if (
+            first["final_timestep"] != expected_final_timestep
+            or second["final_timestep"] != expected_final_timestep
+        ):
             rejection_reasons.append("rollout_incomplete")
         if not outputs_identical:
             rejection_reasons.append("rollout_not_deterministic")
