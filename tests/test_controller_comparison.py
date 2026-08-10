@@ -15,10 +15,27 @@ def test_reference_configuration_is_distinct_and_more_conservative() -> None:
     assert reference.desired_vel_mps < tested.desired_vel_mps
     assert reference.min_spacing_m > tested.min_spacing_m
     assert reference.safe_time_headway_s > tested.safe_time_headway_s
-    assert reference.max_decel_mps2 > tested.max_decel_mps2
+    assert reference.comfortable_decel_mps2 < (
+        tested.comfortable_decel_mps2
+    )
     assert reference.additional_lookahead_distance_m > (
         tested.additional_lookahead_distance_m
     )
+
+
+def test_reference_has_larger_desired_gap_while_closing() -> None:
+    tested_gap = controller_comparison.idm_desired_gap_m(
+        controller_comparison.TESTED_CONTROLLER,
+        current_speed_mps=15.0,
+        lead_speed_mps=10.0,
+    )
+    reference_gap = controller_comparison.idm_desired_gap_m(
+        controller_comparison.REFERENCE_CONTROLLER,
+        current_speed_mps=15.0,
+        lead_speed_mps=10.0,
+    )
+
+    assert reference_gap > tested_gap
 
 
 def test_successful_rollout_has_no_failure_reasons() -> None:
@@ -95,6 +112,8 @@ def test_controller_report_is_versioned_and_parameterized() -> None:
     assert report["role"] == "reference"
     assert report["implementation"] == "Waymax IDMRoutePolicy"
     assert report["parameters"]["safe_time_headway_s"] == 3.0
+    assert report["parameters"]["lookahead_from_current_position"] is True
+    assert report["parameters"]["invalidate_on_end"] is False
 
 
 def test_trace_hash_is_deterministic_and_content_sensitive() -> None:

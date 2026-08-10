@@ -6,6 +6,7 @@ import argparse
 import dataclasses
 import hashlib
 import json
+import math
 import platform
 import resource
 import sys
@@ -52,11 +53,13 @@ class ControllerSpec:
     min_spacing_m: float
     safe_time_headway_s: float
     max_accel_mps2: float
-    max_decel_mps2: float
+    comfortable_decel_mps2: float
     delta: float
     max_lookahead: int
+    lookahead_from_current_position: bool
     additional_lookahead_points: int
     additional_lookahead_distance_m: float
+    invalidate_on_end: bool
 
     def build(self) -> agents.IDMRoutePolicy:
         """Build the pinned Waymax IDM implementation for this specification."""
@@ -66,13 +69,17 @@ class ControllerSpec:
             min_spacing=self.min_spacing_m,
             safe_time_headway=self.safe_time_headway_s,
             max_accel=self.max_accel_mps2,
-            max_decel=self.max_decel_mps2,
+            max_decel=self.comfortable_decel_mps2,
             delta=self.delta,
             max_lookahead=self.max_lookahead,
+            lookahead_from_current_position=(
+                self.lookahead_from_current_position
+            ),
             additional_lookahead_points=self.additional_lookahead_points,
             additional_lookahead_distance=(
                 self.additional_lookahead_distance_m
             ),
+            invalidate_on_end=self.invalidate_on_end,
         )
 
     def report(self) -> dict[str, Any]:
@@ -96,11 +103,13 @@ TESTED_CONTROLLER = ControllerSpec(
     min_spacing_m=2.0,
     safe_time_headway_s=2.0,
     max_accel_mps2=2.0,
-    max_decel_mps2=4.0,
+    comfortable_decel_mps2=4.0,
     delta=4.0,
     max_lookahead=10,
+    lookahead_from_current_position=True,
     additional_lookahead_points=10,
     additional_lookahead_distance_m=10.0,
+    invalidate_on_end=False,
 )
 
 REFERENCE_CONTROLLER = ControllerSpec(
@@ -110,12 +119,35 @@ REFERENCE_CONTROLLER = ControllerSpec(
     min_spacing_m=4.0,
     safe_time_headway_s=3.0,
     max_accel_mps2=1.5,
-    max_decel_mps2=6.0,
+    comfortable_decel_mps2=2.0,
     delta=4.0,
-    max_lookahead=20,
+    max_lookahead=10,
+    lookahead_from_current_position=True,
     additional_lookahead_points=20,
     additional_lookahead_distance_m=20.0,
+    invalidate_on_end=False,
 )
+
+
+def idm_desired_gap_m(
+    spec: ControllerSpec,
+    *,
+    current_speed_mps: float,
+    lead_speed_mps: float,
+) -> float:
+    """Compute the pinned IDM desired gap for an auditable closing example."""
+    closing_term = (
+        current_speed_mps * (current_speed_mps - lead_speed_mps)
+    ) / (
+        2.0
+        * math.sqrt(
+            spec.max_accel_mps2 * spec.comfortable_decel_mps2
+        )
+    )
+    return spec.min_spacing_m + max(
+        0.0,
+        current_speed_mps * spec.safe_time_headway_s + closing_term,
+    )
 
 
 def evaluate_rollout(

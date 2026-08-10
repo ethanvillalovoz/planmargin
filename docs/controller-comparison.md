@@ -15,13 +15,18 @@ repository. Their configurations are versioned separately:
 | Minimum spacing | `2.0 m` | `4.0 m` |
 | Safe time headway | `2.0 s` | `3.0 s` |
 | Maximum acceleration | `2.0 m/s²` | `1.5 m/s²` |
-| Maximum deceleration | `4.0 m/s²` | `6.0 m/s²` |
+| Comfortable deceleration parameter | `4.0 m/s²` | `2.0 m/s²` |
+| Lookahead from current simulated position | `true` | `true` |
 | Additional lookahead points | `10` | `20` |
 | Additional lookahead distance | `10.0 m` | `20.0 m` |
+| Invalidate at route end | `false` | `false` |
 
 The tested configuration matches Waymax defaults. The reference is intended to
 be more conservative through lower desired speed and acceleration, larger
-spacing and headway, stronger braking, and longer lookahead.
+spacing and headway, less reliance on comfortable deceleration, and longer
+lookahead. In Waymax's pinned IDM equation, the comfortable-deceleration value
+appears in the desired-gap denominator; lowering it increases the desired gap
+while closing on a slower lead vehicle. It is not a hard braking clamp.
 
 ## Four required outcomes
 
