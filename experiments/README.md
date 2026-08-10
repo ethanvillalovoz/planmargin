@@ -15,5 +15,6 @@ Each experiment will receive a versioned configuration and a short report contai
 
 Large outputs, checkpoints, and restricted data are ignored. Small aggregate tables may be committed only after confirming that their publication complies with the applicable dataset terms.
 
-The first planned experiment is `exp-0001-waymax-mutation-smoke-test`.
-
+The completed access and deterministic-baseline evidence is recorded under
+[`stage-0/`](stage-0/). The first planned mutation experiment is
+`exp-0001-waymax-mutation-smoke-test`.

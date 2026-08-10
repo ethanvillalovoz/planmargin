@@ -10,5 +10,11 @@ Before using WOMD:
 4. Store local data under this directory or another ignored path.
 5. Publish code, configuration, permitted identifiers, and aggregate results—not raw restricted data.
 
-Future setup scripts will download or stream only the shards needed for a selected experiment. Tiny synthetic fixtures used by automated tests will live under `tests/fixtures` and will not contain Waymo data.
+The Stage 0 workflow streams only the first record of one fixed validation
+shard. See [the local setup guide](../docs/setup.md) and run
+`scripts/verify_womd_access.sh` for a credential-safe metadata check.
 
+If a later experiment requires a local cache, place authorized shards under
+`data/raw/`; the repository ignores that path. Tiny synthetic fixtures used by
+automated tests will live under `tests/fixtures` and will not contain Waymo
+data.
