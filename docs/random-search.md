@@ -98,14 +98,16 @@ content hash and configuration fingerprint.
 
 Writes use a flushed and synchronized temporary file followed by atomic
 replacement. Resume validates the run fingerprint, record type, schema
-version, content hash, scenario identity, proposal index, and deterministically
-regenerated parameters before skipping work. Missing records are evaluated;
-corrupt, unexpected, or mismatched records stop the run rather than being
-silently replaced.
+version, recorded numerical environment, content hash, scenario identity,
+proposal index, and deterministically regenerated parameters before skipping
+work. Missing records are evaluated; corrupt, unexpected, or mismatched
+records stop the run rather than being silently replaced.
 
 The completed report is reconstructed from checkpoints on disk. Reordered,
 interrupted, and resumed fixture runs must match uninterrupted results except
-for invocation timing and process-memory observations.
+for invocation timing and process-memory observations. Resuming a completed
+run revalidates the full checkpoint set and reconstructs the report before
+returning it; the presence of a sealed `report.json` alone is not trusted.
 
 ## Versioned private schemas
 

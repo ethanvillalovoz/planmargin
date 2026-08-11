@@ -38,6 +38,12 @@ RUN_MANIFEST_TYPE = "planmargin.random_search_run_manifest"
 ORIGINAL_TYPE = "planmargin.random_search_original_checkpoint"
 PROPOSAL_TYPE = "planmargin.random_search_proposal"
 REPORT_TYPE = "planmargin.random_search_report"
+SCHEMA_URI_BY_RECORD_TYPE = {
+    RUN_MANIFEST_TYPE: RUN_MANIFEST_SCHEMA_URI,
+    ORIGINAL_TYPE: ORIGINAL_SCHEMA_URI,
+    PROPOSAL_TYPE: PROPOSAL_SCHEMA_URI,
+    REPORT_TYPE: REPORT_SCHEMA_URI,
+}
 
 DEFAULT_MANIFEST = family_validation.DEFAULT_MANIFEST
 DEFAULT_OUTPUT_DIR = Path("artifacts/random-search/lead-braking-baseline")
@@ -72,8 +78,12 @@ class RandomSearchConfig:
     budget_per_scenario: int = DEFAULT_BUDGET
 
     def __post_init__(self) -> None:
-        if isinstance(self.seed, bool) or not isinstance(self.seed, int):
-            raise ValueError("seed must be an integer")
+        if (
+            isinstance(self.seed, bool)
+            or not isinstance(self.seed, int)
+            or self.seed < 0
+        ):
+            raise ValueError("seed must be a non-negative integer")
         if (
             isinstance(self.budget_per_scenario, bool)
             or not isinstance(self.budget_per_scenario, int)
@@ -413,6 +423,8 @@ def _load_sealed_record(
     configuration_fingerprint: str,
 ) -> dict[str, Any]:
     record = _read_json_object(path)
+    if record.get("$schema") != SCHEMA_URI_BY_RECORD_TYPE[record_type]:
+        raise ValueError(f"Checkpoint schema identifier mismatch: {path}")
     if record.get("schema_version") != SCHEMA_VERSION:
         raise ValueError(f"Checkpoint schema version mismatch: {path}")
     if record.get("record_type") != record_type:
@@ -707,6 +719,36 @@ def build_aggregate_report(
     return _seal_record(report, "report_sha256")
 
 
+def _validate_completed_report(
+    report: dict[str, Any],
+    run_manifest: dict[str, Any],
+    originals: list[dict[str, Any]],
+    proposals: list[dict[str, Any]],
+) -> None:
+    """Prove that a sealed completed report still matches its checkpoints."""
+    try:
+        metrics = report["metrics"]
+        invocation_seconds = float(metrics["final_invocation_seconds"])
+        process_peak_rss_bytes = metrics["process_peak_rss_bytes"]
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Completed report observations are incomplete") from error
+    if (
+        isinstance(process_peak_rss_bytes, bool)
+        or not isinstance(process_peak_rss_bytes, int)
+        or process_peak_rss_bytes < 0
+    ):
+        raise ValueError("Completed report peak-memory observation is invalid")
+    expected = build_aggregate_report(
+        run_manifest,
+        originals,
+        proposals,
+        invocation_seconds=invocation_seconds,
+        process_peak_rss_bytes=process_peak_rss_bytes,
+    )
+    if report != expected:
+        raise ValueError("Completed report does not match durable checkpoints")
+
+
 def _validate_existing_checkpoint_identity(
     record: dict[str, Any],
     *,
@@ -791,6 +833,8 @@ def _initialize_or_resume(
                 "A random-search run already exists; pass --resume to continue it."
             )
         existing = _read_json_object(manifest_path)
+        if existing.get("$schema") != RUN_MANIFEST_SCHEMA_URI:
+            raise ValueError("Run manifest schema identifier mismatch")
         if existing.get("schema_version") != SCHEMA_VERSION:
             raise ValueError("Run manifest schema version mismatch")
         if existing.get("record_type") != RUN_MANIFEST_TYPE:
@@ -807,6 +851,11 @@ def _initialize_or_resume(
             raise ValueError(
                 "Run configuration mismatch; seed, budget, source, controllers, "
                 "or scenario manifest changed."
+            )
+        if existing.get("environment") != expected_manifest["environment"]:
+            raise ValueError(
+                "Run environment mismatch; Python, platform, machine, "
+                "dependency versions, or JAX backend changed."
             )
         return existing
     if resume:
@@ -912,6 +961,12 @@ def run(
     if max_new_proposals is not None and max_new_proposals < 0:
         raise ValueError("max_new_proposals must be non-negative")
     candidates = family_validation.load_manifest_candidates(manifest_path)
+    expected_orders = [candidate["selection_order"] for candidate in candidates]
+    requested_orders = expected_orders if selection_orders is None else selection_orders
+    if len(set(requested_orders)) != len(requested_orders):
+        raise ValueError("selection_orders must not contain duplicates")
+    if any(order not in expected_orders for order in requested_orders):
+        raise ValueError("selection_orders must belong to the run manifest")
     expected_manifest = build_run_manifest(manifest_path, candidates, config)
     run_manifest = _initialize_or_resume(
         output_dir, expected_manifest, resume=resume
@@ -921,19 +976,27 @@ def run(
     if report_path.exists():
         if not resume:
             raise FileExistsError("Completed report already exists")
-        return _load_sealed_record(
+        report = _load_sealed_record(
             report_path,
             record_type=REPORT_TYPE,
             hash_field="report_sha256",
             configuration_fingerprint=fingerprint,
         )
-    expected_orders = [candidate["selection_order"] for candidate in candidates]
-    requested_orders = expected_orders if selection_orders is None else selection_orders
-    if len(set(requested_orders)) != len(requested_orders):
-        raise ValueError("selection_orders must not contain duplicates")
-    if any(order not in expected_orders for order in requested_orders):
-        raise ValueError("selection_orders must belong to the run manifest")
-
+        originals, proposals = _load_completed_records(
+            output_dir, candidates, config, fingerprint
+        )
+        expected_proposal_count = len(candidates) * config.budget_per_scenario
+        if (
+            len(originals) != len(candidates)
+            or len(proposals) != expected_proposal_count
+        ):
+            raise ValueError(
+                "Completed report exists without the complete checkpoint set"
+            )
+        _validate_completed_report(
+            report, run_manifest, originals, proposals
+        )
+        return report
     loaded = scenario_loader(manifest_path)
     by_order = {
         candidate["selection_order"]: (scenario, candidate)

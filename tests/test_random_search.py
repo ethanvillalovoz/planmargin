@@ -225,6 +225,11 @@ def test_stateless_proposals_are_pinned_and_within_bounds() -> None:
     )
 
 
+def test_invalid_seed_is_rejected_before_sampling() -> None:
+    with pytest.raises(ValueError, match="non-negative integer"):
+        random_search.RandomSearchConfig(seed=-1)
+
+
 def test_proposals_do_not_depend_on_request_order() -> None:
     config = random_search.RandomSearchConfig()
     coordinates = [(1, 0), (10, 31), (2, 7), (1, 3)]
@@ -292,6 +297,29 @@ def test_private_output_directory_is_enforced(
     )
     with pytest.raises(ValueError, match="must remain under artifacts"):
         random_search.validate_private_output_dir(Path("experiments/private"))
+
+
+@pytest.mark.parametrize("selection_orders", [[1, 1], [11]])
+def test_invalid_selection_orders_do_not_initialize_a_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_runtime: None,
+    selection_orders: list[int],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    manifest = tmp_path / "selection.json"
+    _write_manifest(manifest)
+    output_dir = Path("artifacts/random-search/invalid-selection")
+
+    with pytest.raises(ValueError, match="selection_orders"):
+        _run(
+            manifest,
+            output_dir,
+            random_search.RandomSearchConfig(budget_per_scenario=1),
+            selection_orders=selection_orders,
+        )
+
+    assert not output_dir.exists()
 
 
 def test_interrupted_resume_matches_uninterrupted_run(
@@ -376,6 +404,77 @@ def test_completed_resume_performs_no_new_evaluations(
     assert resumed == completed
 
 
+def test_completed_resume_revalidates_report_against_checkpoints(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_runtime: None,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    manifest = tmp_path / "selection.json"
+    _write_manifest(manifest)
+    output_dir = Path("artifacts/random-search/complete-tampered")
+    config = random_search.RandomSearchConfig(budget_per_scenario=1)
+    _run(manifest, output_dir, config)
+    proposal_path = random_search._proposal_path(output_dir, 1, 0)
+    proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+    del proposal["record_sha256"]
+    proposal["attempt"]["elapsed_seconds"] = 42.0
+    proposal_path.write_text(
+        json.dumps(random_search._seal_record(proposal, "record_sha256")),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError, match="Completed report does not match durable checkpoints"
+    ):
+        _run(manifest, output_dir, config, resume=True)
+
+
+def test_completed_resume_requires_the_complete_checkpoint_set(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_runtime: None,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    manifest = tmp_path / "selection.json"
+    _write_manifest(manifest)
+    output_dir = Path("artifacts/random-search/complete-missing")
+    config = random_search.RandomSearchConfig(budget_per_scenario=1)
+    _run(manifest, output_dir, config)
+    random_search._proposal_path(output_dir, 1, 0).unlink()
+
+    with pytest.raises(
+        ValueError, match="without the complete checkpoint set"
+    ):
+        _run(manifest, output_dir, config, resume=True)
+
+
+def test_completed_resume_rejects_resealed_report_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_runtime: None,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    manifest = tmp_path / "selection.json"
+    _write_manifest(manifest)
+    output_dir = Path("artifacts/random-search/report-tampered")
+    config = random_search.RandomSearchConfig(budget_per_scenario=1)
+    _run(manifest, output_dir, config)
+    report_path = output_dir / "report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    del report["report_sha256"]
+    report["metrics"]["proposal_count"] = 999
+    report_path.write_text(
+        json.dumps(random_search._seal_record(report, "report_sha256")),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError, match="Completed report does not match durable checkpoints"
+    ):
+        _run(manifest, output_dir, config, resume=True)
+
+
 def test_resume_refuses_configuration_change(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -399,6 +498,23 @@ def test_resume_refuses_configuration_change(
             random_search.RandomSearchConfig(seed=1, budget_per_scenario=1),
             resume=True,
         )
+
+
+def test_resume_refuses_environment_change(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_runtime: None,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    manifest = tmp_path / "selection.json"
+    _write_manifest(manifest)
+    output_dir = Path("artifacts/random-search/environment-mismatch")
+    config = random_search.RandomSearchConfig(budget_per_scenario=1)
+    _run(manifest, output_dir, config, max_new_proposals=1)
+    monkeypatch.setattr(random_search.platform, "machine", lambda: "changed")
+
+    with pytest.raises(ValueError, match="Run environment mismatch"):
+        _run(manifest, output_dir, config, resume=True)
 
 
 def test_resume_rejects_tampered_and_unexpected_checkpoints(
@@ -470,6 +586,30 @@ def test_resume_rederives_cost_instead_of_trusting_resealed_record(
     proposal_path.write_text(json.dumps(resealed), encoding="utf-8")
 
     with pytest.raises(ValueError, match="cost accounting mismatch"):
+        _run(manifest, output_dir, config, resume=True)
+
+
+def test_resume_rejects_resealed_schema_identifier_change(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_runtime: None,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    manifest = tmp_path / "selection.json"
+    _write_manifest(manifest)
+    output_dir = Path("artifacts/random-search/schema-mismatch")
+    config = random_search.RandomSearchConfig(budget_per_scenario=1)
+    _run(manifest, output_dir, config, max_new_proposals=1)
+    proposal_path = random_search._proposal_path(output_dir, 1, 0)
+    proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+    del proposal["record_sha256"]
+    proposal["$schema"] = "https://example.invalid/wrong-schema.json"
+    proposal_path.write_text(
+        json.dumps(random_search._seal_record(proposal, "record_sha256")),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="schema identifier mismatch"):
         _run(manifest, output_dir, config, resume=True)
 
 
