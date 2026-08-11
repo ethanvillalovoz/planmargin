@@ -1,6 +1,9 @@
 """Data-free tests for the lead-braking family evaluation contract."""
 
+import json
 from pathlib import Path
+
+import pytest
 
 from planmargin import family_validation
 
@@ -71,7 +74,7 @@ def test_parameter_grid_is_fixed_and_contains_identity() -> None:
 def test_passing_family_evaluation_returns_go() -> None:
     scenarios, attempts = _passing_input()
 
-    result = family_validation.evaluate_family(scenarios, attempts)
+    result = family_validation.evaluate_family(scenarios)
 
     assert result["decision"] == "go"
     assert all(result["gates"].values())
@@ -87,12 +90,57 @@ def test_family_gate_failure_returns_no_go_without_hiding_metrics() -> None:
         if not attempt["identity_control"]:
             attempt["controllers"]["tested"]["changed_from_original"] = False
 
-    result = family_validation.evaluate_family(scenarios, attempts)
+    result = family_validation.evaluate_family(scenarios)
 
     assert result["decision"] == "no_go"
     assert result["gates"]["eligible_scenarios"] is False
     assert result["gates"]["tested_controller_response_rate"] is False
     assert result["metrics"]["eligible_scenario_count"] == 7
+
+
+def test_policy_specific_failure_requires_eligible_original() -> None:
+    scenarios, _ = _passing_input()
+    scenario = scenarios[0]
+    scenario["original"]["eligible"] = False
+    attempt = scenario["attempts"][1]
+    attempt["controllers"]["tested"]["outcome"]["success"] = False
+
+    result = family_validation.evaluate_family(scenarios)
+
+    assert result["metrics"]["policy_specific_failure_count"] == 0
+
+
+def test_manifest_requires_unique_contiguous_selection_orders(
+    tmp_path: Path,
+) -> None:
+    candidates = [
+        {
+            "family": "lead_vehicle_braking",
+            "selection_order": index,
+            "scenario_id": f"scenario-{index}",
+        }
+        for index in range(1, family_validation.EXPECTED_SCENARIOS + 1)
+    ]
+    candidates[-1]["selection_order"] = 1
+    manifest = tmp_path / "selection.json"
+    manifest.write_text(json.dumps({"candidates": candidates}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="unique and contiguous"):
+        family_validation._load_manifest_scenarios(manifest)
+
+
+def test_private_report_path_must_remain_under_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    family_validation.validate_private_output_path(
+        Path("artifacts/family-validation/report.json")
+    )
+    with pytest.raises(ValueError, match="must remain under artifacts"):
+        family_validation.validate_private_output_path(
+            Path("experiments/report.json")
+        )
 
 
 def test_public_summary_excludes_private_scenario_records() -> None:

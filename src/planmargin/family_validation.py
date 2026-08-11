@@ -59,8 +59,35 @@ def _load_manifest_scenarios(
         raise ValueError(
             f"Expected exactly {EXPECTED_SCENARIOS} selected scenarios."
         )
-    if any(candidate.get("family") != "lead_vehicle_braking" for candidate in candidates):
+    if any(not isinstance(candidate, dict) for candidate in candidates):
+        raise ValueError("Manifest candidates must be objects.")
+    if any(
+        candidate.get("family") != "lead_vehicle_braking"
+        for candidate in candidates
+    ):
         raise ValueError("Family validation requires only lead-vehicle-braking scenarios.")
+    selection_orders = [
+        candidate.get("selection_order") for candidate in candidates
+    ]
+    if any(
+        not isinstance(selection_order, int)
+        or isinstance(selection_order, bool)
+        for selection_order in selection_orders
+    ):
+        raise ValueError("Manifest selection orders must be integers.")
+    if sorted(selection_orders) != list(range(1, EXPECTED_SCENARIOS + 1)):
+        raise ValueError(
+            "Manifest selection orders must be unique and contiguous from 1 to "
+            f"{EXPECTED_SCENARIOS}."
+        )
+    scenario_ids = [candidate.get("scenario_id") for candidate in candidates]
+    if any(
+        not isinstance(scenario_id, str) or not scenario_id
+        for scenario_id in scenario_ids
+    ):
+        raise ValueError("Manifest scenario IDs must be non-empty strings.")
+    if len(set(scenario_ids)) != EXPECTED_SCENARIOS:
+        raise ValueError("Manifest scenario IDs must be unique.")
     by_shard: dict[int, dict[int, dict[str, Any]]] = {}
     for candidate in candidates:
         shard_index = candidate.get("shard_index")
@@ -261,10 +288,13 @@ def _safe_rate(numerator: int, denominator: int) -> float:
     return round(numerator / denominator, 6) if denominator else 0.0
 
 
-def evaluate_family(
-    scenarios: list[dict[str, Any]], attempts: list[dict[str, Any]]
-) -> dict[str, Any]:
+def evaluate_family(scenarios: list[dict[str, Any]]) -> dict[str, Any]:
     """Evaluate the predeclared family gates from private attempt records."""
+    attempts = [
+        attempt
+        for scenario in scenarios
+        for attempt in scenario["attempts"]
+    ]
     eligible_count = sum(scenario["original"]["eligible"] for scenario in scenarios)
     nonidentity = [attempt for attempt in attempts if not attempt["identity_control"]]
     accepted_nonidentity = [
@@ -344,10 +374,12 @@ def evaluate_family(
         ),
     }
     policy_specific_failures = sum(
-        attempt["status"] == "accepted"
+        scenario["original"]["eligible"]
+        and attempt["status"] == "accepted"
         and not attempt["controllers"]["tested"]["outcome"]["success"]
         and attempt["controllers"]["reference"]["outcome"]["success"]
-        for attempt in attempts
+        for scenario in scenarios
+        for attempt in scenario["attempts"]
     )
     return {
         "decision": "go" if all(gates.values()) else "no_go",
@@ -397,7 +429,6 @@ def run(manifest_path: Path) -> dict[str, Any]:
         require_mutated_object_valid_all_steps=False
     )
     scenarios: list[dict[str, Any]] = []
-    all_attempts: list[dict[str, Any]] = []
     for scenario, candidate in loaded:
         original = _original_record(scenario, candidate, runners)
         attempts = [
@@ -424,8 +455,7 @@ def run(manifest_path: Path) -> dict[str, Any]:
             "attempts": attempts,
         }
         scenarios.append(scenario_record)
-        all_attempts.extend(attempts)
-    evaluation = evaluate_family(scenarios, all_attempts)
+    evaluation = evaluate_family(scenarios)
     return {
         "schema_version": 1,
         "status": "completed",
@@ -483,6 +513,16 @@ def public_summary(report: dict[str, Any], output: Path) -> dict[str, Any]:
     }
 
 
+def validate_private_output_path(output: Path) -> None:
+    """Reject report paths outside the repository's ignored artifacts tree."""
+    artifacts_root = (Path.cwd() / "artifacts").resolve()
+    if not output.resolve().is_relative_to(artifacts_root):
+        raise ValueError(
+            "Family-validation reports contain restricted scenario-derived data; "
+            "--output must remain under artifacts/."
+        )
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
@@ -492,13 +532,21 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
+    validate_private_output_path(args.output)
     report = run(args.manifest)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
-    print(json.dumps(public_summary(report, args.output), indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            public_summary(report, args.output),
+            indent=2,
+            sort_keys=True,
+            allow_nan=False,
+        )
+    )
 
 
 if __name__ == "__main__":

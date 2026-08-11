@@ -17,6 +17,13 @@ def oriented_box_corners(
     width_m: float,
 ) -> np.ndarray:
     """Return four counter-clockwise corners for an oriented vehicle box."""
+    values = np.asarray(
+        [x_m, y_m, yaw_rad, length_m, width_m], dtype=np.float64
+    )
+    if not np.isfinite(values).all():
+        raise ValueError("oriented-box inputs must be finite")
+    if length_m <= 0.0 or width_m <= 0.0:
+        raise ValueError("oriented-box dimensions must be positive")
     forward = np.array([math.cos(yaw_rad), math.sin(yaw_rad)])
     lateral = np.array([-forward[1], forward[0]])
     center = np.array([x_m, y_m], dtype=np.float64)
@@ -51,6 +58,8 @@ def signed_oriented_box_separation(
     polygons = (np.asarray(first, dtype=np.float64), np.asarray(second, dtype=np.float64))
     if any(polygon.shape != (4, 2) for polygon in polygons):
         raise ValueError("oriented boxes must each have shape (4, 2)")
+    if any(not np.isfinite(polygon).all() for polygon in polygons):
+        raise ValueError("oriented boxes must contain only finite coordinates")
     axes: list[np.ndarray] = []
     for polygon in polygons:
         for index in range(4):
@@ -99,6 +108,26 @@ def longitudinal_ttc_s(
     lead_length_m: float,
 ) -> float | None:
     """Return same-route closing TTC, or None when the lead is not closing."""
+    values = np.asarray(
+        [
+            sdc_x_m,
+            sdc_y_m,
+            sdc_yaw_rad,
+            sdc_vel_x_mps,
+            sdc_vel_y_mps,
+            sdc_length_m,
+            lead_x_m,
+            lead_y_m,
+            lead_vel_x_mps,
+            lead_vel_y_mps,
+            lead_length_m,
+        ],
+        dtype=np.float64,
+    )
+    if not np.isfinite(values).all():
+        raise ValueError("longitudinal-TTC inputs must be finite")
+    if sdc_length_m <= 0.0 or lead_length_m <= 0.0:
+        raise ValueError("longitudinal-TTC vehicle lengths must be positive")
     forward = np.array(
         [math.cos(sdc_yaw_rad), math.sin(sdc_yaw_rad)], dtype=np.float64
     )

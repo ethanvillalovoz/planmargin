@@ -1,6 +1,7 @@
 """Data-free tests for continuous same-route interaction metrics."""
 
 import numpy as np
+import pytest
 
 from planmargin import interaction_metrics
 
@@ -92,3 +93,29 @@ def test_track_metrics_skip_invalid_states_and_report_minima() -> None:
         "minimum_signed_separation_m": 2.0,
         "minimum_longitudinal_ttc_s": 0.4,
     }
+
+
+def test_valid_state_with_nonfinite_geometry_is_rejected() -> None:
+    sdc = {
+        "x_m": [float("nan")],
+        "y_m": [0.0],
+        "yaw_rad": [0.0],
+        "vel_x_mps": [10.0],
+        "vel_y_mps": [0.0],
+        "length_m": [4.0],
+        "width_m": [2.0],
+        "valid": [True],
+    }
+    lead = {
+        "x_m": [10.0],
+        "y_m": [0.0],
+        "yaw_rad": [0.0],
+        "vel_x_mps": [5.0],
+        "vel_y_mps": [0.0],
+        "length_m": [4.0],
+        "width_m": [2.0],
+        "valid": [True],
+    }
+
+    with pytest.raises(ValueError, match="must be finite"):
+        interaction_metrics.interaction_metrics(sdc, lead)

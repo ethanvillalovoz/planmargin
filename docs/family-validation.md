@@ -70,9 +70,9 @@ The family receives a `go` decision only if all gates pass:
 5. at least five eligible scenarios show a tested-controller minimum-separation
    range of `0.5 m` or a finite-TTC range of `0.5 s`.
 
-A policy-specific failure is counted only when the tested controller fails and
-the reference succeeds at the same accepted point. Its count is descriptive,
-not a feasibility gate.
+A policy-specific failure is counted only when both controllers pass the
+original scenario, the tested controller fails, and the reference succeeds at
+the same accepted point. Its count is descriptive, not a feasibility gate.
 
 ## Running locally
 
@@ -87,7 +87,8 @@ uv run --frozen planmargin-validate-lead-braking-family \
 The terminal receives only aggregate counts and the decision. The private JSON
 retains scenario identifiers, object indices, mutation records, rejection
 reasons, controller outcomes, continuous metrics, hashes, timings, and
-provenance. It must remain under `artifacts/` and must never be committed.
+provenance. The command rejects output paths outside `artifacts/`; the report
+must never be committed.
 
 ## Limitations
 
