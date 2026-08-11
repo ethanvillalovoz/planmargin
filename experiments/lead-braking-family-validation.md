@@ -20,7 +20,7 @@ enough to justify implementing search algorithms?
 
 ## Result
 
-The clean run at Git revision `e3a2646` produced a **go** decision. All five
+The clean run at Git revision `a55ff09` produced a **go** decision. All five
 family gates passed:
 
 | Gate | Threshold | Observed |
@@ -40,8 +40,8 @@ were rejected because delayed progress exhausted the recorded route, and seven
 were rejected because the mutated target went offroad. No accepted point
 produced a tested-controller failure with reference-controller success.
 
-The run took 675.90 seconds, approximately 11.27 minutes, and observed
-928,497,664 bytes of peak process RSS, approximately 0.86 GiB. These are local
+The run took 676.92 seconds, approximately 11.28 minutes, and observed
+928,464,896 bytes of peak process RSS, approximately 0.86 GiB. These are local
 feasibility observations, not controlled performance benchmarks.
 
 ## Interpretation
