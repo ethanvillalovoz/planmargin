@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/random-search-run-manifest-v1.schema.json",
+  "title": "PlanMargin deterministic random-search run manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "record_type",
+    "configuration_fingerprint",
+    "configuration",
+    "environment",
+    "manifest_sha256"
+  ],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/random-search-run-manifest-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.random_search_run_manifest"},
+    "configuration_fingerprint": {"$ref": "#/$defs/sha256"},
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["experiment", "dataset", "search", "mutation", "controllers", "accounting", "source"],
+      "properties": {
+        "experiment": {"const": "deterministic_uniform_random_lead_braking_baseline"},
+        "dataset": {
+          "type": "object",
+          "required": ["name", "version", "split", "scenario_manifest_sha256", "scenarios"],
+          "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "version": {"type": "string", "minLength": 1},
+            "split": {"type": "string", "minLength": 1},
+            "scenario_manifest_sha256": {"$ref": "#/$defs/sha256"},
+            "scenarios": {"type": "array", "minItems": 10, "maxItems": 10, "items": {"$ref": "#/$defs/scenario"}}
+          }
+        },
+        "search": {
+          "type": "object",
+          "required": ["method", "seed", "budget_per_scenario", "total_proposal_budget", "braking_onset_offsets_s", "minimum_speed_multiplier", "maximum_speed_multiplier", "proposal_key", "exhaust_budget_after_finding"],
+          "properties": {
+            "method": {"const": "stateless_uniform_random_pcg64"},
+            "seed": {"type": "integer"},
+            "budget_per_scenario": {"type": "integer", "minimum": 1},
+            "total_proposal_budget": {"type": "integer", "minimum": 10},
+            "braking_onset_offsets_s": {"const": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]},
+            "minimum_speed_multiplier": {"const": 0.75},
+            "maximum_speed_multiplier": {"const": 1.0},
+            "proposal_key": {"const": ["seed", "selection_order", "proposal_index"]},
+            "exhaust_budget_after_finding": {"const": true}
+          }
+        },
+        "mutation": {"type": "object"},
+        "controllers": {"type": "object", "required": ["tested", "reference"]},
+        "accounting": {"type": "object"},
+        "source": {"type": "object", "required": ["git_commit", "git_worktree_dirty", "random_search_source_sha256", "waymax_git_commit"]}
+      }
+    },
+    "environment": {"type": "object", "required": ["python", "platform", "machine", "numpy", "jax", "tensorflow", "jax_backend"]},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario_id", "source_shard", "shard_index", "record_index", "selection_order", "mutated_object_index"],
+      "properties": {
+        "scenario_id": {"type": "string", "minLength": 1},
+        "source_shard": {"type": "string", "minLength": 1},
+        "shard_index": {"type": "integer", "minimum": 0},
+        "record_index": {"type": "integer", "minimum": 0},
+        "selection_order": {"type": "integer", "minimum": 1, "maximum": 10},
+        "mutated_object_index": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

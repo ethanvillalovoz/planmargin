@@ -45,9 +45,8 @@ def is_identity_point(onset_offset_s: float, speed_multiplier: float) -> bool:
     return onset_offset_s == 0.0 and speed_multiplier == 1.0
 
 
-def _load_manifest_scenarios(
-    manifest_path: Path,
-) -> list[tuple[Any, dict[str, Any]]]:
+def load_manifest_candidates(manifest_path: Path) -> list[dict[str, Any]]:
+    """Load and validate the ordered private lead-braking candidate set."""
     if not manifest_path.exists():
         raise FileNotFoundError(
             f"Local selection manifest not found: {manifest_path}. "
@@ -88,6 +87,13 @@ def _load_manifest_scenarios(
         raise ValueError("Manifest scenario IDs must be non-empty strings.")
     if len(set(scenario_ids)) != EXPECTED_SCENARIOS:
         raise ValueError("Manifest scenario IDs must be unique.")
+    return sorted(candidates, key=lambda candidate: candidate["selection_order"])
+
+
+def _load_manifest_scenarios(
+    manifest_path: Path,
+) -> list[tuple[Any, dict[str, Any]]]:
+    candidates = load_manifest_candidates(manifest_path)
     by_shard: dict[int, dict[int, dict[str, Any]]] = {}
     for candidate in candidates:
         shard_index = candidate.get("shard_index")
