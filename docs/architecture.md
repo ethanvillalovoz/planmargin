@@ -38,6 +38,14 @@ Waymax runs closed-loop policies and produces trajectory states. PlanMargin adds
 
 The coordinator presents identical mutation bounds and rollout budgets to random and Bayesian search, records every attempted mutation, and never discards invalid candidates from the audit trail.
 
+The first implementation is the
+[deterministic uniform-random baseline](random-search.md). Stateless PCG64
+proposals make execution order and resume boundaries irrelevant. Atomic,
+content-hashed checkpoints retain every original and proposal evaluation, and
+the completed aggregate is rebuilt from those checkpoints rather than a
+second in-memory result path. The later Bayesian coordinator must preserve the
+same proposal budget, evaluation pipeline, and cost definitions.
+
 ### API and scenario debugger
 
 A FastAPI service will expose experiment metadata and selected artifacts to an Angular/Three.js interface. The interface will compare original and counterfactual rollouts, policy and reference behavior, and metric timelines.
