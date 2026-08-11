@@ -69,6 +69,12 @@ The first consumer is the deterministic
 responsive SVG comparison that exercises the record boundary before the API
 and Angular debugger exist.
 
+The first multi-scenario consumer is the
+[lead-braking family-validation protocol](family-validation.md). It runs a
+fixed two-dimensional mutation grid, preserves every rejection, and adds
+continuous oriented-box separation and longitudinal TTC metrics before any
+search method is allowed to optimize the space.
+
 ## Zero-cost execution
 
 - Apple-silicon Mac: primary development, preprocessing, C++, DuckDB, Beam Direct Runner, frontend, and PyTorch MPS

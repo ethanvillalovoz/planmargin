@@ -28,3 +28,6 @@ first tested-versus-reference harness run and its negative finding. The
 private export that will feed visualization and later analysis. The
 [trajectory-visualization report](stage-0/trajectory-visualization.md) records
 the first responsive spatial comparison generated only from that export.
+The [lead-braking family-validation report](lead-braking-family-validation.md)
+records the first fixed multi-scenario mutation grid and its predeclared go
+decision before search implementation.

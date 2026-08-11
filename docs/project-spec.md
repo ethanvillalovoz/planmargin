@@ -49,11 +49,12 @@ The changed lead vehicle must remain on its recorded spatial route. If the
 left-turn family is revisited, its corresponding search space will use arrival
 time offset and speed multiplier.
 
-The first implemented dimension is a speed multiplier in `[0.75, 1.00]`. It
-ramps from the recorded current state, scales route progress, and rejects
-outputs that exceed explicit acceleration or jerk limits. The braking-onset
-dimension remains future work. See the
-[speed-mutation protocol](speed-mutation.md).
+The first Stage 0 dimension was a speed multiplier in `[0.75, 1.00]`. The
+family-validation harness adds a braking-onset delay in `[0.0, 0.5]` seconds,
+forming the complete feasibility search space. Both dimensions use smooth
+route-progress resampling and reject mutations that introduce acceleration,
+jerk, or route violations. See the [speed-mutation protocol](speed-mutation.md)
+and [family-validation protocol](family-validation.md).
 
 ### Tested and reference controllers
 
