@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/random-search-report-v1.schema.json",
+  "title": "PlanMargin deterministic random-search aggregate report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "configuration_fingerprint", "status", "decision", "integrity_gates", "metrics", "cost", "scenario_summaries", "limitations", "report_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/random-search-report-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.random_search_report"},
+    "configuration_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"const": "completed"},
+    "decision": {"enum": ["baseline_complete", "invalid_run"]},
+    "integrity_gates": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "boolean"}},
+    "metrics": {
+      "type": "object",
+      "required": ["scenario_count", "eligible_original_scenario_count", "proposal_budget_per_scenario", "proposal_count", "accepted_proposal_count", "valid_mutation_rate", "accepted_attempt_determinism_rate", "tested_controller_response_rate", "qualifying_failure_count", "minimum_tested_signed_separation_m", "minimum_tested_longitudinal_ttc_s", "minimum_failure_mutation_distance", "status_counts", "rejection_reason_counts", "recorded_work_seconds", "final_invocation_seconds", "proposals_per_recorded_work_second", "process_peak_rss_bytes"]
+    },
+    "cost": {"type": "object", "required": ["originals", "proposals", "total"]},
+    "scenario_summaries": {"type": "array", "minItems": 10, "maxItems": 10},
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

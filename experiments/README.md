@@ -31,3 +31,6 @@ the first responsive spatial comparison generated only from that export.
 The [lead-braking family-validation report](lead-braking-family-validation.md)
 records the first fixed multi-scenario mutation grid and its predeclared go
 decision before search implementation.
+The [deterministic random-search baseline report](random-search-baseline.md)
+records the complete fixed-budget training run, including all invalid-attempt
+and physical-rollout accounting, before Bayesian search is implemented.

@@ -130,7 +130,11 @@ R passes mutation(s, theta)
 
 ### Baseline
 
-Uniform random search within identical bounds and constraints.
+The implemented baseline uses stateless uniform-random proposals within the
+identical bounds and constraints. Its fixed training run evaluates 32
+proposals per scenario, retains invalid attempts in the primary budget, and
+records physical rollout costs separately. See the
+[deterministic random-search protocol](random-search.md).
 
 ### Proposed method
 

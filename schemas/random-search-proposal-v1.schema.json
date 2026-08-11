@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/random-search-proposal-v1.schema.json",
+  "title": "PlanMargin deterministic random-search proposal record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "record_id", "configuration_fingerprint", "scenario", "proposal", "attempt", "finding", "cost", "record_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/random-search-proposal-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.random_search_proposal"},
+    "record_id": {"type": "string", "pattern": "^proposal_[0-9a-f]{64}$"},
+    "configuration_fingerprint": {"$ref": "#/$defs/sha256"},
+    "scenario": {"type": "object", "required": ["scenario_id", "source_shard", "shard_index", "record_index", "selection_order", "mutated_object_index"]},
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposal_index", "parameters", "normalized_mutation_distance"],
+      "properties": {
+        "proposal_index": {"type": "integer", "minimum": 0},
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["braking_onset_offset_s", "speed_multiplier"],
+          "properties": {
+            "braking_onset_offset_s": {"enum": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]},
+            "speed_multiplier": {"type": "number", "minimum": 0.75, "maximum": 1.0}
+          }
+        },
+        "normalized_mutation_distance": {"type": "number", "minimum": 0}
+      }
+    },
+    "attempt": {"type": "object", "required": ["parameters", "identity_control", "mutation", "status", "scenario_validation", "controllers", "elapsed_seconds"], "properties": {"status": {"enum": ["mutation_rejected", "scenario_rejected", "accepted"]}}},
+    "finding": {"type": ["object", "null"]},
+    "cost": {"$ref": "#/$defs/cost"},
+    "record_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["core_mutation_attempts", "scenario_validation_logical_evaluations", "scenario_validation_physical_rollouts", "tested_controller_logical_evaluations", "tested_controller_physical_rollouts", "reference_controller_logical_evaluations", "reference_controller_physical_rollouts", "total_physical_rollouts", "waymax_rollout_steps"],
+      "properties": {
+        "core_mutation_attempts": {"type": "integer", "minimum": 0},
+        "scenario_validation_logical_evaluations": {"type": "integer", "minimum": 0},
+        "scenario_validation_physical_rollouts": {"type": "integer", "minimum": 0},
+        "tested_controller_logical_evaluations": {"type": "integer", "minimum": 0},
+        "tested_controller_physical_rollouts": {"type": "integer", "minimum": 0},
+        "reference_controller_logical_evaluations": {"type": "integer", "minimum": 0},
+        "reference_controller_physical_rollouts": {"type": "integer", "minimum": 0},
+        "total_physical_rollouts": {"type": "integer", "minimum": 0},
+        "waymax_rollout_steps": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

@@ -4,10 +4,11 @@
 
 PlanMargin is an independent research and engineering project that searches for the smallest realistic change to a recorded driving scenario that exposes an avoidable planner failure.
 
-> **Current status:** Stage 0 is complete. The initial ten-scenario
-> lead-vehicle-braking family and its two-dimensional mutation grid passed all
-> predeclared feasibility gates. The next milestone is the uniform-random
-> search baseline; no planner-performance claims have been made.
+> **Current status:** The deterministic 320-proposal uniform-random training
+> baseline is complete. It retained every invalid attempt, reproduced every
+> accepted rollout, and found no qualifying policy-specific failure. The next
+> milestone is constrained Bayesian search under the identical budget and
+> evaluation contract; no planner-performance claims have been made.
 
 ## The problem
 
@@ -87,7 +88,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Export trajectories and evaluation metrics
 - [x] Produce the first original-versus-counterfactual visualization
 - [x] Validate the initial scenario family
-- [ ] Implement random-search baseline
+- [x] Implement random-search baseline
 - [ ] Implement constrained Bayesian search
 - [ ] Run equal-budget evaluation on held-out scenarios
 - [ ] Add scalable processing and profiling
@@ -100,6 +101,7 @@ See the [local setup guide](docs/setup.md),
 [rollout-record protocol](docs/rollout-record.md),
 [trajectory-visualization protocol](docs/trajectory-visualization.md),
 [lead-braking family-validation protocol](docs/family-validation.md),
+[deterministic random-search protocol](docs/random-search.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md) for details.
