@@ -23,6 +23,7 @@ planmargin-build-empirical-support = "planmargin.empirical_support:main"
 planmargin-report-matched-search-core = "planmargin.matched_search:main"
 planmargin-run-matched-search-smoke = "planmargin.matched_smoke:main"
 planmargin-check-regression-eligibility = "planmargin.regression_eligibility:main"
+planmargin-run-matched-campaign = "planmargin.matched_campaign:main"
 
 [dependency-groups]
 dev = [

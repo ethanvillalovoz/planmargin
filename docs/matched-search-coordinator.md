@@ -96,5 +96,7 @@ passed for the two predeclared random proposals. Its adapter extracted and
 scored the shared counterfactual feature before controller execution, returned
 both controller records, and left all derived values to this coordinator. The
 frozen proposal rule, thresholds, controller configurations, and record
-derivations were unchanged. The next gate is controlled headway-regression
-original eligibility.
+derivations were unchanged. The controlled headway-regression eligibility gate
+returned `no_go`. The remaining natural cells are composed by the resumable
+[natural development campaign](matched-search-campaign.md); the coordinator's
+cell identities and 32-proposal budgets remain unchanged.

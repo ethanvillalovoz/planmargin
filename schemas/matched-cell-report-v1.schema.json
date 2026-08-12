@@ -15,7 +15,7 @@
     "status": {"const": "completed"},
     "decision": {"enum": ["cell_complete", "invalid_cell"]},
     "integrity_gates": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "boolean"}},
-    "metrics": {"type": "object", "required": ["proposal_budget", "proposal_count", "accepted_proposal_count", "pipeline_valid_count", "support_and_pipeline_valid_count", "fully_feasible_count", "qualifying_failure_count", "first_qualifying_failure_proposal_count", "minimum_failure_mutation_distance", "pipeline_valid_rate", "support_and_pipeline_valid_rate", "duplicate_proposal_count", "status_counts", "final_feasible_hypervolume", "feasible_hypervolume_by_proposal", "recorded_work_seconds", "final_invocation_seconds", "process_peak_rss_bytes"]},
+    "metrics": {"type": "object", "required": ["proposal_budget", "proposal_count", "accepted_proposal_count", "pipeline_valid_count", "support_and_pipeline_valid_count", "fully_feasible_count", "qualifying_failure_count", "first_qualifying_failure_proposal_count", "restricted_physical_rollouts_to_first_qualifying_failure", "minimum_failure_mutation_distance", "pipeline_valid_rate", "support_and_pipeline_valid_rate", "duplicate_proposal_count", "status_counts", "final_feasible_hypervolume", "feasible_hypervolume_by_proposal", "recorded_work_seconds", "final_invocation_seconds", "process_peak_rss_bytes"]},
     "cost": {"type": "object", "additionalProperties": false, "required": ["original", "proposals", "total"], "properties": {"original": {"type": "object"}, "proposals": {"type": "object"}, "total": {"type": "object"}}},
     "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "report_sha256": {"$ref": "#/$defs/sha256"}

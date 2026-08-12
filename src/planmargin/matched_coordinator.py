@@ -1037,6 +1037,21 @@ def build_report(
     proposal_cost = _sum_cost([record["cost"] for record in proposals])
     original_cost = original["cost"]
     total_cost = _sum_cost([original_cost, proposal_cost])
+    physical_rollouts_to_first = (
+        _sum_cost(
+            [
+                original_cost,
+                *[
+                    record["cost"]
+                    for record in proposals[
+                        : findings[0]["identity"]["proposal_index"] + 1
+                    ]
+                ],
+            ]
+        )["total_physical_rollouts"]
+        if findings
+        else total_cost["total_physical_rollouts"]
+    )
     hypervolume_trace = [
         round(_two_objective_hypervolume(proposals[: index + 1]), 12)
         for index in range(len(proposals))
@@ -1086,6 +1101,9 @@ def build_report(
         "qualifying_failure_count": len(findings),
         "first_qualifying_failure_proposal_count": (
             findings[0]["identity"]["proposal_index"] + 1 if findings else None
+        ),
+        "restricted_physical_rollouts_to_first_qualifying_failure": (
+            physical_rollouts_to_first
         ),
         "minimum_failure_mutation_distance": (
             min(record["proposal"]["normalized_mutation_distance"] for record in findings)
