@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import jax.numpy as jnp
 import numpy as np
+import pytest
 
 from planmargin import smoke_test
 
@@ -65,3 +66,20 @@ def test_metric_summary_excludes_padded_object_slots() -> None:
             "sdc_value": 0.0,
         }
     }
+
+
+def test_training_is_default_and_validation_requires_explicit_authorization() -> None:
+    _, split = smoke_test._dataset_config(
+        smoke_test.DEFAULT_SHARD_URI, allow_validation_access=False
+    )
+    assert split == "training"
+    validation = (
+        "gs://waymo_open_dataset_motion_v_1_3_1/uncompressed/tf_example/"
+        "validation/validation_tfexample.tfrecord-00000-of-00150"
+    )
+    with pytest.raises(ValueError, match="never implicit"):
+        smoke_test._dataset_config(validation, allow_validation_access=False)
+    _, split = smoke_test._dataset_config(
+        validation, allow_validation_access=True
+    )
+    assert split == "validation"

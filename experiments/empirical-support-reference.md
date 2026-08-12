@@ -14,7 +14,7 @@ or opening the official validation split?
   [empirical-support protocol](../docs/behavioral-realism-and-matched-search.md);
 - training shard `00000` excluded because it contains the development
   scenarios;
-- official WOMD validation untouched;
+- no official WOMD validation read by the empirical-support workflow;
 - the unchanged Stage-0 lead-braking selector, retaining one best qualifying
   lead per scenario with no controller or baseline-validation filter;
 - one shared float64 eight-feature extractor over current state through six

@@ -552,7 +552,7 @@ def build_report(
             "Five seeds support descriptive paired results, not broad generalization.",
             "A zero-finding natural result leaves H1 and H2 untestable.",
             "No result describes or evaluates the production Waymo Driver.",
-            "Held-out WOMD validation data remains unopened by this campaign.",
+            "This campaign did not read held-out WOMD validation data.",
         ],
     }
     return random_search._seal_record(report, "report_sha256")

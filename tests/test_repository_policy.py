@@ -64,3 +64,40 @@ def test_per_scenario_womd_reports_are_not_committed() -> None:
     ).stdout.splitlines()
 
     assert tracked == []
+
+
+def test_public_claims_do_not_repeat_disproven_pristine_holdout_language() -> None:
+    prohibited = (
+        "held-out split remains unopened",
+        "validation split has not been opened",
+        "official held-out womd evaluation remains unopened",
+        "official womd validation split remains unopened",
+        "held-out data remains unopened",
+        "held-out remains unopened",
+        "untouched validation split",
+    )
+    tracked = subprocess.run(
+        ["git", "ls-files"],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    searchable = {
+        ".md",
+        ".py",
+        ".ts",
+        ".json",
+        ".html",
+        ".sh",
+    }
+    violations: list[tuple[str, str]] = []
+    for relative in tracked:
+        path = REPOSITORY_ROOT / relative
+        if path.suffix not in searchable or path.resolve() == Path(__file__).resolve():
+            continue
+        content = path.read_text(encoding="utf-8").lower()
+        violations.extend(
+            (relative, phrase) for phrase in prohibited if phrase in content
+        )
+    assert violations == []

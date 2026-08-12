@@ -1,7 +1,7 @@
 # Local setup and WOMD access
 
 This workflow streams one scenario from a fixed Waymo Open Motion Dataset
-(WOMD) validation shard. It does not download the complete dataset, commit raw
+(WOMD) training shard. It does not download the complete dataset, commit raw
 records, or place Google credentials in this repository.
 
 ## 1. Review the data terms
@@ -71,8 +71,8 @@ uv run planmargin-waymax-smoke-test \
   --output artifacts/stage-0/waymax-smoke-test.json
 ```
 
-The command streams only the first TFExample from validation shard
-`00000-of-00150`, preserves its `scenario/id`, completes the unmodified
+The command streams only the first TFExample from training shard
+`00000-of-01000`, preserves its `scenario/id`, completes the unmodified
 eight-second rollout twice, and fails if the trajectory hashes differ. It
 exports only a small report containing configuration, timing, peak process
 memory, hashes, and aggregate Waymax metrics.
@@ -103,8 +103,11 @@ before using `womd-direct`, which performs authorized dataset reads.
 
 For later experiments, individual authorized shards may be copied under
 `data/raw/`; everything below `data/` except its README is ignored. Prefer
-streaming for this smoke test because a single compressed validation shard is
-about 770 MB and only its first record is needed.
+streaming for this smoke test because only its first record is needed.
+
+Validation access is never implicit. The CLI rejects a validation URI unless
+`--allow-validation-access` is supplied under a separately authorized protocol.
+That override is not part of the reproduction workflow.
 
 ## Optional Gemini explanation adapter
 

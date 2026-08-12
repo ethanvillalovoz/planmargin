@@ -13,7 +13,9 @@ the selected scenarios represent WOMD or real-world driving generally.
 - raw records remain in memory only while mining and validation run
 
 Training data is used because this is development and feasibility work. The
-validation split remains held out for later experiment comparisons.
+validation split is not used by selection or either comparative campaign. A
+legacy compatibility smoke had previously accessed one validation record; see
+[ADR 0007](decisions/0007-correct-validation-access-boundary.md).
 
 ## Preferred family probe
 

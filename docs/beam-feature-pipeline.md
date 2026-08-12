@@ -79,7 +79,7 @@ orders the materialized `features` table by event key, and stores a
 - all eight feature values to be finite;
 - every partition assignment to match the frozen hash function;
 - raw scenario IDs and source URIs to be absent; and
-- the official held-out split to remain unopened.
+- the pipeline to perform no official validation-split read.
 
 DuckDB's Parquet reader supports explicit multi-file scans, projections, and
 filter pushdown; PlanMargin passes a fixed file list rather than a client or

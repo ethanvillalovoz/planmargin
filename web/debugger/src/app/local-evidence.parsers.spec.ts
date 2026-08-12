@@ -19,7 +19,7 @@ describe('local evidence response parsers', () => {
     const result = parseCampaign(API_CAMPAIGN, API_METHODS, API_HYPOTHESES, API_CELLS);
 
     expect(result.campaign.mode).toBe('real-local-redacted');
-    expect(result.campaign.heldOutOpened).toBe(false);
+    expect(result.campaign.heldOutComparisonRun).toBe(false);
     expect(result.campaign.methods.bayesian.validRatePercent).toBe(75);
     expect(result.campaign.hypotheses.efficiency).toBe('Untestable');
     expect(result.cells[0].cellId).toBe('cell_opaque');
@@ -47,12 +47,20 @@ describe('local evidence response parsers', () => {
   it('rejects an opened held-out claim and misaligned replay timeline', () => {
     expect(() =>
       parseCampaign(
-        { ...API_CAMPAIGN, held_out_opened: true },
+        { ...API_CAMPAIGN, api_version: '1.0.0' },
         API_METHODS,
         API_HYPOTHESES,
         API_CELLS,
       ),
-    ).toThrowError('held-out split was opened');
+    ).toThrowError('api_version is not supported');
+    expect(() =>
+      parseCampaign(
+        { ...API_CAMPAIGN, held_out_comparison_run: true },
+        API_METHODS,
+        API_HYPOTHESES,
+        API_CELLS,
+      ),
+    ).toThrowError('held-out comparison ran');
     const changed = structuredClone(API_RUN);
     changed.hypothesis.metrics[1].time_seconds = 0.3;
     expect(() => parseLocalRun(changed)).toThrowError('fixed step');

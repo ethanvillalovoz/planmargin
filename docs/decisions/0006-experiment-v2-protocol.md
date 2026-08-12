@@ -143,7 +143,7 @@ Every gate must pass:
 | Privacy and reliability | Checkpoint/report remain ignored; tracked files contain no scenario identity; data-free tests cover training, serialization, inference, limits, and tamper rejection. |
 
 Failure produces a controller `no_go`; the learned policy is not used in a v2
-campaign, and held-out remains unopened.
+campaign, and no v2 validation access occurs.
 
 ## Phase 2: v2 development campaign
 

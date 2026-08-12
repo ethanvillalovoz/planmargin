@@ -18,6 +18,6 @@ describe('CAMPAIGN_EVIDENCE', () => {
     expect(CAMPAIGN_EVIDENCE.hypotheses.efficiency).toBe('Untestable');
     expect(CAMPAIGN_EVIDENCE.hypotheses.minimality).toBe('Untestable');
     expect(CAMPAIGN_EVIDENCE.hypotheses.validity).toBe('Supported');
-    expect(CAMPAIGN_EVIDENCE.heldOutOpened).toBe(false);
+    expect(CAMPAIGN_EVIDENCE.heldOutComparisonRun).toBe(false);
   });
 });

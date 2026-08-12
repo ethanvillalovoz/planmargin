@@ -212,7 +212,8 @@ def test_authenticated_routes_are_redacted_and_not_cached(
             assert '"source_shard":' not in serialized
             assert '"record_index":' not in serialized
 
-        assert campaign.json()["held_out_opened"] is False
+        assert campaign.json()["api_version"] == "1.1.0"
+        assert campaign.json()["held_out_comparison_run"] is False
         assert cells.json()[0]["cell_id"] == CELL_ID
         assert proposals.json()[0]["support_passes"] is None
         assert run.json()["synthetic"] is False

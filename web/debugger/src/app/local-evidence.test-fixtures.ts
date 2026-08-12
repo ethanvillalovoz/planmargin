@@ -1,9 +1,10 @@
 export const API_CAMPAIGN = {
+  api_version: '1.1.0',
   evidence_mode: 'real_local_redacted',
   campaign_label: 'natural-development-v1',
   total_physical_rollouts: 24,
   waymax_rollout_steps: 1_920,
-  held_out_opened: false,
+  held_out_comparison_run: false,
 };
 
 export const API_METHODS = [

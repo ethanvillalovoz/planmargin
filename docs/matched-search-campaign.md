@@ -99,4 +99,4 @@ uv run --frozen planmargin-run-matched-campaign --resume
 Every command prints only aggregate-safe progress or completed campaign
 metrics. Scenario identifiers, object indices, feature vectors, support
 scores, controller outcomes, proposal records, and linked private hashes stay
-inside ignored artifacts. The official WOMD validation split remains unopened.
+inside ignored artifacts. This campaign does not read the WOMD validation split.

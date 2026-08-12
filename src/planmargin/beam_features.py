@@ -1144,7 +1144,7 @@ def public_summary(manifest: Mapping[str, Any]) -> dict[str, Any]:
         "limitations": [
             "This validates the data pipeline, not planner safety or failure discovery.",
             "The tracked report contains aggregates only; feature rows remain ignored locally.",
-            "The official held-out split remains unopened.",
+            "This Beam pipeline did not read the official validation split.",
         ],
     }
 

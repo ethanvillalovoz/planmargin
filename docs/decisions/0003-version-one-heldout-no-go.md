@@ -1,6 +1,6 @@
-# ADR 0003: Keep held-out validation unopened under version one
+# ADR 0003: Do not run a held-out comparison under version one
 
-- **Status:** Accepted
+- **Status:** Accepted; historical access claim corrected by ADR 0007
 - **Date:** 2026-08-12
 - **Checkpoint revision:** `4736ebf`
 
@@ -20,24 +20,27 @@ The separate headway-regression eligibility gate returned `no_go` because only
 4 of 10 originals were eligible. No replacement controller configuration was
 authorized under protocol version one.
 
-The official WOMD validation split has not been opened. Running the unchanged
-natural protocol on it would consume the holdout without a demonstrated
-development signal for the primary comparison. Changing failure thresholds,
-mutation bounds, the controller, or scenario selection after observing the
-development result would violate the frozen protocol and weaken any later
-claim.
+The legacy Stage-0 compatibility smoke had already loaded the first record of a
+validation shard. It did not run either search method and supplied no
+comparative result, but validation was not a pristine statistical holdout.
+Running the unchanged natural protocol on additional validation data would
+still consume the reserved comparison set without a demonstrated development
+signal. Changing failure thresholds, mutation bounds, the controller, or
+scenario selection after observing the development result would violate the
+frozen protocol and weaken any later claim.
 
 ## Decision
 
-PlanMargin records a **version-one held-out `no_go`**. The validation split
-will remain unopened under the current protocol. Version one closes with an
+PlanMargin records a **version-one held-out-comparison `no_go`**. No validation
+search campaign will run under the current protocol. Version one closes with an
 audited negative development result rather than a nominal held-out run that
 cannot answer H1 or H2 reliably.
 
 This decision changes the remaining version-one sequence in ADR 0002: the
 project proceeds to the analytical data layer, measured systems optimization,
 and recruiter-facing demonstration. It does not represent a failed validation
-experiment, because no held-out scenario was loaded or evaluated.
+comparison: the legacy record was used only for compatibility, and neither
+search method was evaluated on it.
 
 A future versioned experiment may authorize held-out access only after all of
 the following occur:
@@ -51,7 +54,7 @@ the following occur:
 4. the data-free, privacy, reconstruction, and zero-cost readiness gates pass;
    and
 5. a separate held-out protocol freezes scenario selection and aggregate
-   reporting before validation data is inspected.
+   reporting before any additional validation data is inspected.
 
 The future protocol must define its development-signal threshold in advance;
 this ADR deliberately does not choose one after seeing version-one outcomes.
@@ -60,8 +63,8 @@ this ADR deliberately does not choose one after seeing version-one outcomes.
 
 ### Positive
 
-- The untouched validation split remains useful for a scientifically motivated
-  future protocol.
+- The unused remainder of validation can support a transparently caveated
+  future protocol, but not a claim that the entire split was pristine.
 - The project reports the zero-finding result without tuning it away.
 - Engineering effort moves to product and systems responsibilities that have
   independent value and do not require additional private-data exposure.

@@ -26,9 +26,10 @@ authenticated local evidence API, and an interactive evidence debugger.
 The result is intentionally narrow. Constrained Bayesian search increased the
 support-and-pipeline-valid rate by **14.8125 percentage points**, but neither
 method found a qualifying failure under the frozen budget. The experiment does
-not establish better failure discovery or mutation minimality. The held-out
-split remains unopened, and PlanMargin does not evaluate the production Waymo
-Driver. See the [aggregate-only result](docs/natural-development-results.md)
+not establish better failure discovery or mutation minimality. No held-out
+comparative campaign ran; one validation record had already been accessed by a
+legacy compatibility smoke test. PlanMargin does not evaluate the production
+Waymo Driver. See the [aggregate-only result](docs/natural-development-results.md)
 and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 
 > **Program status:** The recovered PlanMargin program is complete. The
@@ -258,9 +259,9 @@ following the [credential-safe setup guide](docs/setup.md).
   its 585–619× result is reported only as an isolated-kernel benchmark—not an
   end-to-end campaign speedup.
 - **Technology must own a responsibility.** FastAPI owns the authenticated
-  real-evidence boundary, and Beam owns restartable feature dataflow; each
-  remaining active layer must pass its own responsibility and verification
-  gate before it can be claimed.
+  real-evidence boundary, and Beam owns restartable feature dataflow; every
+  evaluated layer had to pass its own responsibility and verification gate
+  before it could be claimed as a product capability.
 - **Zero-cost execution.** The core system runs on local Apple silicon, CPU
   JAX, optional Colab Free, and data-free GitHub Actions.
 
@@ -276,7 +277,7 @@ following the [credential-safe setup guide](docs/setup.md).
 | Evidence assistant       | [Constrained offline and Gemini contract](docs/evidence-assistant.md)                                                                                                            |
 | Product interface        | [Local evidence API](docs/evidence-api.md) · [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md)                               |
 | Reproduction             | [Local setup](docs/setup.md) · [Data boundary](data/README.md)                                                                                                                     |
-| Active program           | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Open milestones](https://github.com/ethanvillalovoz/planmargin/issues)                             |
+| Program audit            | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Final integration audit](docs/final-program-audit.md)                                   |
 
 ## Data, licensing, and affiliation
 
