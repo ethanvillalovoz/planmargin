@@ -89,9 +89,12 @@ training device, never a PlanMargin finding or safety metric.
 - optimizer: Adam, learning rate `3e-4`;
 - discount: `0.99`;
 - replay capacity: `100,000` transitions;
+- environment collection: 32 parallel episodes;
 - warm-up: `5,000` transitions;
 - minibatch: `256`;
 - training steps: `120,000`;
+- optimizer ratio: four gradient updates after each 32-transition collection
+  step once warm-up completes;
 - target update interval: `1,000` optimizer steps;
 - epsilon: linear from `1.0` to `0.05` over `80,000` environment steps;
 - training seed: `2027`;
