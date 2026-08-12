@@ -133,3 +133,11 @@ deliverable. It may extend the research schedule, but it closes the largest
 claim gap and protects the recruiter-facing product from being deferred behind
 infrastructure work. C++, Beam, and an AI assistant remain in scope only when
 they acquire a concrete, measured responsibility.
+
+## Resolution
+
+The subsequent
+[WOMD empirical-support and matched-search protocol](../behavioral-realism-and-matched-search.md)
+selects the recommended empirical-gate path and freezes the matched experiment.
+The support claim remains pending until its bounded extraction and calibration
+gates pass.

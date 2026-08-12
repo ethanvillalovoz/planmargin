@@ -8,6 +8,13 @@ metric, reproducibility, and privacy contracts established in Stage 0.
 The first run uses the ordered ten-scenario training feasibility set. It is not
 a held-out evaluation and cannot support a planner-performance claim.
 
+This protocol remains the immutable contract for the completed historical
+baseline. The later
+[matched-search protocol](behavioral-realism-and-matched-search.md) adds a WOMD
+empirical-support gate and five seeds, so it requires a new method-neutral
+random control as well as Bayesian search. The historical run is not silently
+rescored or used as the final direct comparator.
+
 ## Frozen search space and budget
 
 For each scenario, the baseline evaluates exactly 32 indexed proposals:

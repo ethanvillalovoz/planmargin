@@ -23,10 +23,12 @@ If the evidence does not support these hypotheses, the negative result will be r
 At checkpoint revision `6224760`, the repository enforces physical, kinematic,
 route, map, and deterministic-rerun constraints, but it does not yet estimate
 behavioral likelihood from observed WOMD distributions. The Bayesian
-comparison therefore cannot be described as fully behavioral-realism-
-constrained until the next protocol either implements that empirical gate for
-both methods or narrows the public research claim. See
-[ADR 0002](decisions/0002-version-one-product-checkpoint.md).
+comparison therefore cannot yet be described as empirically supported. The
+subsequent frozen protocol selects a bounded WOMD empirical-support gate for
+both methods; the claim remains pending until that gate passes its extraction
+and calibration criteria. See
+[ADR 0002](decisions/0002-version-one-product-checkpoint.md) and the
+[matched-search protocol](behavioral-realism-and-matched-search.md).
 
 ## Version-one scope
 
@@ -148,16 +150,20 @@ records physical rollout costs separately. See the
 
 ### Proposed method
 
-Constrained Bayesian optimization using PyTorch/BoTorch on CPU or MPS. A smooth search objective will reward severity and penalize mutation distance and realism violations:
+Constrained multi-objective Bayesian optimization uses PyTorch/BoTorch in
+float64 on CPU. It models criticality and mutation minimality separately,
+avoiding an outcome-tuned scalar weight:
 
 ```text
-score(theta) =
-    severity(theta)
-  - lambda * normalized_mutation_distance(theta)
-  - mu * realism_penalty(theta)
+criticality(theta) = 1 / (1 + max(minimum_signed_separation_m, 0) / 1 m)
+minimality(theta)  = 1 - normalized_mutation_distance(theta) / sqrt(2)
 ```
 
-The final acceptance gates remain authoritative; the scalar search score cannot by itself certify a valid failure.
+Pipeline validity, WOMD empirical support, and reference-controller success are
+modeled outcome constraints. Constrained qLogNEHVI selects a Pareto tradeoff
+without allowing either objective or the acquisition function to certify a
+finding. See the frozen
+[empirical-support and matched-search protocol](behavioral-realism-and-matched-search.md).
 
 ## Stage 0 feasibility exit criteria
 
