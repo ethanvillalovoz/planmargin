@@ -132,13 +132,15 @@ class WaymaxEvaluatorAdapter:
             scenario, object_index, config
         )
         self._record_event(attempt_index, "mutation")
+        mutation_record = mutation.report(config)
+        mutation_record["parameters"] = dict(parameters)
         attempt: dict[str, Any] = {
             "parameters": parameters,
             "identity_control": family_validation.is_identity_point(
                 parameters["braking_onset_offset_s"],
                 parameters["speed_multiplier"],
             ),
-            "mutation": mutation.report(config),
+            "mutation": mutation_record,
             "status": "mutation_rejected",
             "scenario_validation": None,
             "controllers": None,

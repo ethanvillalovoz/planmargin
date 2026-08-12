@@ -31,6 +31,7 @@ class _Mutation:
             "parameters": {
                 "braking_onset_offset_s": config.braking_onset_offset_s,
                 "speed_multiplier": config.speed_multiplier,
+                "fixed_bound_from_underlying_mutation": 100.0,
             },
             "rejection_reasons": [] if self.accepted else ["rejected"],
             "metrics": {},
@@ -186,6 +187,10 @@ def test_support_is_scored_before_both_controllers_even_when_it_fails() -> None:
         "reference_controller",
     ]
     assert result["attempt"]["status"] == "accepted"
+    assert result["attempt"]["mutation"]["parameters"] == {
+        "braking_onset_offset_s": 0.3,
+        "speed_multiplier": 0.8,
+    }
     assert set(result["attempt"]["controllers"]) == {"tested", "reference"}
     assert set(result) == {"attempt", "feature"}
     assert tuple(event["stage"] for event in adapter.events) == tuple(events)
