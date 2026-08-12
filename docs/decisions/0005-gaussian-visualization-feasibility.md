@@ -64,8 +64,10 @@ passes.
 
 ## Frozen inputs and split
 
-- Use one already-selected experiment-v1 **training** scenario. Do not select a
-  scene after viewing Gaussian results.
+- Use the already-selected experiment-v1 **training** scenario with
+  `selection_order = 1`, the earliest item under the frozen selection ordering.
+  Do not substitute a scene after checking LiDAR availability or viewing
+  Gaussian results.
 - Read no official held-out or test split.
 - Consume at most the 11 WOMD-LiDAR input frames associated with that scenario.
 - Use even-indexed frames for fitting and odd-indexed frames for geometric
