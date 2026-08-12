@@ -9,9 +9,10 @@ PlanMargin is an independent research and engineering project that searches for 
 > accepted rollout, and found no qualifying policy-specific failure. The
 > version-one product checkpoint confirms that the experiment engine is on
 > track, while empirical behavioral realism and the recruiter-facing product
-> layers remain incomplete. The next milestone freezes that realism contract
-> and the matched Bayesian-search protocol; no planner-performance claims have
-> been made.
+> layers remain incomplete. The WOMD empirical-support and matched-search
+> contract is now frozen; the next milestone implements and validates that
+> support gate before optimizer code. No planner-performance claims have been
+> made.
 
 ## The problem
 
@@ -93,7 +94,8 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Validate the initial scenario family
 - [x] Implement random-search baseline
 - [x] Freeze the version-one product checkpoint
-- [ ] Resolve the behavioral-realism contract and freeze matched search
+- [x] Resolve the behavioral-realism contract and freeze matched search
+- [ ] Implement the WOMD empirical-support gate
 - [ ] Implement constrained Bayesian search
 - [ ] Build the thin interactive scenario-debugger slice
 - [ ] Run equal-budget evaluation on held-out scenarios
@@ -108,6 +110,7 @@ See the [local setup guide](docs/setup.md),
 [trajectory-visualization protocol](docs/trajectory-visualization.md),
 [lead-braking family-validation protocol](docs/family-validation.md),
 [deterministic random-search protocol](docs/random-search.md),
+[WOMD empirical-support and matched-search protocol](docs/behavioral-realism-and-matched-search.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md), and
