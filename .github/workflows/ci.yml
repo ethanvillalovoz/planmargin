@@ -38,6 +38,9 @@ jobs:
       - name: Lint
         run: uv run --frozen ruff check .
 
+      - name: Build source and native wheel distributions
+        run: uv build
+
       - name: Test without WOMD credentials
         run: uv run --frozen pytest
 

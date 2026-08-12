@@ -16,9 +16,13 @@ Loads selected Waymo Open Motion scenarios and converts them into an internal, v
 
 ### Geometry and validation library
 
-C++20 kernels will eventually own coordinate transforms, oriented-box overlap, route projection, conflict points, time-to-collision, mutation continuity, and kinematic bounds. Python bindings will be provided with pybind11.
-
-Stage 0 may prototype these operations in Python, but each migrated kernel must have parity tests before the C++ version becomes authoritative.
+The first measured native kernel aggregates oriented-box separation and
+longitudinal TTC across aligned controller traces. C++20 owns the per-state
+geometry loop through pybind11; Python retains schema validation and final
+rounding. The original Python algorithm remains a parity oracle, with edge-case
+and randomized equivalence tests required before the native result is
+authoritative. Other geometry stays in Python until profiling gives it a real
+native responsibility. See the [native geometry benchmark](native-geometry.md).
 
 ### Scenario miner
 

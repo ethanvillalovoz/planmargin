@@ -32,7 +32,10 @@ are not printed.
 Every table is stored in one local DuckDB database and exported to a
 Zstandard-compressed Parquet file. The sealed analytics manifest records file
 hashes, byte sizes, source report hashes, builder-source hash, DuckDB version,
-and row counts.
+and row counts. A stable logical fingerprint covers the sealed sources,
+builder, Parquet tables, and row counts. The DuckDB file hash provides
+integrity for that build but is not part of logical identity because equivalent
+DuckDB files can contain different internal storage metadata.
 
 ## Verification contract
 
@@ -44,7 +47,9 @@ Before publishing the output directory atomically, the builder:
 4. recomputes method counts, valid rates, hypervolume summaries, and rollout
    costs with SQL and requires agreement with the campaign report;
 5. reads every Parquet file back through DuckDB and checks its row count; and
-6. hashes the closed DuckDB and Parquet files into the manifest.
+6. hashes the closed DuckDB and Parquet files into the manifest; and
+7. derives a stable logical fingerprint from the reproducible Parquet tables
+   and their sealed provenance.
 
 An existing output directory is never overwritten. This makes a partially
 built or previously sealed analytical dataset distinguishable from a new run.

@@ -7,6 +7,8 @@ from typing import Any
 
 import numpy as np
 
+from planmargin import _geometry
+
 
 def oriented_box_corners(
     *,
@@ -152,10 +154,10 @@ def longitudinal_ttc_s(
     return bumper_gap / closing_speed
 
 
-def interaction_metrics(
+def _interaction_metrics_python(
     sdc: dict[str, Any], lead: dict[str, Any]
 ) -> dict[str, float | int | None]:
-    """Aggregate separation and TTC over aligned SDC and lead tracks."""
+    """Return the Python reference used for native-kernel parity checks."""
     required = (
         "x_m",
         "y_m",
@@ -216,5 +218,53 @@ def interaction_metrics(
         "minimum_signed_separation_m": round(min(separations), 6),
         "minimum_longitudinal_ttc_s": (
             round(min(ttcs), 6) if ttcs else None
+        ),
+    }
+
+
+def _track_matrix(track: dict[str, Any], name: str) -> tuple[np.ndarray, np.ndarray]:
+    numeric_fields = (
+        "x_m",
+        "y_m",
+        "yaw_rad",
+        "vel_x_mps",
+        "vel_y_mps",
+        "length_m",
+        "width_m",
+    )
+    required = (*numeric_fields, "valid")
+    if any(field not in track for field in required):
+        raise ValueError(f"{name} track is missing required fields")
+    arrays = {field: np.asarray(track[field]) for field in required}
+    if any(array.ndim != 1 for array in arrays.values()):
+        raise ValueError(f"{name} track fields must be one-dimensional")
+    lengths = {len(array) for array in arrays.values()}
+    if len(lengths) != 1:
+        raise ValueError(f"{name} track fields must have equal lengths")
+    values = np.column_stack(
+        [np.asarray(arrays[field], dtype=np.float64) for field in numeric_fields]
+    )
+    valid = np.asarray(arrays["valid"], dtype=np.bool_)
+    return values, valid
+
+
+def interaction_metrics(
+    sdc: dict[str, Any], lead: dict[str, Any]
+) -> dict[str, float | int | None]:
+    """Aggregate separation and TTC with the C++20 authoritative kernel."""
+    sdc_values, sdc_valid = _track_matrix(sdc, "sdc")
+    lead_values, lead_valid = _track_matrix(lead, "lead")
+    if len(sdc_values) != len(lead_values):
+        raise ValueError("SDC and lead tracks must be aligned")
+    jointly_valid, minimum_separation, minimum_ttc = (
+        _geometry.aggregate_interaction_metrics(
+            sdc_values, lead_values, sdc_valid, lead_valid
+        )
+    )
+    return {
+        "jointly_valid_states": jointly_valid,
+        "minimum_signed_separation_m": round(minimum_separation, 6),
+        "minimum_longitudinal_ttc_s": (
+            round(minimum_ttc, 6) if minimum_ttc is not None else None
         ),
     }

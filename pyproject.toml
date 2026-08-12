@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Counterfactual stress testing for autonomous-driving planners"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = [
   "botorch==0.18.1",
   "duckdb==1.5.5",
@@ -26,6 +27,7 @@ planmargin-run-matched-search-smoke = "planmargin.matched_smoke:main"
 planmargin-check-regression-eligibility = "planmargin.regression_eligibility:main"
 planmargin-run-matched-campaign = "planmargin.matched_campaign:main"
 planmargin-build-analytics = "planmargin.analytics:main"
+planmargin-benchmark-geometry = "planmargin.geometry_benchmark:main"
 
 [dependency-groups]
 dev = [
@@ -35,11 +37,11 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["pybind11==3.1.0", "setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 88
