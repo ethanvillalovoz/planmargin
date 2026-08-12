@@ -4,16 +4,14 @@
 
 PlanMargin is an independent research and engineering project that searches for the smallest realistic change to a recorded driving scenario that exposes an avoidable planner failure.
 
-> **Current status:** The deterministic 320-proposal uniform-random training
-> baseline is complete. It retained every invalid attempt, reproduced every
-> accepted rollout, and found no qualifying policy-specific failure. The
-> version-one product checkpoint confirms that the experiment engine is on
-> track, while empirical behavioral realism and the recruiter-facing product
-> layers remain incomplete. The frozen WOMD empirical-support gate is now
-> implemented and validated on 265 events from the exact 16-shard reference
-> sample. The data-free proposal core and method-neutral 32-proposal cell
-> coordinator are also complete; the next milestone is their bounded private
-> integration smoke test. No planner-performance claims have been made.
+> **Current status:** The experiment engine now includes the frozen WOMD
+> empirical-support model, constrained-Bayesian proposal core, method-neutral
+> cell coordinator, and a passing private two-proposal integration smoke test.
+> The injected `1.0 s` headway-regression eligibility gate returned a valid
+> `no_go` at 4 of 10 eligible originals, so that track is closed without
+> replacement tuning. The natural development comparison remains pending, as
+> do the recruiter-facing debugger and held-out evaluation. No
+> planner-performance claims have been made.
 
 ## The problem
 
@@ -102,6 +100,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Run the one-scenario, two-proposal private integration smoke test
 - [x] Establish controlled headway-regression original eligibility (`no_go`)
 - [ ] Build the thin interactive scenario-debugger slice
+- [ ] Run the complete natural development comparison
 - [ ] Run equal-budget evaluation on held-out scenarios
 - [ ] Add the analytical data layer and measured systems optimization
 - [ ] Polish the reproducible recruiter-facing demonstration
