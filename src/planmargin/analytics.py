@@ -561,6 +561,16 @@ def build_analytics(
             }
             for table, metadata in parquet.items()
         }
+        logical_fingerprint = random_search._content_sha256(
+            {
+                "campaign_manifest_sha256": run_manifest["manifest_sha256"],
+                "campaign_report_sha256": campaign_report["report_sha256"],
+                "builder_source_sha256": random_search._file_sha256(Path(__file__)),
+                "duckdb_version": duckdb.__version__,
+                "parquet": parquet_files,
+                "table_row_counts": row_counts,
+            }
+        )
         manifest = random_search._seal_record(
             {
                 "$schema": MANIFEST_SCHEMA_URI,
@@ -574,6 +584,7 @@ def build_analytics(
                 "campaign_report_sha256": campaign_report["report_sha256"],
                 "builder_source_sha256": random_search._file_sha256(Path(__file__)),
                 "duckdb_version": duckdb.__version__,
+                "logical_fingerprint": logical_fingerprint,
                 "privacy_scope": "sealed_campaign_and_cell_aggregates_only",
                 "database": database,
                 "parquet": parquet_files,

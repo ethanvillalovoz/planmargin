@@ -45,7 +45,14 @@ and tokens.
 
 ## 3. Create the pinned Python environment
 
-Install [uv](https://docs.astral.sh/uv/), then run:
+Install [uv](https://docs.astral.sh/uv/) and a C++20 compiler. On macOS, the
+compiler is provided by the free Xcode Command Line Tools:
+
+```bash
+xcode-select --install
+```
+
+Then run:
 
 ```bash
 uv sync --frozen
@@ -53,7 +60,9 @@ uv sync --frozen
 
 The lockfile pins the complete transitive environment. Waymax itself is pinned
 to commit `a64dfec9be8576b60d9cecc94f406d9812d4a7d0`. The project uses Python 3.11
-because the system Python may be newer than TensorFlow supports.
+because the system Python may be newer than TensorFlow supports. Environment
+creation compiles the small C++20/pybind11 interaction-metrics extension
+locally; it does not download a platform-specific project binary.
 
 ## 4. Run the deterministic smoke test
 

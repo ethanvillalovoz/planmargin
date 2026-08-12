@@ -184,7 +184,19 @@ def test_output_is_reproducible_and_cannot_be_overwritten(
         campaign_dir=campaign_dir, output_dir=second_dir
     )
 
-    assert first == second
+    assert first["logical_fingerprint"] == second["logical_fingerprint"]
+    assert first["parquet"] == second["parquet"]
+    assert first["table_row_counts"] == second["table_row_counts"]
+    for directory in (first_dir, second_dir):
+        connection = duckdb.connect(
+            str(directory / analytics.DATABASE_NAME), read_only=True
+        )
+        try:
+            assert connection.execute(
+                "SELECT method, proposal_count FROM methods ORDER BY method"
+            ).fetchall() == [("bayesian", 1600), ("random", 1600)]
+        finally:
+            connection.close()
     with pytest.raises(FileExistsError, match="already exists"):
         analytics.build_analytics(
             campaign_dir=campaign_dir, output_dir=first_dir

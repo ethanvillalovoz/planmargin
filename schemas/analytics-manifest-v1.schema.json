@@ -4,7 +4,7 @@
   "title": "PlanMargin private analytics manifest v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema_version", "record_type", "campaign_id", "campaign_configuration_fingerprint", "campaign_manifest_sha256", "campaign_report_sha256", "builder_source_sha256", "duckdb_version", "privacy_scope", "database", "parquet", "table_row_counts", "sql_aggregate_verification", "manifest_sha256"],
+  "required": ["$schema", "schema_version", "record_type", "campaign_id", "campaign_configuration_fingerprint", "campaign_manifest_sha256", "campaign_report_sha256", "builder_source_sha256", "duckdb_version", "logical_fingerprint", "privacy_scope", "database", "parquet", "table_row_counts", "sql_aggregate_verification", "manifest_sha256"],
   "properties": {
     "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/analytics-manifest-v1.schema.json"},
     "schema_version": {"const": "1.0.0"},
@@ -15,6 +15,7 @@
     "campaign_report_sha256": {"$ref": "#/$defs/sha256"},
     "builder_source_sha256": {"$ref": "#/$defs/sha256"},
     "duckdb_version": {"const": "1.5.5"},
+    "logical_fingerprint": {"$ref": "#/$defs/sha256"},
     "privacy_scope": {"const": "sealed_campaign_and_cell_aggregates_only"},
     "database": {"$ref": "#/$defs/file"},
     "parquet": {

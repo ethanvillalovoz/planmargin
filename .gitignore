@@ -28,6 +28,7 @@ compile_commands.json
 *.o
 *.a
 *.dylib
+*.so
 
 # Node and Angular
 node_modules/

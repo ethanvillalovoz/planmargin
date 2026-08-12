@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from planmargin import interaction_metrics
+from planmargin import geometry_benchmark
 
 
 def _box(x_m: float) -> np.ndarray:
@@ -119,3 +120,65 @@ def test_valid_state_with_nonfinite_geometry_is_rejected() -> None:
 
     with pytest.raises(ValueError, match="must be finite"):
         interaction_metrics.interaction_metrics(sdc, lead)
+
+
+def test_native_trace_aggregation_matches_python_reference_randomized() -> None:
+    generator = np.random.default_rng(20260812)
+    for _ in range(100):
+        states = 80
+        sdc_x = np.cumsum(generator.uniform(0.5, 1.5, states))
+        lead_x = sdc_x + generator.uniform(-3.0, 30.0, states)
+        sdc = {
+            "x_m": sdc_x,
+            "y_m": generator.normal(0.0, 1.0, states),
+            "yaw_rad": generator.uniform(-np.pi, np.pi, states),
+            "vel_x_mps": generator.uniform(-2.0, 20.0, states),
+            "vel_y_mps": generator.uniform(-2.0, 2.0, states),
+            "length_m": generator.uniform(3.0, 6.0, states),
+            "width_m": generator.uniform(1.5, 2.5, states),
+            "valid": generator.random(states) > 0.1,
+        }
+        lead = {
+            "x_m": lead_x,
+            "y_m": generator.normal(0.0, 1.0, states),
+            "yaw_rad": generator.uniform(-np.pi, np.pi, states),
+            "vel_x_mps": generator.uniform(-2.0, 20.0, states),
+            "vel_y_mps": generator.uniform(-2.0, 2.0, states),
+            "length_m": generator.uniform(3.0, 6.0, states),
+            "width_m": generator.uniform(1.5, 2.5, states),
+            "valid": generator.random(states) > 0.1,
+        }
+        sdc["valid"][0] = True
+        lead["valid"][0] = True
+
+        assert interaction_metrics.interaction_metrics(
+            sdc, lead
+        ) == interaction_metrics._interaction_metrics_python(sdc, lead)
+
+
+def test_native_kernel_preserves_invalid_state_and_shape_semantics() -> None:
+    sdc, lead = geometry_benchmark.synthetic_tracks(states=3)
+    sdc["x_m"][1] = np.nan
+    sdc["valid"][1] = False
+    assert interaction_metrics.interaction_metrics(
+        sdc, lead
+    ) == interaction_metrics._interaction_metrics_python(sdc, lead)
+
+    sdc["valid"][:] = False
+    with pytest.raises(ValueError, match="no jointly valid states"):
+        interaction_metrics.interaction_metrics(sdc, lead)
+
+    sdc, lead = geometry_benchmark.synthetic_tracks(states=3)
+    sdc["x_m"] = sdc["x_m"][:, None]
+    with pytest.raises(ValueError, match="one-dimensional"):
+        interaction_metrics.interaction_metrics(sdc, lead)
+
+
+def test_data_free_benchmark_checks_parity() -> None:
+    report = geometry_benchmark.benchmark(iterations=3, states=20)
+
+    assert report["decision"] == "parity_passed"
+    assert report["fixture"] == "synthetic_20_state_lead_vehicle_trace"
+    assert report["native_median_microseconds"] > 0.0
+    assert report["python_median_microseconds"] > 0.0
+    assert report["kernel_speedup"] > 0.0

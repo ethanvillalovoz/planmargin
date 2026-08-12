@@ -103,7 +103,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Run the complete natural development comparison
 - [x] Resolve the version-one held-out gate (`no_go`; split remains unopened)
 - [x] Add the private DuckDB/Parquet analytical data layer
-- [ ] Add measured systems optimization
+- [x] Add measured C++20 interaction-metrics optimization
 - [ ] Polish the reproducible recruiter-facing demonstration
 
 See the [local setup guide](docs/setup.md),
@@ -121,6 +121,7 @@ See the [local setup guide](docs/setup.md),
 [natural development campaign](docs/matched-search-campaign.md),
 [natural development results](docs/natural-development-results.md),
 [private campaign analytics](docs/analytics.md),
+[measured C++20 interaction metrics](docs/native-geometry.md),
 [private matched-search integration smoke test](docs/matched-search-private-smoke.md),
 [controlled headway-regression eligibility](docs/regression-eligibility.md),
 [scenario debugger design and verification contract](docs/debugger-design.md),
