@@ -6,9 +6,12 @@ PlanMargin is an independent research and engineering project that searches for 
 
 > **Current status:** The deterministic 320-proposal uniform-random training
 > baseline is complete. It retained every invalid attempt, reproduced every
-> accepted rollout, and found no qualifying policy-specific failure. The next
-> milestone is constrained Bayesian search under the identical budget and
-> evaluation contract; no planner-performance claims have been made.
+> accepted rollout, and found no qualifying policy-specific failure. The
+> version-one product checkpoint confirms that the experiment engine is on
+> track, while empirical behavioral realism and the recruiter-facing product
+> layers remain incomplete. The next milestone freezes that realism contract
+> and the matched Bayesian-search protocol; no planner-performance claims have
+> been made.
 
 ## The problem
 
@@ -89,10 +92,13 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Produce the first original-versus-counterfactual visualization
 - [x] Validate the initial scenario family
 - [x] Implement random-search baseline
+- [x] Freeze the version-one product checkpoint
+- [ ] Resolve the behavioral-realism contract and freeze matched search
 - [ ] Implement constrained Bayesian search
+- [ ] Build the thin interactive scenario-debugger slice
 - [ ] Run equal-budget evaluation on held-out scenarios
-- [ ] Add scalable processing and profiling
-- [ ] Build the engineer-facing scenario debugger
+- [ ] Add the analytical data layer and measured systems optimization
+- [ ] Polish the reproducible recruiter-facing demonstration
 
 See the [local setup guide](docs/setup.md),
 [scenario-selection protocol](docs/scenario-selection.md),
@@ -104,7 +110,9 @@ See the [local setup guide](docs/setup.md),
 [deterministic random-search protocol](docs/random-search.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
-[initial scope decision](docs/decisions/0001-project-scope.md) for details.
+[initial scope decision](docs/decisions/0001-project-scope.md), and
+[version-one product checkpoint](docs/decisions/0002-version-one-product-checkpoint.md)
+for details.
 
 ## Reproducibility principles
 

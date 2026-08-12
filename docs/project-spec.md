@@ -18,6 +18,16 @@ The project evaluates a testing methodology. It does not make claims about the p
 
 If the evidence does not support these hypotheses, the negative result will be reported rather than hidden.
 
+## Version-one checkpoint
+
+At checkpoint revision `6224760`, the repository enforces physical, kinematic,
+route, map, and deterministic-rerun constraints, but it does not yet estimate
+behavioral likelihood from observed WOMD distributions. The Bayesian
+comparison therefore cannot be described as fully behavioral-realism-
+constrained until the next protocol either implements that empirical gate for
+both methods or narrows the public research claim. See
+[ADR 0002](decisions/0002-version-one-product-checkpoint.md).
+
 ## Version-one scope
 
 ### Dataset and simulator
