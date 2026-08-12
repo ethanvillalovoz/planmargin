@@ -1,6 +1,6 @@
 # ADR 0006: Freeze experiment v2 and its learned-controller gate
 
-- **Status:** accepted; controller qualification pending
+- **Status:** accepted; controller qualification `no_go`
 - **Date:** 2026-08-12
 - **Tracking:** #56
 
@@ -234,3 +234,30 @@ responsibility and removes v1's same-algorithm controller limitation. It also
 keeps the project scientifically legible: a failed RL qualification or sparse
 development result remains useful evidence and cannot be bypassed to obtain a
 more impressive held-out story.
+
+## Result
+
+The frozen training and synthetic evaluation ran twice on the M4 Pro. Both
+trainings emitted byte-identical 21.66 KiB checkpoints and identical parameter
+fingerprints. The first and second training runs took 6.66 and 5.99 seconds,
+respectively; peak RSS was 292.2 MiB. The final controller was not selected from
+intermediate checkpoints.
+
+| Synthetic evaluation (2,048 episodes, seed 2028) | Collision rate | Mean distance | Mean return |
+| --- | ---: | ---: | ---: |
+| Learned final DQN | **3.125%** | 93.43 m | -1.44 |
+| Emergency-braking baseline | 1.953% | 92.50 m | -1.40 |
+| Fixed untrained network | 11.475% | 52.20 m | -11.37 |
+
+Determinism, free-compute, and progress gates passed. The synthetic-safety gate
+failed because 3.125% exceeds both the absolute 1.0% maximum and the permitted
+margin over the emergency baseline. The result is therefore
+`synthetic_no_go`.
+
+Per the predeclared sequence, PlanMargin did not deploy this checkpoint into
+Waymax, did not run the 100-cell v2 development campaign, and did not open WOMD
+validation. Tuning the reward, training budget, action shield, architecture, or
+threshold after this observation would constitute a new protocol version. The
+implementation and aggregate result remain as evidence of genuine JAX/Optax
+double-DQN engineering and of the project's refusal to promote an unqualified
+controller.

@@ -160,8 +160,9 @@ dependencies:
   completed `no_go` on trajectory coverage; its private field is not served and
   no renderer was added. Decoder/fitter code and aggregate audit results remain
   for reproducibility.
-- **Learned or RL planner:** an experiment-v2 candidate that must earn a role
-  through compute, determinism, and scientific-design gates.
+- **Learned or RL planner:** the experiment-v2 JAX double-DQN candidate passed
+  determinism, compute, and progress gates but failed its predeclared synthetic
+  collision gate. It was not deployed into Waymax and validation stayed closed.
 
 Hosted infrastructure remains unnecessary: every core responsibility must
 retain a free local or data-free execution path. See the

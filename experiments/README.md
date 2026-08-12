@@ -47,3 +47,6 @@ predeclared proposals.
 The [controlled headway-regression eligibility report](regression-eligibility.md)
 records the valid `no_go` that closes the injected-regression track without
 changing its frozen configuration or the natural experiment.
+The [experiment-v2 protocol and result](../docs/decisions/0006-experiment-v2-protocol.md)
+records deterministic JAX double-DQN training and the synthetic-safety `no_go`
+that prevented Waymax deployment, a v2 campaign, and held-out access.

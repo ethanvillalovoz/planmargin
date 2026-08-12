@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/rl-controller-training-report-v1.schema.json",
+  "title": "PlanMargin RL controller training report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "record_type", "status", "held_out_opened",
+    "training_seed", "evaluation_seed", "configuration", "provenance", "checkpoint_sha256",
+    "parameter_fingerprint", "checkpoint_bytes", "first_training",
+    "second_training", "evaluation", "gates", "report_sha256"
+  ],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/rl-controller-training-report-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.rl_controller_training_report"},
+    "status": {"enum": ["synthetic_go", "synthetic_no_go"]},
+    "held_out_opened": {"const": false},
+    "training_seed": {"const": 2027},
+    "evaluation_seed": {"const": 2028},
+    "configuration": {"type": "object"},
+    "provenance": {
+      "type": "object",
+      "required": ["python", "platform", "machine", "jax", "jax_backend", "optax", "controller_source_sha256", "protocol_sha256"],
+      "properties": {
+        "controller_source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "protocol_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "checkpoint_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "parameter_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "checkpoint_bytes": {"type": "integer", "minimum": 1, "maximum": 2097152},
+    "first_training": {"$ref": "#/$defs/training"},
+    "second_training": {"$ref": "#/$defs/training"},
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["learned", "untrained", "emergency_braking"],
+      "properties": {
+        "learned": {"$ref": "#/$defs/evaluation"},
+        "untrained": {"$ref": "#/$defs/evaluation"},
+        "emergency_braking": {"$ref": "#/$defs/evaluation"}
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deterministic_training", "free_local_compute", "synthetic_safety", "synthetic_progress"],
+      "properties": {
+        "deterministic_training": {"type": "boolean"},
+        "free_local_compute": {"type": "boolean"},
+        "synthetic_safety": {"type": "boolean"},
+        "synthetic_progress": {"type": "boolean"}
+      }
+    },
+    "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "training": {
+      "type": "object",
+      "required": ["environment_steps", "optimizer_steps", "runtime_seconds", "peak_rss_bytes", "mean_last_100_huber_loss"],
+      "properties": {
+        "environment_steps": {"type": "integer", "minimum": 1},
+        "optimizer_steps": {"type": "integer", "minimum": 1},
+        "runtime_seconds": {"type": "number", "minimum": 0},
+        "peak_rss_bytes": {"type": "integer", "minimum": 1},
+        "mean_last_100_huber_loss": {"type": "number"}
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["episode_count", "collision_count", "collision_rate", "mean_return", "mean_distance_m"],
+      "properties": {
+        "episode_count": {"type": "integer", "minimum": 1},
+        "collision_count": {"type": "integer", "minimum": 0},
+        "collision_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "mean_return": {"type": "number"},
+        "mean_distance_m": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}
