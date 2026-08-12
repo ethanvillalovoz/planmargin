@@ -9,8 +9,9 @@ PlanMargin is an independent research and engineering project that searches for 
 > cell coordinator, and a passing private two-proposal integration smoke test.
 > The injected `1.0 s` headway-regression eligibility gate returned a valid
 > `no_go` at 4 of 10 eligible originals, so that track is closed without
-> replacement tuning. The natural development comparison remains pending, as
-> do the recruiter-facing debugger and held-out evaluation. No
+> replacement tuning. A local, synthetic-only Angular/Three.js scenario
+> debugger now exercises the method-neutral visualization contract. The
+> natural development comparison and held-out evaluation remain pending. No
 > planner-performance claims have been made.
 
 ## The problem
@@ -99,7 +100,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Implement method-neutral matched-search records and coordination
 - [x] Run the one-scenario, two-proposal private integration smoke test
 - [x] Establish controlled headway-regression original eligibility (`no_go`)
-- [ ] Build the thin interactive scenario-debugger slice
+- [x] Build the thin interactive scenario-debugger slice
 - [ ] Run the complete natural development comparison
 - [ ] Run equal-budget evaluation on held-out scenarios
 - [ ] Add the analytical data layer and measured systems optimization
@@ -119,11 +120,29 @@ See the [local setup guide](docs/setup.md),
 [matched-search cell coordinator](docs/matched-search-coordinator.md),
 [private matched-search integration smoke test](docs/matched-search-private-smoke.md),
 [controlled headway-regression eligibility](docs/regression-eligibility.md),
+[scenario debugger design and verification contract](docs/debugger-design.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md), and
 [version-one product checkpoint](docs/decisions/0002-version-one-product-checkpoint.md)
 for details.
+
+## Local scenario debugger
+
+The thin debugger uses a bundled synthetic fixture and does not discover or
+upload private dataset records. With Node.js 24.15.0 or a compatible Node 24
+release:
+
+```bash
+cd web/debugger
+npm ci
+npm start
+```
+
+Open `http://127.0.0.1:4200`. The interface supports proposal selection,
+play/pause/step, timeline scrubbing, responsive Scene/Evidence/Metrics views,
+strictly validated synthetic JSON files, and a compact view export. Run
+`npm run check` for strict typechecking, unit tests, and a production build.
 
 ## Reproducibility principles
 
