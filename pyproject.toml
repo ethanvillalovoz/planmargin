@@ -22,6 +22,7 @@ planmargin-run-random-baseline = "planmargin.random_search:main"
 planmargin-build-empirical-support = "planmargin.empirical_support:main"
 planmargin-report-matched-search-core = "planmargin.matched_search:main"
 planmargin-run-matched-search-smoke = "planmargin.matched_smoke:main"
+planmargin-check-regression-eligibility = "planmargin.regression_eligibility:main"
 
 [dependency-groups]
 dev = [
