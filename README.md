@@ -101,7 +101,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Establish controlled headway-regression original eligibility (`no_go`)
 - [x] Build the thin interactive scenario-debugger slice
 - [x] Run the complete natural development comparison
-- [ ] Run equal-budget evaluation on held-out scenarios
+- [x] Resolve the version-one held-out gate (`no_go`; split remains unopened)
 - [ ] Add the analytical data layer and measured systems optimization
 - [ ] Polish the reproducible recruiter-facing demonstration
 
@@ -123,9 +123,10 @@ See the [local setup guide](docs/setup.md),
 [controlled headway-regression eligibility](docs/regression-eligibility.md),
 [scenario debugger design and verification contract](docs/debugger-design.md),
 [project specification](docs/project-spec.md),
-[architecture](docs/architecture.md), and
-[initial scope decision](docs/decisions/0001-project-scope.md), and
-[version-one product checkpoint](docs/decisions/0002-version-one-product-checkpoint.md)
+[architecture](docs/architecture.md),
+[initial scope decision](docs/decisions/0001-project-scope.md),
+[version-one product checkpoint](docs/decisions/0002-version-one-product-checkpoint.md), and
+[version-one held-out decision](docs/decisions/0003-version-one-heldout-no-go.md)
 for details.
 
 ## Local scenario debugger

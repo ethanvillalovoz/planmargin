@@ -30,6 +30,12 @@ and calibration criteria. See
 [ADR 0002](decisions/0002-version-one-product-checkpoint.md) and the
 [matched-search protocol](behavioral-realism-and-matched-search.md).
 
+The completed natural development campaign later produced no qualifying
+findings for either method, and the one predeclared regression alternative
+failed its eligibility gate. [ADR 0003](decisions/0003-version-one-heldout-no-go.md)
+therefore keeps the validation split unopened under version one and narrows
+the final evidence to the audited development comparison.
+
 ## Version-one scope
 
 ### Dataset and simulator
