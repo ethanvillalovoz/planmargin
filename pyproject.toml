@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.12"
 license = { text = "Apache-2.0" }
 dependencies = [
+  "botorch==0.18.1",
   "waymo-waymax @ git+https://github.com/waymo-research/waymax.git@a64dfec9be8576b60d9cecc94f406d9812d4a7d0",
 ]
 
@@ -19,6 +20,7 @@ planmargin-render-trajectory-comparison = "planmargin.trajectory_visualization:m
 planmargin-validate-lead-braking-family = "planmargin.family_validation:main"
 planmargin-run-random-baseline = "planmargin.random_search:main"
 planmargin-build-empirical-support = "planmargin.empirical_support:main"
+planmargin-report-matched-search-core = "planmargin.matched_search:main"
 
 [dependency-groups]
 dev = [

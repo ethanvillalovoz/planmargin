@@ -33,4 +33,7 @@ records the first fixed multi-scenario mutation grid and its predeclared go
 decision before search implementation.
 The [deterministic random-search baseline report](random-search-baseline.md)
 records the complete fixed-budget training run, including all invalid-attempt
-and physical-rollout accounting, before Bayesian search is implemented.
+and physical-rollout accounting, before the Bayesian core was implemented.
+The [data-free matched-search proposal-core report](matched-search-proposal-core.md)
+records the released CPU dependency stack and synthetic evidence for the
+frozen random/Bayesian proposal boundary before private coordination.
