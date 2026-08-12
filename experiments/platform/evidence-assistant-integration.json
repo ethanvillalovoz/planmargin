@@ -1,0 +1,28 @@
+{
+  "decision": "evidence_assistant_verified",
+  "hosted_request_executed": false,
+  "integrity_gates": {
+    "all_five_queries_schema_valid": true,
+    "citations_sealed_to_tracked_sources": true,
+    "generated_numeric_metrics_rejected": true,
+    "local_duckdb_query_verified": true,
+    "nonallowlisted_queries_rejected": true,
+    "offline_default_deterministic": true,
+    "private_evidence_blocked_from_gemini": true,
+    "raw_question_excluded_from_gemini": true
+  },
+  "limitations": [
+    "The assistant explains deterministic evidence and does not generate scientific results.",
+    "The optional hosted path was contract-tested without making a billable or data-sharing request.",
+    "Gemini free-tier availability and terms must be rechecked before optional use."
+  ],
+  "provider_modes": [
+    "offline_deterministic",
+    "gemini_public_aggregate"
+  ],
+  "public_catalog_fingerprint": "3f82f51f3711d6dceeef378bbadfc059b816aee5613d544ea29d1d90e99a963c",
+  "query_count": 5,
+  "record_type": "planmargin.evidence_assistant_integration",
+  "schema_version": 1,
+  "status": "completed"
+}

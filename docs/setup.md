@@ -105,3 +105,19 @@ For later experiments, individual authorized shards may be copied under
 `data/raw/`; everything below `data/` except its README is ignored. Prefer
 streaming for this smoke test because a single compressed validation shard is
 about 770 MB and only its first record is needed.
+
+## Optional Gemini explanation adapter
+
+The evidence assistant is offline by default and needs no additional package:
+
+```bash
+uv run --frozen planmargin-ask-evidence \
+  --question "What is the defensible claim?"
+```
+
+Only if you have independently verified that a Google AI Studio project is on
+the current free tier, install the pinned optional SDK with
+`uv sync --extra assistant`. Keep `GEMINI_API_KEY` in the environment and use
+`--provider gemini --confirm-free-tier`. Hosted mode receives public aggregates
+only and cannot be combined with local evidence. See the complete
+[assistant privacy and provider contract](evidence-assistant.md) before use.

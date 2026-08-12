@@ -33,6 +33,12 @@ planmargin-build-analytics = "planmargin.analytics:main"
 planmargin-build-beam-features = "planmargin.beam_features:main"
 planmargin-benchmark-geometry = "planmargin.geometry_benchmark:main"
 planmargin-serve-evidence = "planmargin.evidence_api:main"
+planmargin-ask-evidence = "planmargin.evidence_assistant:main"
+
+[project.optional-dependencies]
+assistant = [
+  "google-genai==2.17.0",
+]
 
 [dependency-groups]
 dev = [

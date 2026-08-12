@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/evidence-assistant-response-v1.schema.json",
+  "title": "PlanMargin constrained evidence assistant response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "record_type",
+    "schema_version",
+    "status",
+    "question",
+    "provider",
+    "tool_result",
+    "explanation",
+    "privacy",
+    "limitations"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/evidence-assistant-response-v1.schema.json"
+    },
+    "record_type": { "const": "planmargin.evidence_assistant_response" },
+    "schema_version": { "const": "1.0.0" },
+    "status": { "const": "answered" },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "query_id", "query_label"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "query_id": { "$ref": "#/$defs/queryId" },
+        "query_label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "model", "role"],
+      "properties": {
+        "id": { "enum": ["offline_deterministic", "gemini_public_aggregate"] },
+        "model": { "type": ["string", "null"] },
+        "role": { "const": "explanation_only" }
+      }
+    },
+    "tool_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query_id", "title", "source_mode", "facts", "citations"],
+      "properties": {
+        "query_id": { "$ref": "#/$defs/queryId" },
+        "title": { "type": "string", "minLength": 1 },
+        "source_mode": { "enum": ["public_aggregate", "real_local_redacted"] },
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/fact" }
+        },
+        "citations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/citation" }
+        }
+      }
+    },
+    "explanation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "interpretation",
+        "cited_fact_ids",
+        "limitation",
+        "citation_ids"
+      ],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1, "maxLength": 280 },
+        "interpretation": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "cited_fact_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "limitation": { "type": "string", "minLength": 1, "maxLength": 280 },
+        "citation_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_question_persisted",
+        "raw_question_sent_to_provider",
+        "private_data_sent_to_provider",
+        "provider_input_scope"
+      ],
+      "properties": {
+        "raw_question_persisted": { "const": false },
+        "raw_question_sent_to_provider": { "const": false },
+        "private_data_sent_to_provider": { "const": false },
+        "provider_input_scope": {
+          "enum": ["none", "public_aggregate_tool_result_only"]
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "queryId": {
+      "enum": [
+        "campaign_overview",
+        "method_comparison",
+        "hypothesis_decisions",
+        "claim_boundary",
+        "beam_pipeline"
+      ]
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact_id", "statement", "value", "unit", "citation_id"],
+      "properties": {
+        "fact_id": { "type": "string", "pattern": "^[a-z0-9_.-]+$" },
+        "statement": { "type": "string", "minLength": 1 },
+        "value": { "type": ["string", "number", "integer", "boolean", "null"] },
+        "unit": { "type": ["string", "null"] },
+        "citation_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["citation_id", "title", "repository_path", "sha256"],
+      "properties": {
+        "citation_id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "repository_path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}
