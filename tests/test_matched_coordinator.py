@@ -352,6 +352,14 @@ def test_both_methods_complete_equal_budgets_and_shared_accounting(
         report["cost"]["total"]["total_physical_rollouts"]
         for report in reports.values()
     } == {196}
+    assert all(
+        4
+        <= report["metrics"][
+            "restricted_physical_rollouts_to_first_qualifying_failure"
+        ]
+        <= 196
+        for report in reports.values()
+    )
     assert all(report["metrics"]["qualifying_failure_count"] > 0 for report in reports.values())
     assert reports["bayesian"]["metrics"]["duplicate_proposal_count"] == 23
     assert reports["bayesian"]["metrics"]["support_and_pipeline_valid_count"] < 32
@@ -398,6 +406,35 @@ def test_rejected_proposals_remain_in_the_complete_budget(
     assert all(record["cost"]["core_mutation_attempts"] == 1 for record in rejected)
     assert all(record["cost"]["total_physical_rollouts"] == 0 for record in rejected)
     assert all(record["outcome"]["objectives"] == [0.0, 0.0] for record in rejected)
+
+
+def test_no_finding_physical_cost_is_censored_at_the_complete_horizon(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    manifest, model = _prepare(tmp_path)
+
+    def no_finding_attempt(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        evaluation = _attempt(*args, **kwargs)
+        tested = evaluation["attempt"]["controllers"]["tested"]
+        tested["outcome"] = _outcome(True)
+        return evaluation
+
+    report = matched_coordinator.run(
+        manifest_path=manifest,
+        support_model_path=model,
+        output_dir=Path("artifacts/search-comparison/no-findings"),
+        cell=matched_coordinator.CellConfig("random", "natural", 0, 1),
+        scenario_loader=_loader,
+        original_evaluator=_original,
+        attempt_evaluator=no_finding_attempt,
+    )
+
+    assert report["metrics"]["qualifying_failure_count"] == 0
+    assert report["metrics"]["first_qualifying_failure_proposal_count"] is None
+    assert report["metrics"][
+        "restricted_physical_rollouts_to_first_qualifying_failure"
+    ] == report["cost"]["total"]["total_physical_rollouts"]
 
 
 def test_interrupted_resume_matches_uninterrupted_scientific_records(

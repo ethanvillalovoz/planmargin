@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/matched-campaign-report-v1.schema.json",
+  "title": "PlanMargin matched-search completed campaign report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "campaign_id", "configuration_fingerprint", "support_model_fingerprint", "status", "decision", "integrity_gates", "metrics_by_method", "hypotheses", "cost_by_method", "cost_total", "recorded_work_seconds", "final_invocation_seconds", "process_peak_rss_bytes", "limitations", "report_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/matched-campaign-report-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.matched_campaign_report"},
+    "campaign_id": {"const": "natural-development-v1"},
+    "configuration_fingerprint": {"$ref": "#/$defs/sha256"},
+    "support_model_fingerprint": {"$ref": "#/$defs/sha256"},
+    "status": {"const": "completed"},
+    "decision": {"enum": ["campaign_complete", "invalid_campaign"]},
+    "integrity_gates": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "boolean"}},
+    "metrics_by_method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["random", "bayesian"],
+      "properties": {
+        "random": {"$ref": "#/$defs/methodMetrics"},
+        "bayesian": {"$ref": "#/$defs/methodMetrics"}
+      }
+    },
+    "hypotheses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["h1_efficiency", "h2_minimality", "h3_validity"],
+      "properties": {
+        "h1_efficiency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "bayesian_finding_count_at_least_random", "bayesian_lower_restricted_mean_proposals", "bayesian_lower_restricted_mean_physical_rollouts"],
+          "properties": {
+            "status": {"enum": ["supported", "unsupported", "untestable"]},
+            "bayesian_finding_count_at_least_random": {"type": "boolean"},
+            "bayesian_lower_restricted_mean_proposals": {"type": "boolean"},
+            "bayesian_lower_restricted_mean_physical_rollouts": {"type": "boolean"}
+          }
+        },
+        "h2_minimality": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "paired_cell_count", "median_bayesian_minus_random_mutation_distance"],
+          "properties": {
+            "status": {"enum": ["supported", "unsupported", "untestable"]},
+            "paired_cell_count": {"type": "integer", "minimum": 0, "maximum": 50},
+            "median_bayesian_minus_random_mutation_distance": {"type": ["number", "null"]}
+          }
+        },
+        "h3_validity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "bayesian_minus_random_valid_rate", "noninferiority_margin"],
+          "properties": {
+            "status": {"enum": ["supported", "unsupported"]},
+            "bayesian_minus_random_valid_rate": {"type": "number", "minimum": -1, "maximum": 1},
+            "noninferiority_margin": {"const": 0.05}
+          }
+        }
+      }
+    },
+    "cost_by_method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["random", "bayesian"],
+      "properties": {
+        "random": {"$ref": "#/$defs/costRecord"},
+        "bayesian": {"$ref": "#/$defs/costRecord"}
+      }
+    },
+    "cost_total": {"$ref": "#/$defs/costRecord"},
+    "recorded_work_seconds": {"type": "number", "minimum": 0},
+    "final_invocation_seconds": {"type": "number", "minimum": 0},
+    "process_peak_rss_bytes": {"type": "integer", "minimum": 0},
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "report_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "methodMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cell_count", "proposal_count", "finding_cell_count", "qualifying_failure_count", "restricted_mean_proposals_to_first_finding", "restricted_mean_physical_rollouts_to_first_finding", "pipeline_valid_count", "support_and_pipeline_valid_count", "support_and_pipeline_valid_rate", "mean_final_feasible_hypervolume", "mean_feasible_hypervolume_by_proposal", "recorded_work_seconds"],
+      "properties": {
+        "cell_count": {"const": 50},
+        "proposal_count": {"const": 1600},
+        "finding_cell_count": {"type": "integer", "minimum": 0, "maximum": 50},
+        "qualifying_failure_count": {"type": "integer", "minimum": 0, "maximum": 1600},
+        "restricted_mean_proposals_to_first_finding": {"type": "number", "minimum": 1, "maximum": 32},
+        "restricted_mean_physical_rollouts_to_first_finding": {"type": "number", "minimum": 0, "maximum": 196},
+        "pipeline_valid_count": {"type": "integer", "minimum": 0, "maximum": 1600},
+        "support_and_pipeline_valid_count": {"type": "integer", "minimum": 0, "maximum": 1600},
+        "support_and_pipeline_valid_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "mean_final_feasible_hypervolume": {"type": "number", "minimum": 0},
+        "mean_feasible_hypervolume_by_proposal": {"type": "array", "minItems": 32, "maxItems": 32, "items": {"type": "number", "minimum": 0}},
+        "recorded_work_seconds": {"type": "number", "minimum": 0}
+      }
+    },
+    "costRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["core_mutation_attempts", "reference_controller_logical_evaluations", "reference_controller_physical_rollouts", "scenario_validation_logical_evaluations", "scenario_validation_physical_rollouts", "tested_controller_logical_evaluations", "tested_controller_physical_rollouts", "total_physical_rollouts", "waymax_rollout_steps"],
+      "properties": {
+        "core_mutation_attempts": {"type": "integer", "minimum": 0},
+        "reference_controller_logical_evaluations": {"type": "integer", "minimum": 0},
+        "reference_controller_physical_rollouts": {"type": "integer", "minimum": 0},
+        "scenario_validation_logical_evaluations": {"type": "integer", "minimum": 0},
+        "scenario_validation_physical_rollouts": {"type": "integer", "minimum": 0},
+        "tested_controller_logical_evaluations": {"type": "integer", "minimum": 0},
+        "tested_controller_physical_rollouts": {"type": "integer", "minimum": 0},
+        "total_physical_rollouts": {"type": "integer", "minimum": 0},
+        "waymax_rollout_steps": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}
