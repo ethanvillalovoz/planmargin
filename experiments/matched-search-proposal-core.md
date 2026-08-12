@@ -22,7 +22,7 @@ Waymax rollouts, private artifacts, MPS, CUDA, or paid compute?
 
 ## Result
 
-The data-free implementation passed its nine focused tests. All five Sobol
+The data-free implementation passed its ten focused tests. All five Sobol
 initial designs reproduced byte-for-byte through a fresh Python process. The
 random proposal function exactly matched the preserved historical sampler.
 Reference objectives and constraints, all fallback classes, exact duplicate
@@ -33,7 +33,7 @@ successfully returned one of the six exact onset values with a speed multiplier
 inside `[0.75, 1.0]`. It ran in float64 on CPU and exposed exactly two objective
 outputs and three negative-feasible constraints to qLogNEHVI. The focused
 suite, including that numerical transition and two fresh-process checks,
-completed locally in 12.21 seconds. This is a feasibility observation, not a
+completed locally in 5.88 seconds. This is a feasibility observation, not a
 controlled performance benchmark.
 
 The complete 32-proposal synthetic state machine reached proposal index 31,
