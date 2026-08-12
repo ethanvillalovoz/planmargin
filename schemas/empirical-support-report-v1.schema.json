@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/empirical-support-report-v1.schema.json",
+  "title": "PlanMargin empirical-support aggregate report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "configuration_fingerprint", "status", "decision", "integrity_gates", "metrics", "limitations", "report_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/empirical-support-report-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.empirical_support_report"},
+    "configuration_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"const": "completed"},
+    "decision": {"enum": ["support_gate_ready", "no_go"]},
+    "integrity_gates": {"type": "object", "minProperties": 7, "additionalProperties": {"type": "boolean"}},
+    "metrics": {"type": "object", "required": ["shard_count", "event_count", "reference_event_count", "calibration_event_count", "records_scanned", "parse_rejections", "feature_rejection_counts", "record_bytes_processed", "recorded_work_seconds", "maximum_process_peak_rss_bytes", "feature_quantiles", "calibration_score_quantiles", "calibration_pass_nonconformity_threshold"]},
+    "limitations": {"type": "array", "minItems": 3, "items": {"type": "string"}},
+    "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

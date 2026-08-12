@@ -111,6 +111,7 @@ See the [local setup guide](docs/setup.md),
 [lead-braking family-validation protocol](docs/family-validation.md),
 [deterministic random-search protocol](docs/random-search.md),
 [WOMD empirical-support and matched-search protocol](docs/behavioral-realism-and-matched-search.md),
+[WOMD empirical-support implementation](docs/empirical-support.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md), and

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/empirical-support-run-manifest-v1.schema.json",
+  "title": "PlanMargin empirical-support run manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "configuration_fingerprint", "configuration", "environment", "manifest_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/empirical-support-run-manifest-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.empirical_support_run_manifest"},
+    "configuration_fingerprint": {"$ref": "#/$defs/sha256"},
+    "configuration": {"type": "object", "required": ["experiment", "dataset", "event_filter", "features", "model", "source"]},
+    "environment": {"type": "object", "required": ["python", "platform", "machine", "numpy", "jax", "tensorflow", "jax_backend"]},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

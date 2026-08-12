@@ -18,6 +18,7 @@ planmargin-export-rollout-records = "planmargin.rollout_record:main"
 planmargin-render-trajectory-comparison = "planmargin.trajectory_visualization:main"
 planmargin-validate-lead-braking-family = "planmargin.family_validation:main"
 planmargin-run-random-baseline = "planmargin.random_search:main"
+planmargin-build-empirical-support = "planmargin.empirical_support:main"
 
 [dependency-groups]
 dev = [

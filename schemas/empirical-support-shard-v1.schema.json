@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/empirical-support-shard-v1.schema.json",
+  "title": "PlanMargin empirical-support shard checkpoint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "configuration_fingerprint", "shard_index", "source_uri", "status", "metrics", "event_count", "events", "checkpoint_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/empirical-support-shard-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.empirical_support_shard_checkpoint"},
+    "configuration_fingerprint": {"$ref": "#/$defs/sha256"},
+    "shard_index": {"enum": [57, 104, 159, 221, 278, 306, 311, 407, 539, 601, 638, 756, 784, 813, 870, 907]},
+    "source_uri": {"type": "string", "minLength": 1},
+    "status": {"const": "completed"},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records_scanned", "record_bytes_processed", "parse_rejections", "feature_rejection_counts", "elapsed_seconds", "process_peak_rss_bytes"],
+      "properties": {
+        "records_scanned": {"type": "integer", "minimum": 0},
+        "record_bytes_processed": {"type": "integer", "minimum": 0},
+        "parse_rejections": {"type": "integer", "minimum": 0},
+        "feature_rejection_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "elapsed_seconds": {"type": "number", "minimum": 0},
+        "process_peak_rss_bytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "event_count": {"type": "integer", "minimum": 0},
+    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}},
+    "checkpoint_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "vector": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"type": "number"}},
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_key", "source", "selection_score", "audit_metrics", "vector"],
+      "properties": {
+        "event_key": {"$ref": "#/$defs/sha256"},
+        "source": {"type": "object", "required": ["dataset_version", "split", "shard_index", "record_index", "scenario_id", "sdc_object_index", "lead_object_index"]},
+        "selection_score": {"type": "number"},
+        "audit_metrics": {"type": "object", "minProperties": 10, "additionalProperties": {"type": "number"}},
+        "vector": {"$ref": "#/$defs/vector"}
+      }
+    }
+  }
+}
