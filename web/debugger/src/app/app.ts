@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { parseDebuggerRun } from './debugger.fixture';
 import { DebuggerStore } from './debugger.store';
 import { ExportService } from './export.service';
+import { CampaignSummary } from './components/campaign-summary';
 import { EvidenceInspector } from './components/evidence-inspector';
 import { MetricTimeline } from './components/metric-timeline';
 import { MobileSceneSummary } from './components/mobile-scene-summary';
@@ -12,6 +13,7 @@ import { SceneViewport } from './components/scene-viewport';
 @Component({
   selector: 'app-root',
   imports: [
+    CampaignSummary,
     EvidenceInspector,
     MetricTimeline,
     MobileSceneSummary,
@@ -33,10 +35,21 @@ import { SceneViewport } from './components/scene-viewport';
           aria-hidden="true"
           (change)="openRun($event)"
         />
+        <button
+          type="button"
+          class="results"
+          [attr.aria-expanded]="showCampaign()"
+          (click)="showCampaign.set(true)"
+        >
+          Campaign results
+        </button>
         <button type="button" (click)="runInput.click()">Open run</button>
         <button type="button" class="primary" (click)="exportView()">Export view</button>
       </div>
     </header>
+    @if (showCampaign()) {
+      <app-campaign-summary (close)="showCampaign.set(false)" />
+    }
     <app-mobile-view-nav />
     @if (notice()) {
       <p class="notice" role="status">{{ notice() }}</p>
@@ -113,6 +126,10 @@ import { SceneViewport } from './components/scene-viewport';
       border-color: var(--tested);
       color: var(--tested);
     }
+    button.results {
+      border-color: #4f626f;
+      background: #101820;
+    }
     main {
       display: grid;
       grid-template-columns: 210px minmax(0, 1fr) 300px;
@@ -177,6 +194,10 @@ import { SceneViewport } from './components/scene-viewport';
         padding: 0 0.55rem;
         font-size: 0.62rem;
       }
+      .actions button.results {
+        max-width: 72px;
+        line-height: 1.05;
+      }
       main {
         display: block;
         min-height: auto;
@@ -208,6 +229,9 @@ export class App {
   private readonly exporter = inject(ExportService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly notice = signal<string | undefined>(undefined);
+  protected readonly showCampaign = signal(
+    new URLSearchParams(window.location.search).has('evidence'),
+  );
   private noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
