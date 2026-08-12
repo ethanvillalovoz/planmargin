@@ -30,6 +30,13 @@ An Apache Beam pipeline will classify and shard scenarios, compute reusable feat
 - Parquet/Arrow: derived scenario, rollout, and metric tables
 - DuckDB: analytical SQL, comparisons, slicing, and report generation
 
+The version-one implementation deliberately begins at the aggregate boundary.
+It normalizes sealed campaign and cell reports into a private DuckDB database
+and Zstandard-compressed Parquet tables, then uses SQL to reproduce the sealed
+method totals before accepting the export. It does not duplicate proposal
+records, scenario identifiers, trajectories, or support vectors. See the
+[analytics contract](analytics.md).
+
 ### Simulation and evaluation
 
 Waymax runs closed-loop policies and produces trajectory states. PlanMargin adds custom failure, near-failure, realism, and reference-controller checks while preserving the individual metric components behind any composite score.

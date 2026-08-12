@@ -102,7 +102,8 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Build the thin interactive scenario-debugger slice
 - [x] Run the complete natural development comparison
 - [x] Resolve the version-one held-out gate (`no_go`; split remains unopened)
-- [ ] Add the analytical data layer and measured systems optimization
+- [x] Add the private DuckDB/Parquet analytical data layer
+- [ ] Add measured systems optimization
 - [ ] Polish the reproducible recruiter-facing demonstration
 
 See the [local setup guide](docs/setup.md),
@@ -119,6 +120,7 @@ See the [local setup guide](docs/setup.md),
 [matched-search cell coordinator](docs/matched-search-coordinator.md),
 [natural development campaign](docs/matched-search-campaign.md),
 [natural development results](docs/natural-development-results.md),
+[private campaign analytics](docs/analytics.md),
 [private matched-search integration smoke test](docs/matched-search-private-smoke.md),
 [controlled headway-regression eligibility](docs/regression-eligibility.md),
 [scenario debugger design and verification contract](docs/debugger-design.md),
