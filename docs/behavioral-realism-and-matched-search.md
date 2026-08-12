@@ -280,6 +280,11 @@ The regression track proceeds only if at least 8 of 10 originals pass both its
 tested controller and the reference. Otherwise it records a no-go and no
 replacement configuration is tried under this protocol version.
 
+The completed [original-eligibility gate](regression-eligibility.md) returned
+`no_go`: 4 of 10 originals were eligible. All integrity gates passed. The
+controlled-regression track is therefore closed under protocol version one;
+the natural track is unchanged.
+
 ## Interpretation rules
 
 Each track reports all 50 scenario-seed pairs per method. With only five seeds,

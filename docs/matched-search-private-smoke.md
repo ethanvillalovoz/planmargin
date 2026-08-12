@@ -76,4 +76,6 @@ contract and evaluation order for the two predeclared proposals. It does not
 measure search efficiency, establish an avoidable failure, evaluate Bayesian
 search, support H1/H2/H3, or say anything about the production Waymo Driver.
 
-The next gate is the controlled headway-regression original-eligibility check.
+The subsequent controlled headway-regression
+[original-eligibility gate](regression-eligibility.md) returned `no_go`, so no
+regression-track search cells are authorized. The natural track is unchanged.

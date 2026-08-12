@@ -44,21 +44,21 @@ public. The gate does not claim universal human-driving realism.
 
 The coordinator presents identical mutation bounds and rollout budgets to random and Bayesian search, records every attempted mutation, and never discards invalid candidates from the audit trail.
 
-The first implementation is the
+The first implementation was the
 [deterministic uniform-random baseline](random-search.md). Stateless PCG64
 proposals make execution order and resume boundaries irrelevant. Atomic,
 content-hashed checkpoints retain every original and proposal evaluation, and
 the completed aggregate is rebuilt from those checkpoints rather than a
-second in-memory result path. The later Bayesian coordinator must preserve the
-same proposal budget, mutation/controller treatment, and cost definitions. The
-final comparison adds empirical support only through a new shared contract run
-by both methods; it does not compare a changed Bayesian pipeline directly with
-the historical random report.
+second in-memory result path. The implemented method-neutral coordinator now
+preserves the same proposal budget, mutation/controller treatment, empirical
+support, and cost definitions for random and Bayesian search. The final
+comparison uses that shared contract for both methods; it does not compare the
+new Bayesian pipeline directly with the historical random report.
 
 The frozen
 [matched-search protocol](behavioral-realism-and-matched-search.md) replaces a
 weighted scalar score with constrained multi-objective search over criticality
-and mutation minimality. Uniform random and qLogNEHVI methods will emit one
+and mutation minimality. Uniform random and qLogNEHVI methods emit one
 method-neutral checkpoint contract so the analytical layer and debugger do not
 depend on optimizer-specific files.
 
