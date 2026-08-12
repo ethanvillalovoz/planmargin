@@ -26,7 +26,7 @@ or opening the official validation split?
 
 ## Result
 
-The clean run at Git revision `00c3727` produced a
+The definitive clean run at Git revision `7a9fa90` produced a
 **support-gate-ready** decision. All seven integrity gates passed: all fixed
 shards completed, the 160-event minimum was exceeded, event keys were unique,
 feature vectors were finite, the model validated, the official validation
@@ -43,8 +43,8 @@ event selection.
 | Calibration events | 80 |
 | Parse rejections | 0 |
 | Shared-feature rejections after selection | 0 |
-| Recorded scan work | 606.886 s (10.11 min) |
-| Peak process RSS | 663,879,680 bytes (0.62 GiB) |
+| Recorded scan work | 591.130 s (9.85 min) |
+| Peak process RSS | 663,945,216 bytes (0.62 GiB) |
 | `p_support >= 0.05` nonconformity boundary | 1.553154 |
 
 The permitted aggregate feature distribution is:
@@ -65,6 +65,12 @@ sealed aggregate report. A separate audit-only process reconstructed the model
 and report exactly from the checkpoints. All 19 private JSON records also
 validated against their checked-in schemas. Git ignore and tracked-file checks
 confirmed that none of those records entered the repository.
+
+This definitive run followed a clean implementation run at revision `00c3727`.
+Across the two complete scans, every per-shard event, stable scan metric,
+feature quantile, calibration score, split membership, robust-scaling value,
+and reference vector reproduced exactly. Only revision provenance, elapsed
+time, and peak-memory observations changed.
 
 ## Interpretation
 
