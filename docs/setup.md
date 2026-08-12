@@ -82,6 +82,23 @@ The default output path is ignored by Git. The checked-in Stage 0 report under
 results. Raw WOMD data remains governed by its own license and must not be
 committed.
 
+## 5. Build the local Beam feature dataset
+
+After the empirical-support workflow has completed, transform its sealed real
+training evidence without another cloud read:
+
+```bash
+uv run --frozen planmargin-build-beam-features \
+  --source-mode sealed-support \
+  --support-dir artifacts/realism/lead-braking-support-v1 \
+  --output-dir artifacts/beam-features/lead-braking-v1
+```
+
+Apache Beam 2.74.0 runs with local DirectRunner. The resulting source
+checkpoints, partitioned Parquet, DuckDB file, and private manifest remain under
+the ignored `artifacts/` tree. See [the Beam pipeline contract](beam-feature-pipeline.md)
+before using `womd-direct`, which performs authorized dataset reads.
+
 ## Optional local cache
 
 For later experiments, individual authorized shards may be copied under
