@@ -96,10 +96,24 @@ class OutcomeRecord:
     constraints: tuple[float, float, float]
     objective_available: bool
 
+    def __post_init__(self) -> None:
+        _validate_parameters(self.parameters)
+        if len(self.objectives) != 2 or len(self.constraints) != 3:
+            raise ValueError("Outcome record must contain two objectives and three constraints")
+        if not isinstance(self.objective_available, bool):
+            raise TypeError("objective_available must be a boolean")
+        if not self.objective_available and self.objectives != (0.0, 0.0):
+            raise ValueError("Unavailable objectives must be exactly zero")
+        self.model_outputs()
+
     def model_outputs(self) -> tuple[float, ...]:
         values = (*self.objectives, *self.constraints)
         if (
             len(values) != 5
+            or any(
+                isinstance(value, bool) or not isinstance(value, numbers.Real)
+                for value in values
+            )
             or not np.isfinite(np.asarray(values, dtype=np.float64)).all()
         ):
             raise ValueError("Outcome record must contain five finite outputs")
@@ -211,7 +225,6 @@ def evaluate_outcomes(
         constraints=constraints,
         objective_available=objective_available,
     )
-    record.model_outputs()
     return record
 
 
@@ -532,6 +545,9 @@ def bayesian_proposal(
     _validate_indices(seed, selection_order, proposal_index)
     if len(observations) != proposal_index:
         raise ValueError("Bayesian observations must match the proposal index")
+    for observation in observations:
+        observation.model_outputs()
+        _validate_parameters(observation.parameters)
     if proposal_index < SOBOL_INITIALIZATION_COUNT:
         return ProposalDecision(
             proposal_index=proposal_index,

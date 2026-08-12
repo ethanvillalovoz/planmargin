@@ -219,6 +219,20 @@ def test_numeric_and_boolean_boundaries_reject_python_bool_aliases() -> None:
             p_support=False,
             reference_succeeds=True,
         )
+    with pytest.raises(ValueError, match="exactly zero"):
+        matched_search.OutcomeRecord(
+            parameters=(0.0, 0.9),
+            objectives=(0.1, 0.2),
+            constraints=(0.5, 1.0, 0.5),
+            objective_available=False,
+        )
+    with pytest.raises(ValueError, match="five finite outputs"):
+        matched_search.OutcomeRecord(
+            parameters=(0.0, 0.9),
+            objectives=(True, 0.2),
+            constraints=(-0.5, -0.1, -0.5),
+            objective_available=True,
+        )
 
 
 def test_ties_use_sha_digest_and_not_candidate_order() -> None:
