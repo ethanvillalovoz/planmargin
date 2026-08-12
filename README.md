@@ -4,15 +4,14 @@
 
 PlanMargin is an independent research and engineering project that searches for the smallest realistic change to a recorded driving scenario that exposes an avoidable planner failure.
 
-> **Current status:** The experiment engine now includes the frozen WOMD
-> empirical-support model, constrained-Bayesian proposal core, method-neutral
-> cell coordinator, and a passing private two-proposal integration smoke test.
-> The injected `1.0 s` headway-regression eligibility gate returned a valid
-> `no_go` at 4 of 10 eligible originals, so that track is closed without
-> replacement tuning. A local, synthetic-only Angular/Three.js scenario
-> debugger now exercises the method-neutral visualization contract. The
-> natural development comparison and held-out evaluation remain pending. No
-> planner-performance claims have been made.
+> **Current status:** The frozen 100-cell natural development comparison is
+> complete: both methods evaluated 1,600 proposals, neither found a qualifying
+> failure, and constrained Bayesian search increased the aggregate
+> support-and-pipeline-valid rate from 54.5625% to 69.3750%. H1 efficiency and
+> H2 minimality are therefore untestable; H3 validity is supported under its
+> predeclared noninferiority rule. The held-out evaluation remains unopened.
+> See the [aggregate-only results](docs/natural-development-results.md). No
+> production-planner performance claim is made.
 
 ## The problem
 
@@ -101,7 +100,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Run the one-scenario, two-proposal private integration smoke test
 - [x] Establish controlled headway-regression original eligibility (`no_go`)
 - [x] Build the thin interactive scenario-debugger slice
-- [ ] Run the complete natural development comparison
+- [x] Run the complete natural development comparison
 - [ ] Run equal-budget evaluation on held-out scenarios
 - [ ] Add the analytical data layer and measured systems optimization
 - [ ] Polish the reproducible recruiter-facing demonstration
@@ -119,6 +118,7 @@ See the [local setup guide](docs/setup.md),
 [matched-search proposal core](docs/matched-search-proposal-core.md),
 [matched-search cell coordinator](docs/matched-search-coordinator.md),
 [natural development campaign](docs/matched-search-campaign.md),
+[natural development results](docs/natural-development-results.md),
 [private matched-search integration smoke test](docs/matched-search-private-smoke.md),
 [controlled headway-regression eligibility](docs/regression-eligibility.md),
 [scenario debugger design and verification contract](docs/debugger-design.md),
