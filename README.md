@@ -9,8 +9,8 @@ PlanMargin is a local, reproducible research workbench that searches for the
 smallest realistic change to a recorded driving scenario that exposes an
 avoidable planner failure. It combines Waymo Open Motion Dataset (WOMD)
 scenarios, Waymax closed-loop simulation, constrained Bayesian optimization,
-sealed experiment records, verified analytics, a measured native kernel, and
-an authenticated local evidence API, and an interactive evidence debugger.
+sealed experiment records, verified analytics, a measured native kernel, an
+authenticated local evidence API, and an interactive evidence debugger.
 
 ## Version-one evidence
 
@@ -33,9 +33,9 @@ and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 
 > **Program status:** Experiment v1 is frozen and complete, but the original
 > PlanMargin program remains active. The localhost-only real-record API and
-> debugger mode and Beam-to-Parquet-to-DuckDB pipeline are complete. The next
-> tracks add an optional constrained evidence assistant, a gated 3D Gaussian feasibility study, and a
-> separately frozen experiment v2. See the
+> debugger mode, Beam-to-Parquet-to-DuckDB pipeline, and constrained evidence
+> assistant are complete. The next tracks add a gated 3D Gaussian feasibility
+> study and a separately frozen experiment v2. See the
 > [recovery decision](docs/decisions/0004-recover-original-program.md).
 
 ![Aggregate-only campaign evidence surface](docs/assets/campaign-evidence.png)
@@ -64,6 +64,9 @@ technology demos:
 - **Product engineering:** a responsive Angular/TypeScript/Three.js debugger
   with strict synthetic-input validation, an authenticated real-record mode,
   sealed proposal inspection, and an aggregate campaign view.
+- **Constrained AI:** an offline-first evidence assistant with five
+  deterministic aggregate tools, sealed citations, and an optional
+  public-aggregate-only Gemini structured-output adapter.
 - **Reliability:** locked Python and Node environments, versioned JSON Schemas,
   data-free CI, deterministic reconstruction, and repository privacy tests.
 
@@ -80,6 +83,7 @@ technology demos:
    [sealed campaign coordinator](docs/matched-search-campaign.md).
 4. **Check the engineering depth.** Review the
    [DuckDB/Parquet reconciliation](docs/analytics.md), the
+   [constrained evidence assistant](docs/evidence-assistant.md), the
    [C++20 benchmark](docs/native-geometry.md), and the
    [held-out `no_go` decision](docs/decisions/0003-version-one-heldout-no-go.md).
 
@@ -116,6 +120,8 @@ flowchart LR
     E --> J["FastAPI · authenticated local real evidence"]
     A --> K["Apache Beam · bounded feature dataflow"]
     K --> F
+    G --> L["Deterministic evidence tools"]
+    L --> M["Offline or optional Gemini explanation"]
     H["Synthetic debugger fixture"] --> I["Angular · TypeScript · Three.js"]
     J -->|"authenticated loopback only"| I
     G --> I
@@ -129,9 +135,24 @@ describes each responsibility and public/private boundary.
 
 The implemented stack is Python, JAX/Waymax, PyTorch/BoTorch,
 C++20/pybind11, Apache Beam, DuckDB, Parquet, FastAPI, Angular, TypeScript,
-Three.js, and GitHub Actions. The optional AI explanation layer, 3D Gaussian
-feasibility study, and experiment-v2 learned-policy work remain active program
+Three.js, an optional Gemini adapter, and GitHub Actions. The 3D Gaussian
+feasibility study and experiment-v2 learned-policy work remain active program
 milestones. Hosted infrastructure is not required.
+
+## Ask the evidence assistant
+
+The default path is deterministic and offline:
+
+```bash
+uv run --frozen planmargin-ask-evidence \
+  --question "How did Bayesian compare with random search?"
+```
+
+It maps the question to one closed aggregate query, emits cited facts, and
+keeps explanation separate from measurement. An optional Gemini adapter can
+explain only already-public aggregates; it never receives the raw question or
+private records and requires explicit free-tier confirmation. See the
+[assistant contract](docs/evidence-assistant.md).
 
 ## Run the Beam feature pipeline
 
@@ -210,7 +231,7 @@ following the [credential-safe setup guide](docs/setup.md).
 
 | Path                               | Responsibility                                                        |
 | ---------------------------------- | --------------------------------------------------------------------- |
-| [`src/planmargin`](src/planmargin) | Simulation, mutation, evaluation, search, coordination, and analytics |
+| [`src/planmargin`](src/planmargin) | Simulation, search, dataflow, evidence API, assistant, and analytics   |
 | [`cpp`](cpp)                       | Measured C++20 interaction-metrics kernel                             |
 | [`schemas`](schemas)               | Versioned experiment and analytics contracts                          |
 | [`tests`](tests)                   | Data-free scientific, parity, reconstruction, and privacy checks      |
@@ -243,6 +264,7 @@ following the [credential-safe setup guide](docs/setup.md).
 | Final evidence           | [Aggregate result](docs/natural-development-results.md) · [Held-out decision](docs/decisions/0003-version-one-heldout-no-go.md)                                                    |
 | Data and systems         | [Analytics](docs/analytics.md) · [Native geometry](docs/native-geometry.md) · [Rollout records](docs/rollout-record.md)                                                            |
 | Dataflow                 | [Beam feature pipeline](docs/beam-feature-pipeline.md)                                                                                                                           |
+| Evidence assistant       | [Constrained offline and Gemini contract](docs/evidence-assistant.md)                                                                                                            |
 | Product interface        | [Local evidence API](docs/evidence-api.md) · [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md)                               |
 | Reproduction             | [Local setup](docs/setup.md) · [Data boundary](data/README.md)                                                                                                                     |
 | Active program           | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Open milestones](https://github.com/ethanvillalovoz/planmargin/issues)                             |

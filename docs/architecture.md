@@ -33,9 +33,13 @@ flowchart TB
         L["Aggregate-only campaign report"]
         M["Angular / Three.js evidence debugger"]
         N["Python and native parity tests"]
+        S["Deterministic aggregate evidence tools"]
+        T["Offline / optional Gemini explanation"]
         K --> M
         L --> M
         K --> N
+        L --> S
+        S --> T
     end
 
     I -->|"permitted aggregates only"| L
@@ -57,6 +61,7 @@ flowchart TB
 | Feature dataflow | Apache Beam, PyArrow, Parquet    | Mine or ingest bounded training shards, extract the shared behavior features, checkpoint by source, key/group into stable partitions, and reconcile in DuckDB. |
 | Local API       | FastAPI, read-only DuckDB        | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced projections on loopback only.                                     |
 | Evidence UI     | Angular, TypeScript, Three.js    | Boot safely from a synthetic fixture; optionally inspect authenticated, redacted local trajectories and sealed proposal evidence without exporting it. |
+| Evidence assistant | Python, optional Gemini SDK   | Route questions to one closed aggregate tool, cite sealed deterministic facts, and optionally explain public aggregates without sharing the raw question or private records. |
 | Automation      | uv, npm, GitHub Actions          | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                     |
 
 ## Experiment execution
@@ -147,8 +152,10 @@ dependencies:
 - **FastAPI:** implemented as a localhost-only, read-only boundary over ignored
   sealed records and verified DuckDB/Parquet evidence; the Angular client uses
   its fixed authenticated projections without persistence or export.
-- **Evidence assistant:** optional explanation and allowlisted aggregate-query
-  tools; never metric generation, finding certification, or vehicle control.
+- **Evidence assistant:** implemented with five allowlisted aggregate-query
+  tools, a deterministic offline default, sealed citations, and an optional
+  public-only Gemini structured-output adapter; never metric generation,
+  finding certification, or vehicle control.
 - **3D Gaussian splatting:** a frozen feasibility study for an authorized
   Waymo-linked reconstruction and trajectory-inspection responsibility.
 - **Learned or RL planner:** an experiment-v2 candidate that must earn a role
