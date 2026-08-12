@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/analytics-manifest-v1.schema.json",
+  "title": "PlanMargin private analytics manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "campaign_id", "campaign_configuration_fingerprint", "campaign_manifest_sha256", "campaign_report_sha256", "builder_source_sha256", "duckdb_version", "privacy_scope", "database", "parquet", "table_row_counts", "sql_aggregate_verification", "manifest_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/analytics-manifest-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.analytics_manifest"},
+    "campaign_id": {"const": "natural-development-v1"},
+    "campaign_configuration_fingerprint": {"$ref": "#/$defs/sha256"},
+    "campaign_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "campaign_report_sha256": {"$ref": "#/$defs/sha256"},
+    "builder_source_sha256": {"$ref": "#/$defs/sha256"},
+    "duckdb_version": {"const": "1.5.5"},
+    "privacy_scope": {"const": "sealed_campaign_and_cell_aggregates_only"},
+    "database": {"$ref": "#/$defs/file"},
+    "parquet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["campaign", "methods", "hypotheses", "cells", "hypervolume_trace", "status_counts", "integrity_gates"],
+      "properties": {
+        "campaign": {"$ref": "#/$defs/parquetFile"},
+        "methods": {"$ref": "#/$defs/parquetFile"},
+        "hypotheses": {"$ref": "#/$defs/parquetFile"},
+        "cells": {"$ref": "#/$defs/parquetFile"},
+        "hypervolume_trace": {"$ref": "#/$defs/parquetFile"},
+        "status_counts": {"$ref": "#/$defs/parquetFile"},
+        "integrity_gates": {"$ref": "#/$defs/parquetFile"}
+      }
+    },
+    "table_row_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["campaign", "methods", "hypotheses", "cells", "hypervolume_trace", "status_counts", "integrity_gates"],
+      "properties": {
+        "campaign": {"const": 1},
+        "methods": {"const": 2},
+        "hypotheses": {"const": 3},
+        "cells": {"const": 100},
+        "hypervolume_trace": {"const": 3200},
+        "status_counts": {"type": "integer", "minimum": 100},
+        "integrity_gates": {"type": "integer", "minimum": 107}
+      }
+    },
+    "sql_aggregate_verification": {"const": "passed"},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "bytes", "sha256"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "parquetFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "bytes", "sha256", "row_count"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "row_count": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

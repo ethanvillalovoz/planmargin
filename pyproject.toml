@@ -7,6 +7,7 @@ requires-python = ">=3.11,<3.12"
 license = { text = "Apache-2.0" }
 dependencies = [
   "botorch==0.18.1",
+  "duckdb==1.5.5",
   "waymo-waymax @ git+https://github.com/waymo-research/waymax.git@a64dfec9be8576b60d9cecc94f406d9812d4a7d0",
 ]
 
@@ -24,6 +25,7 @@ planmargin-report-matched-search-core = "planmargin.matched_search:main"
 planmargin-run-matched-search-smoke = "planmargin.matched_smoke:main"
 planmargin-check-regression-eligibility = "planmargin.regression_eligibility:main"
 planmargin-run-matched-campaign = "planmargin.matched_campaign:main"
+planmargin-build-analytics = "planmargin.analytics:main"
 
 [dependency-groups]
 dev = [
