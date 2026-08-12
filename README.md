@@ -31,13 +31,15 @@ split remains unopened, and PlanMargin does not evaluate the production Waymo
 Driver. See the [aggregate-only result](docs/natural-development-results.md)
 and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 
-> **Program status:** Experiment v1 is frozen and complete, but the original
-> PlanMargin program remains active. The localhost-only real-record API and
+> **Program status:** The recovered PlanMargin program is complete. The
+> localhost-only real-record API and
 > debugger mode, Beam-to-Parquet-to-DuckDB pipeline, and constrained evidence
 > assistant are complete. The exact-scenario LiDAR Gaussian study produced a
 > reproducible `no_go` because only 23.66% of the full debugger trajectories fit
-> its frozen crop; the renderer was therefore not forced into the product. The
-> remaining active track is a separately frozen experiment v2. See the
+> its frozen crop. The JAX double-DQN study also produced a reproducible
+> `no_go`: 3.125% synthetic collisions exceeded its frozen 1.0% gate. Neither
+> failed technology was forced into the product, and no held-out comparative
+> campaign ran. See the
 > [recovery decision](docs/decisions/0004-recover-original-program.md).
 
 ![Aggregate-only campaign evidence surface](docs/assets/campaign-evidence.png)
@@ -69,6 +71,9 @@ technology demos:
 - **Constrained AI:** an offline-first evidence assistant with five
   deterministic aggregate tools, sealed citations, and an optional
   public-aggregate-only Gemini structured-output adapter.
+- **Learned control research:** a deterministic JAX/Optax double-DQN training,
+  evaluation, and tamper-evident checkpoint pipeline whose failed safety gate
+  correctly prevented Waymax deployment and a held-out campaign.
 - **Reliability:** locked Python and Node environments, versioned JSON Schemas,
   data-free CI, deterministic reconstruction, and repository privacy tests.
 
@@ -87,7 +92,9 @@ technology demos:
    [DuckDB/Parquet reconciliation](docs/analytics.md), the
    [constrained evidence assistant](docs/evidence-assistant.md), the
    [C++20 benchmark](docs/native-geometry.md), and the
-   [held-out `no_go` decision](docs/decisions/0003-version-one-heldout-no-go.md).
+   [v1 held-out `no_go`](docs/decisions/0003-version-one-heldout-no-go.md),
+   [Gaussian feasibility result](docs/decisions/0005-gaussian-visualization-feasibility.md),
+   and [v2 RL gate](docs/decisions/0006-experiment-v2-protocol.md).
 
 ## Research question
 
@@ -137,9 +144,9 @@ describes each responsibility and public/private boundary.
 
 The implemented stack is Python, JAX/Waymax, PyTorch/BoTorch,
 C++20/pybind11, Apache Beam, DuckDB, Parquet, FastAPI, Angular, TypeScript,
-Three.js, an optional Gemini adapter, and GitHub Actions. The Gaussian study is
-complete as an audited negative engineering result; experiment-v2 learned-policy
-work remains active. Hosted infrastructure is not required.
+Three.js, an optional Gemini adapter, and GitHub Actions. The Gaussian and
+learned-controller studies are complete as audited negative engineering
+results. Hosted infrastructure is not required.
 
 ## Ask the evidence assistant
 
