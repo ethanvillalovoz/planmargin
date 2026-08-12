@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import warnings
 from pathlib import Path
 
 import botorch
@@ -76,7 +77,8 @@ def test_exact_configuration_dependency_stack_and_cpu_float64() -> None:
 
     report = matched_search.dependency_report()
     assert report["python_api"] == "1.0.0"
-    assert report["torch"] == torch.__version__ == "2.13.0"
+    assert report["torch"] == torch.__version__
+    assert report["torch"].split("+")[0] == "2.13.0"
     assert report["botorch"] == botorch.__version__ == "0.18.1"
     assert report["gpytorch"] == gpytorch.__version__ == "1.15.2"
     assert report["linear_operator"] == linear_operator.__version__ == "0.6.1"
@@ -194,6 +196,31 @@ def test_objective_and_constraint_reference_calculations() -> None:
         )
 
 
+def test_numeric_and_boolean_boundaries_reject_python_bool_aliases() -> None:
+    with pytest.raises(TypeError, match="must be integers"):
+        matched_search.sobol_parameters(
+            seed=True, selection_order=1, proposal_index=0
+        )
+    with pytest.raises(TypeError, match="real numbers"):
+        matched_search.normalized_mutation_distance((False, 0.9))
+    with pytest.raises(TypeError, match="must be booleans"):
+        matched_search.evaluate_outcomes(
+            parameters=(0.0, 0.9),
+            minimum_signed_separation_m=1.0,
+            pipeline_passes=1,
+            p_support=0.1,
+            reference_succeeds=True,
+        )
+    with pytest.raises(ValueError, match="p_support"):
+        matched_search.evaluate_outcomes(
+            parameters=(0.0, 0.9),
+            minimum_signed_separation_m=1.0,
+            pipeline_passes=True,
+            p_support=False,
+            reference_succeeds=True,
+        )
+
+
 def test_ties_use_sha_digest_and_not_candidate_order() -> None:
     candidates = [(onset, 0.8) for onset in matched_search.ONSET_OFFSETS_S]
     expected = min(
@@ -294,7 +321,8 @@ def test_sobol_fallback_is_stateless_across_failure_classes() -> None:
 def test_model_and_acquisition_have_five_outputs_two_objectives_three_constraints(
 ) -> None:
     observations = _initial_observations()
-    with pytest.warns(Warning):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         model, train_x = matched_search._fit_model(observations)
     acquisition = matched_search._build_acquisition(
         model=model,

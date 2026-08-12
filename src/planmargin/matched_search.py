@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import numbers
 import struct
 import warnings
 from dataclasses import asdict, dataclass
@@ -172,17 +173,28 @@ def evaluate_outcomes(
 ) -> OutcomeRecord:
     """Apply the frozen two-objective and three-constraint formulas."""
     _validate_parameters(parameters)
+    if not isinstance(pipeline_passes, bool) or not isinstance(
+        reference_succeeds, bool
+    ):
+        raise TypeError("pipeline and reference outcomes must be booleans")
+    if minimum_signed_separation_m is not None and (
+        isinstance(minimum_signed_separation_m, bool)
+        or not isinstance(minimum_signed_separation_m, numbers.Real)
+        or not math.isfinite(minimum_signed_separation_m)
+    ):
+        raise ValueError("minimum signed separation must be finite")
     if p_support is not None and (
-        not math.isfinite(p_support) or not 0.0 <= p_support <= 1.0
+        isinstance(p_support, bool)
+        or not isinstance(p_support, numbers.Real)
+        or not math.isfinite(p_support)
+        or not 0.0 <= p_support <= 1.0
     ):
         raise ValueError("p_support must be finite and within [0, 1]")
     if pipeline_passes and minimum_signed_separation_m is None:
         raise ValueError("pipeline-accepted outcomes require signed separation")
-    objective_available = pipeline_passes and minimum_signed_separation_m is not None
+    objective_available = pipeline_passes
     if objective_available:
         separation = float(minimum_signed_separation_m)
-        if not math.isfinite(separation):
-            raise ValueError("minimum signed separation must be finite")
         criticality = 1.0 / (1.0 + max(separation, 0.0))
         minimality = 1.0 - normalized_mutation_distance(parameters) / math.sqrt(2.0)
         objectives = (criticality, minimality)
@@ -204,6 +216,11 @@ def evaluate_outcomes(
 
 
 def _validate_indices(seed: int, selection_order: int, proposal_index: int) -> None:
+    if any(
+        isinstance(value, bool) or not isinstance(value, int)
+        for value in (seed, selection_order, proposal_index)
+    ):
+        raise TypeError("seed, selection order, and proposal index must be integers")
     if seed not in SEEDS:
         raise ValueError("seed is outside the frozen set")
     if selection_order < 1:
@@ -214,6 +231,11 @@ def _validate_indices(seed: int, selection_order: int, proposal_index: int) -> N
 
 def _validate_parameters(parameters: tuple[float, float]) -> None:
     onset, multiplier = parameters
+    if any(
+        isinstance(value, bool) or not isinstance(value, numbers.Real)
+        for value in parameters
+    ):
+        raise TypeError("matched-search parameters must be real numbers")
     if onset not in ONSET_OFFSETS_S:
         raise ValueError("braking onset is outside the frozen discrete set")
     if not math.isfinite(multiplier) or not (
@@ -321,6 +343,8 @@ def _torch_training_data(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     if len(observations) < 2:
         raise ValueError("At least two observations are required")
+    for observation in observations:
+        _validate_parameters(observation.parameters)
     train_x = torch.tensor(
         [observation.parameters for observation in observations],
         dtype=TORCH_DTYPE,
