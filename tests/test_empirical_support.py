@@ -69,6 +69,50 @@ def _schema(name: str) -> dict[str, object]:
     return json.loads((root / "schemas" / name).read_text(encoding="utf-8"))
 
 
+def test_exact_reference_shards_and_frozen_manifest_contract() -> None:
+    assert empirical_support.REFERENCE_SHARDS == (
+        57,
+        104,
+        159,
+        221,
+        278,
+        306,
+        311,
+        407,
+        539,
+        601,
+        638,
+        756,
+        784,
+        813,
+        870,
+        907,
+    )
+    manifest = empirical_support.build_run_manifest()
+    empirical_support.validate_run_manifest(manifest)
+    assert manifest["configuration"]["dataset"]["official_validation_used"] is False
+    assert (
+        manifest["configuration"]["event_filter"]["controller_or_baseline_filter"]
+        is False
+    )
+
+
+def test_resealed_manifest_cannot_change_a_frozen_threshold() -> None:
+    manifest = empirical_support.build_run_manifest()
+    payload = copy.deepcopy(manifest)
+    del payload["manifest_sha256"]
+    payload["configuration"]["event_filter"]["thresholds"][
+        "min_total_speed_drop_mps"
+    ] = 1.5
+    payload["configuration_fingerprint"] = empirical_support._content_sha256(
+        payload["configuration"]
+    )
+    resealed = empirical_support._seal_record(payload, "manifest_sha256")
+
+    with pytest.raises(ValueError, match="frozen protocol"):
+        empirical_support.validate_run_manifest(resealed)
+
+
 def test_model_split_scaling_scoring_and_ties_are_deterministic() -> None:
     events = [_event(index) for index in range(20)]
     first = empirical_support.fit_model(events, configuration_fingerprint="a" * 64)
@@ -132,6 +176,14 @@ def test_model_rejects_nonfinite_duplicate_and_tampered_data() -> None:
     model["model"]["reference_vectors"][0][0] += 1.0
     with pytest.raises(ValueError, match="hash mismatch"):
         empirical_support.validate_model(model)
+
+    resealed = empirical_support.fit_model(events, configuration_fingerprint="c" * 64)
+    del resealed["model_sha256"]
+    resealed["model"]["scaling"]["first_quartile"][0] += 1.0
+    resealed["model_fingerprint"] = empirical_support._content_sha256(resealed["model"])
+    resealed = empirical_support._seal_record(resealed, "model_sha256")
+    with pytest.raises(ValueError, match="scaling derivations"):
+        empirical_support.validate_model(resealed)
 
 
 def test_strict_json_refuses_nonfinite_checkpoints(tmp_path) -> None:
@@ -198,6 +250,12 @@ def test_completed_run_records_validate_against_public_schemas(
     jsonschema.validate(model, _schema("empirical-support-model-v1.schema.json"))
     jsonschema.validate(report, _schema("empirical-support-report-v1.schema.json"))
 
+    def unexpected_scan(shard_index, thresholds):
+        del shard_index, thresholds
+        raise AssertionError("a completed resume must not scan WOMD")
+
+    assert empirical_support.run(output_dir, scanner=unexpected_scan) == report
+
 
 def test_tampered_checkpoint_fails_resume_and_independent_audit(
     tmp_path, monkeypatch
@@ -214,6 +272,41 @@ def test_tampered_checkpoint_fails_resume_and_independent_audit(
         empirical_support.run(output_dir, scanner=_scanner())
     with pytest.raises(ValueError, match="hash mismatch"):
         empirical_support.audit_completed_run(output_dir)
+
+
+def test_resealed_inconsistent_report_fails_completed_resume(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    output_dir = Path("artifacts/realism/resealed-report")
+    empirical_support.run(output_dir, scanner=_scanner())
+    path = output_dir / "report.json"
+    report = json.loads(path.read_text())
+    del report["report_sha256"]
+    report["metrics"]["event_count"] += 1
+    report = empirical_support._seal_record(report, "report_sha256")
+    path.write_text(json.dumps(report), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="does not match durable checkpoints"):
+        empirical_support.run(output_dir, scanner=_scanner())
+    with pytest.raises(ValueError, match="does not match durable checkpoints"):
+        empirical_support.audit_completed_run(output_dir)
+
+
+@pytest.mark.parametrize("filename", ["model.json", "report.json"])
+def test_tampered_completed_output_fails_closed(
+    tmp_path, monkeypatch, filename
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    output_dir = Path("artifacts/realism/tampered-completed")
+    empirical_support.run(output_dir, scanner=_scanner())
+    path = output_dir / filename
+    record = json.loads(path.read_text())
+    record[next(key for key in record if key.endswith("_sha256"))] = "0" * 64
+    path.write_text(json.dumps(record), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="hash mismatch"):
+        empirical_support.run(output_dir, scanner=_scanner())
 
 
 def test_fixed_scan_below_160_is_predeclared_no_go(tmp_path, monkeypatch) -> None:

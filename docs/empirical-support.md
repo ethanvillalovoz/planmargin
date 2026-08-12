@@ -19,9 +19,10 @@ wrong-shaped 61-state window never receives a score.
 
 The Stage-0 lead-braking selector and its ranking formula are unchanged. The
 reference scan first asks that selector for the one best qualifying lead and
-then calls the shared feature extractor. Counterfactual mutation records call
-the same extractor after the mutation has been installed in the Waymax log
-trajectory.
+then calls the shared feature extractor. The object-pair entry point accepts
+the complete Waymax log-trajectory arrays at current index `10`, so the next
+version-two evaluator can call the identical implementation after installing a
+counterfactual mutation; no second formula is permitted.
 
 ## Private run layout
 

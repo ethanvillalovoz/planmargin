@@ -254,17 +254,35 @@ def validate_run_manifest(manifest: dict[str, Any]) -> None:
             "Empirical-support manifest configuration is incomplete"
         ) from error
     if (
-        dataset.get("version") != scenario_selection.DATASET_VERSION
+        configuration.get("experiment") != "womd_lead_braking_empirical_support_v1"
+        or dataset.get("name") != "Waymo Open Motion Dataset"
+        or dataset.get("version") != scenario_selection.DATASET_VERSION
         or dataset.get("split") != scenario_selection.SPLIT
         or dataset.get("excluded_development_shards") != [0]
         or dataset.get("reference_shards") != list(REFERENCE_SHARDS)
         or dataset.get("official_validation_used") is not False
+        or dataset.get("shard_selection_seed") != SHARD_SELECTION_SEED
+        or event_filter.get("family") != "lead_vehicle_braking"
+        or event_filter.get("one_best_qualifying_lead_per_scenario") is not True
         or event_filter.get("controller_or_baseline_filter") is not False
+        or event_filter.get("thresholds")
+        != dataclasses.asdict(scenario_selection.SelectionThresholds())
+        or features.get("schema_version") != behavior_features.FEATURE_SCHEMA_VERSION
         or features.get("names") != list(behavior_features.FEATURE_NAMES)
+        or features.get("window_states") != behavior_features.WINDOW_STATES
+        or features.get("time_interval_s") != behavior_features.TIME_INTERVAL_S
+        or features.get("one_second_steps") != behavior_features.ONE_SECOND_STEPS
+        or features.get("nonincrease_tolerance_mps")
+        != behavior_features.NONINCREASE_TOLERANCE_MPS
         or features.get("numeric_dtype") != "float64"
+        or model.get("split_order") != "sha256_private_scenario_id_ascending"
+        or model.get("reference_fraction") != REFERENCE_FRACTION
+        or model.get("quantile_method") != "linear"
+        or model.get("iqr_floor") != IQR_FLOOR
         or model.get("minimum_event_count") != MINIMUM_EVENT_COUNT
         or model.get("neighbor_count") != NEIGHBOR_COUNT
         or model.get("support_alpha") != SUPPORT_ALPHA
+        or model.get("ties_included") is not True
     ):
         raise ValueError("Empirical-support manifest violates the frozen protocol")
 
@@ -393,7 +411,13 @@ def validate_model(model_record: dict[str, Any]) -> None:
     scaling = model.get("scaling", {})
     scale_arrays = [
         np.asarray(scaling.get(name), dtype=np.float64)
-        for name in ("median", "iqr", "effective_iqr")
+        for name in (
+            "median",
+            "first_quartile",
+            "third_quartile",
+            "iqr",
+            "effective_iqr",
+        )
     ]
     dimension = len(behavior_features.FEATURE_NAMES)
     if reference.ndim != 2 or reference.shape[1] != dimension:
@@ -406,8 +430,13 @@ def validate_model(model_record: dict[str, Any]) -> None:
         np.isfinite(array).all() for array in [reference, calibration, *scale_arrays]
     ):
         raise ValueError("Empirical-support model contains non-finite values")
-    if np.any(scale_arrays[2] < IQR_FLOOR):
+    median, first_quartile, third_quartile, iqr, effective_iqr = scale_arrays
+    if np.any(effective_iqr < IQR_FLOOR):
         raise ValueError("Empirical-support effective IQR violates the floor")
+    if not np.array_equal(iqr, third_quartile - first_quartile) or not np.array_equal(
+        effective_iqr, np.maximum(iqr, IQR_FLOOR)
+    ):
+        raise ValueError("Empirical-support scaling derivations are inconsistent")
     split = model.get("split", {})
     if (
         split.get("ordering") != "sha256_private_scenario_id_ascending"
@@ -420,6 +449,22 @@ def validate_model(model_record: dict[str, Any]) -> None:
         raise ValueError("Empirical-support reference membership mismatch")
     if len(split.get("calibration_event_keys", [])) != len(calibration):
         raise ValueError("Empirical-support calibration membership mismatch")
+    all_keys = split.get("reference_event_keys", []) + split.get(
+        "calibration_event_keys", []
+    )
+    if (
+        any(
+            not isinstance(key, str)
+            or len(key) != 64
+            or any(character not in "0123456789abcdef" for character in key)
+            for key in all_keys
+        )
+        or all_keys != sorted(all_keys)
+        or len(set(all_keys)) != len(all_keys)
+    ):
+        raise ValueError("Empirical-support split keys are invalid")
+    if np.any(calibration < 0.0):
+        raise ValueError("Empirical-support calibration scores must be non-negative")
     if model_record.get("event_count") != len(reference) + len(calibration):
         raise ValueError("Empirical-support event count mismatch")
 
@@ -839,14 +884,31 @@ def run(
         )
 
     events = [event for checkpoint in checkpoints for event in checkpoint["events"]]
+    model_path = output_dir / "model.json"
     if len(events) < 8:
+        if model_path.exists():
+            raise ValueError("Unexpected model exists for an unfit reference sample")
         model_record = None
     else:
-        model_record = fit_model(events, configuration_fingerprint=fingerprint)
-        validate_model(model_record)
-        _atomic_write_json(output_dir / "model.json", model_record)
-    report = build_report(manifest, checkpoints, model_record)
-    _atomic_write_json(output_dir / "report.json", report)
+        expected_model = fit_model(events, configuration_fingerprint=fingerprint)
+        validate_model(expected_model)
+        if model_path.exists():
+            model_record = load_model(model_path)
+            if model_record != expected_model:
+                raise ValueError("Completed model does not match durable checkpoints")
+        else:
+            model_record = expected_model
+            _atomic_write_json(model_path, model_record)
+    expected_report = build_report(manifest, checkpoints, model_record)
+    report_path = output_dir / "report.json"
+    if report_path.exists():
+        report = _read_json_object(report_path)
+        _validate_seal(report, "report_sha256")
+        if report != expected_report:
+            raise ValueError("Completed report does not match durable checkpoints")
+    else:
+        report = expected_report
+        _atomic_write_json(report_path, report)
     audit_completed_run(output_dir)
     return report
 
