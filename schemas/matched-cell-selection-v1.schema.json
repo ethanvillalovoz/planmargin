@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/matched-cell-selection-v1.schema.json",
+  "title": "PlanMargin matched-search model and proposal-selection step v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "identity", "configuration_fingerprint", "scenario", "support_model_fingerprint", "history", "decision", "selection_seconds", "selection_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/matched-cell-selection-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.matched_cell_selection_step"},
+    "identity": {"$ref": "#/$defs/proposalIdentity"},
+    "configuration_fingerprint": {"$ref": "#/$defs/sha256"},
+    "scenario": {"type": "object", "required": ["scenario_id", "selection_order", "mutated_object_index"]},
+    "support_model_fingerprint": {"$ref": "#/$defs/sha256"},
+    "history": {"type": "object", "additionalProperties": false, "required": ["observation_count", "proposal_record_sha256", "history_fingerprint"], "properties": {"observation_count": {"type": "integer", "minimum": 0, "maximum": 31}, "proposal_record_sha256": {"type": "array", "maxItems": 31, "items": {"$ref": "#/$defs/sha256"}}, "history_fingerprint": {"$ref": "#/$defs/sha256"}}},
+    "decision": {"type": "object", "additionalProperties": false, "required": ["schema_version", "proposal_index", "parameters", "source", "fallback_reason", "diagnostics"], "properties": {"schema_version": {"const": "1.0.0"}, "proposal_index": {"type": "integer", "minimum": 0, "maximum": 31}, "parameters": {"$ref": "#/$defs/parameters"}, "source": {"enum": ["stateless_uniform_random_pcg64", "sobol_initialization", "qlognehvi_mixed", "sobol_fallback"]}, "fallback_reason": {"type": ["string", "null"]}, "diagnostics": {"type": ["object", "null"]}}},
+    "selection_seconds": {"type": "number", "minimum": 0},
+    "selection_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "proposalIdentity": {"type": "object", "additionalProperties": false, "required": ["method", "track", "seed", "selection_order", "proposal_index"], "properties": {"method": {"enum": ["random", "bayesian"]}, "track": {"enum": ["natural", "headway_regression"]}, "seed": {"type": "integer", "minimum": 0, "maximum": 4}, "selection_order": {"type": "integer", "minimum": 1, "maximum": 10}, "proposal_index": {"type": "integer", "minimum": 0, "maximum": 31}}},
+    "parameters": {"type": "object", "additionalProperties": false, "required": ["braking_onset_offset_s", "speed_multiplier"], "properties": {"braking_onset_offset_s": {"enum": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]}, "speed_multiplier": {"type": "number", "minimum": 0.75, "maximum": 1.0}}}
+  }
+}

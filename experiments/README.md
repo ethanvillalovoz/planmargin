@@ -36,4 +36,7 @@ records the complete fixed-budget training run, including all invalid-attempt
 and physical-rollout accounting, before the Bayesian core was implemented.
 The [data-free matched-search proposal-core report](matched-search-proposal-core.md)
 records the released CPU dependency stack and synthetic evidence for the
-frozen random/Bayesian proposal boundary before private coordination.
+frozen random/Bayesian proposal boundary used by the coordinator.
+The [data-free matched-search cell-coordinator report](matched-search-cell-coordinator.md)
+records method-neutral schema, derivation, accounting, checkpoint, resume, and
+privacy evidence before the bounded private integration smoke test.

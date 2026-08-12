@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/matched-cell-report-v1.schema.json",
+  "title": "PlanMargin matched-search completed cell report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "record_type", "identity", "configuration_fingerprint", "support_model_fingerprint", "status", "decision", "integrity_gates", "metrics", "cost", "limitations", "report_sha256"],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/matched-cell-report-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.matched_cell_report"},
+    "identity": {"$ref": "#/$defs/cellIdentity"},
+    "configuration_fingerprint": {"$ref": "#/$defs/sha256"},
+    "support_model_fingerprint": {"$ref": "#/$defs/sha256"},
+    "status": {"const": "completed"},
+    "decision": {"enum": ["cell_complete", "invalid_cell"]},
+    "integrity_gates": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "boolean"}},
+    "metrics": {"type": "object", "required": ["proposal_budget", "proposal_count", "accepted_proposal_count", "pipeline_valid_count", "support_and_pipeline_valid_count", "fully_feasible_count", "qualifying_failure_count", "first_qualifying_failure_proposal_count", "minimum_failure_mutation_distance", "pipeline_valid_rate", "support_and_pipeline_valid_rate", "duplicate_proposal_count", "status_counts", "final_feasible_hypervolume", "feasible_hypervolume_by_proposal", "recorded_work_seconds", "final_invocation_seconds", "process_peak_rss_bytes"]},
+    "cost": {"type": "object", "additionalProperties": false, "required": ["original", "proposals", "total"], "properties": {"original": {"type": "object"}, "proposals": {"type": "object"}, "total": {"type": "object"}}},
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "report_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "cellIdentity": {"type": "object", "additionalProperties": false, "required": ["method", "track", "seed", "selection_order", "proposal_index"], "properties": {"method": {"enum": ["random", "bayesian"]}, "track": {"enum": ["natural", "headway_regression"]}, "seed": {"type": "integer", "minimum": 0, "maximum": 4}, "selection_order": {"type": "integer", "minimum": 1, "maximum": 10}, "proposal_index": {"type": "null"}}}
+  }
+}

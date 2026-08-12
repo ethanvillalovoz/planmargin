@@ -42,6 +42,9 @@ def test_per_scenario_womd_reports_are_not_committed() -> None:
         / "realism"
         / "lead-braking-support-v1"
         / "shards",
+        REPOSITORY_ROOT
+        / "artifacts"
+        / "search-comparison",
     )
 
     assert all(not path.exists() for path in prohibited_reports)
