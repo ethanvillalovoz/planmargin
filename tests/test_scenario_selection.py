@@ -76,6 +76,9 @@ def test_lead_braking_candidate_requires_same_recorded_route() -> None:
 
     assert candidate is not None
     assert candidate.family == "lead_vehicle_braking"
+    # This exact value pins the pre-empirical-support Stage-0 selector.
+    assert candidate.score == 10.25
+    assert candidate.interacting_object_index == 1
     assert candidate.features["max_total_speed_drop_mps"] == 5.0
 
     arrays.y[1] = 4.0
