@@ -121,19 +121,23 @@ See the [analytics contract](analytics.md).
 Repository policy tests and `.gitignore` enforce this separation. The debugger
 ships no private data and does not upload local records.
 
-## Deliberate omissions
+## Reopened program responsibilities
 
-- **Apache Beam:** the bounded local extraction did not justify a separate
-  distributed pipeline responsibility.
-- **FastAPI:** the final debugger can satisfy its public role with a synthetic
-  fixture and static aggregate evidence; no private-record API is needed.
-- **Hosted infrastructure:** local execution and GitHub Actions cover the
-  reproducibility contract at zero cost.
-- **AI explanation:** deterministic evidence is already concise, and an
-  assistant would not own metric generation or safety decisions.
-- **Gaussian splatting:** it does not help answer the version-one research
-  question or inspect the frozen evidence.
+Experiment v1 did not require the following layers, but ADR 0004 restores them
+as separately gated program responsibilities rather than silently omitted
+dependencies:
 
-These are scope decisions, not missing dependencies. New infrastructure belongs
-in a future version only after a measured product or scaling requirement gives
-it a concrete responsibility.
+- **Apache Beam:** bounded scenario mining and empirical feature extraction to
+  deterministic partitioned Parquet under DirectRunner.
+- **FastAPI:** a localhost-only, read-only boundary over ignored sealed records
+  and DuckDB/Parquet evidence for the real-data debugger mode.
+- **Evidence assistant:** optional explanation and allowlisted aggregate-query
+  tools; never metric generation, finding certification, or vehicle control.
+- **3D Gaussian splatting:** a frozen feasibility study for an authorized
+  Waymo-linked reconstruction and trajectory-inspection responsibility.
+- **Learned or RL planner:** an experiment-v2 candidate that must earn a role
+  through compute, determinism, and scientific-design gates.
+
+Hosted infrastructure remains unnecessary: every core responsibility must
+retain a free local or data-free execution path. See the
+[original-program recovery decision](decisions/0004-recover-original-program.md).

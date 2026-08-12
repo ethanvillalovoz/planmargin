@@ -31,6 +31,13 @@ split remains unopened, and PlanMargin does not evaluate the production Waymo
 Driver. See the [aggregate-only result](docs/natural-development-results.md)
 and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 
+> **Program status:** Experiment v1 is frozen and complete, but the original
+> PlanMargin program remains active. The next tracks add a localhost-only
+> real-record API and debugger mode, a Beam-to-Parquet pipeline, an optional
+> constrained evidence assistant, a gated 3D Gaussian feasibility study, and a
+> separately frozen experiment v2. See the
+> [recovery decision](docs/decisions/0004-recover-original-program.md).
+
 ![Aggregate-only campaign evidence surface](docs/assets/campaign-evidence.png)
 
 ## What I built
@@ -191,6 +198,7 @@ following the [credential-safe setup guide](docs/setup.md).
 | Data and systems         | [Analytics](docs/analytics.md) · [Native geometry](docs/native-geometry.md) · [Rollout records](docs/rollout-record.md)                                                            |
 | Product interface        | [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md)                                                                          |
 | Reproduction             | [Local setup](docs/setup.md) · [Data boundary](data/README.md)                                                                                                                     |
+| Active program           | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Open milestones](https://github.com/ethanvillalovoz/planmargin/issues)                             |
 
 ## Data, licensing, and affiliation
 
