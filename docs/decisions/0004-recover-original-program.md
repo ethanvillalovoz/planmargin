@@ -118,8 +118,8 @@ Experiment v2 begins only after a design note freezes:
 - a quantitative development-signal gate; and
 - held-out selection and aggregate reporting rules.
 
-The official held-out split remains unopened unless the v2 development gate
-passes. Platform progress cannot authorize held-out access.
+No held-out comparative campaign is authorized unless the v2 development gate
+passes. Platform progress cannot authorize validation access.
 
 ## Program guardrails
 
@@ -140,3 +140,12 @@ The project will take longer than the reduced version-one roadmap, but the
 program once again matches its original goal. Experiment v1 remains a credible
 negative result, while platform completion and experiment v2 can progress
 without rewriting history.
+
+## Final resolution
+
+All recovery tracks are resolved. FastAPI real evidence, the Angular local
+provider, Beam dataflow, and the constrained assistant shipped. The Gaussian
+field completed `no_go` on frozen trajectory coverage. Experiment v2 completed
+`no_go` at learned-controller qualification and therefore did not proceed to a
+campaign. The final audit also corrected the legacy validation-access history
+in ADR 0007. See the [full-program audit](../final-program-audit.md).

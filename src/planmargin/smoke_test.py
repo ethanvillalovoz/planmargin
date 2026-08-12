@@ -31,7 +31,7 @@ from waymax.dataloader import womd_factories
 DATASET_VERSION = "1.3.1"
 DEFAULT_SHARD_URI = (
     "gs://waymo_open_dataset_motion_v_1_3_1/uncompressed/tf_example/"
-    "validation/validation_tfexample.tfrecord-00000-of-00150"
+    "training/training_tfexample.tfrecord-00000-of-01000"
 )
 WAYMAX_COMMIT = "a64dfec9be8576b60d9cecc94f406d9812d4a7d0"
 MAX_NUM_OBJECTS = 128
@@ -53,10 +53,30 @@ def _update_hash(digest: Any, state: Any) -> None:
         digest.update(array.tobytes())
 
 
-def _load_first_scenario(shard_uri: str) -> tuple[Any, str, int]:
+def _dataset_config(
+    shard_uri: str, *, allow_validation_access: bool
+) -> tuple[Any, str]:
+    if "/training/training_tfexample." in shard_uri:
+        return config.WOD_1_3_1_TRAINING, "training"
+    if "/validation/validation_tfexample." in shard_uri:
+        if not allow_validation_access:
+            raise ValueError(
+                "Validation access is never implicit; pass "
+                "--allow-validation-access only under an authorized protocol."
+            )
+        return config.WOD_1_3_1_VALIDATION, "validation"
+    raise ValueError("Shard URI must identify a WOMD v1.3.1 training or validation TFExample.")
+
+
+def _load_first_scenario(
+    shard_uri: str, *, allow_validation_access: bool = False
+) -> tuple[Any, str, int, str]:
     """Stream and parse only the first TFExample from one fixed shard."""
+    base_config, split = _dataset_config(
+        shard_uri, allow_validation_access=allow_validation_access
+    )
     dataset_config = dataclasses.replace(
-        config.WOD_1_3_1_VALIDATION,
+        base_config,
         path=shard_uri,
         repeat=1,
         batch_dims=(),
@@ -88,7 +108,7 @@ def _load_first_scenario(shard_uri: str) -> tuple[Any, str, int]:
     scenario = womd_factories.simulator_state_from_womd_dict(
         parsed, include_sdc_paths=False
     )
-    return scenario, scenario_id, len(serialized_bytes)
+    return scenario, scenario_id, len(serialized_bytes), split
 
 
 def _rollout_once(
@@ -160,11 +180,18 @@ def _metric_summary(environment: Any, state: Any) -> dict[str, Any]:
     return summary
 
 
-def run(shard_uri: str, requested_steps: int) -> dict[str, Any]:
+def run(
+    shard_uri: str,
+    requested_steps: int,
+    *,
+    allow_validation_access: bool = False,
+) -> dict[str, Any]:
     """Execute the complete Stage 0 smoke test and return its report."""
     started = time.perf_counter()
     load_started = time.perf_counter()
-    scenario, scenario_id, record_bytes = _load_first_scenario(shard_uri)
+    scenario, scenario_id, record_bytes, split = _load_first_scenario(
+        shard_uri, allow_validation_access=allow_validation_access
+    )
     load_seconds = time.perf_counter() - load_started
 
     dynamics_model = dynamics.StateDynamics()
@@ -209,7 +236,7 @@ def run(shard_uri: str, requested_steps: int) -> dict[str, Any]:
         "dataset": {
             "name": "Waymo Open Motion Dataset",
             "version": DATASET_VERSION,
-            "split": "validation",
+            "split": split,
             "shard": Path(shard_uri).name,
             "scenario_id": scenario_id,
             "streamed_record_bytes": record_bytes,
@@ -256,6 +283,11 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--shard-uri", default=DEFAULT_SHARD_URI)
     parser.add_argument(
+        "--allow-validation-access",
+        action="store_true",
+        help="Explicitly authorize a validation URI under a separately frozen protocol.",
+    )
+    parser.add_argument(
         "--steps",
         type=int,
         default=80,
@@ -273,7 +305,11 @@ def main() -> None:
     args = _parse_args()
     if args.steps < 1:
         raise SystemExit("--steps must be at least 1")
-    report = run(args.shard_uri, args.steps)
+    report = run(
+        args.shard_uri,
+        args.steps,
+        allow_validation_access=args.allow_validation_access,
+    )
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

@@ -1,1 +1,41 @@
-{"decision":"beam_pipeline_verified","integrity_gates":{"all_source_checkpoints_sealed":true,"event_keys_unique":true,"feature_rows_finite":true,"held_out_untouched":true,"partition_assignments_valid":true,"partition_count_exact":true,"raw_scenario_ids_excluded":true,"row_count_reconciled":true},"limitations":["This validates the data pipeline, not planner safety or failure discovery.","The tracked report contains aggregates only; feature rows remain ignored locally.","The official held-out split remains unopened."],"logical_fingerprint":"ab3087d032e179c7753a7432fedc95b1658187caa8c32b32de1af04225d9a820","pipeline":{"accepted_event_count":265,"partition_count":8,"records_scanned":7796,"runner":"DirectRunner","source_mode":"sealed-support","source_shard_count":16},"privacy":{"held_out_opened":false,"private_local_artifact":true,"raw_scenario_ids_written":false,"source_uris_written":false},"record_type":"planmargin.beam_public_summary","schema_version":1,"status":"completed","versions":{"apache_beam":"2.74.0","duckdb":"1.5.5","pyarrow":"23.0.1"}}
+{
+  "decision": "beam_pipeline_verified",
+  "integrity_gates": {
+    "all_source_checkpoints_sealed": true,
+    "event_keys_unique": true,
+    "feature_rows_finite": true,
+    "held_out_untouched": true,
+    "partition_assignments_valid": true,
+    "partition_count_exact": true,
+    "raw_scenario_ids_excluded": true,
+    "row_count_reconciled": true
+  },
+  "limitations": [
+    "This validates the data pipeline, not planner safety or failure discovery.",
+    "The tracked report contains aggregates only; feature rows remain ignored locally.",
+    "This Beam pipeline did not read the official validation split."
+  ],
+  "logical_fingerprint": "ab3087d032e179c7753a7432fedc95b1658187caa8c32b32de1af04225d9a820",
+  "pipeline": {
+    "accepted_event_count": 265,
+    "partition_count": 8,
+    "records_scanned": 7796,
+    "runner": "DirectRunner",
+    "source_mode": "sealed-support",
+    "source_shard_count": 16
+  },
+  "privacy": {
+    "held_out_opened": false,
+    "private_local_artifact": true,
+    "raw_scenario_ids_written": false,
+    "source_uris_written": false
+  },
+  "record_type": "planmargin.beam_public_summary",
+  "schema_version": 1,
+  "status": "completed",
+  "versions": {
+    "apache_beam": "2.74.0",
+    "duckdb": "1.5.5",
+    "pyarrow": "23.0.1"
+  }
+}

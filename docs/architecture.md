@@ -96,8 +96,8 @@ flowchart TB
   records.
 - Hypothesis rules are evaluated as frozen; budget-censored discovery values
   are not reported as observed costs.
-- The held-out WOMD split remains unopened under the version-one `no_go`
-  decision.
+- No held-out WOMD comparative campaign ran under the version-one `no_go`;
+  a legacy compatibility smoke had accessed one validation record.
 
 ## Native geometry boundary
 

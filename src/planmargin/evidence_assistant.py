@@ -132,19 +132,19 @@ PUBLIC_CITATIONS = {
         CAMPAIGN,
         "Natural matched-search development results",
         "docs/natural-development-results.md",
-        "f43ad796baf73ddf403de710c7e073e389523c1ae827f67c3a588726ef2fd8e2",
+        "c0d579e364b6048cd275fcca273d59eb59d98a55c57f5135412226c81b938fb5",
     ),
     HELD_OUT: Citation(
         HELD_OUT,
         "Version-one held-out no-go decision",
         "docs/decisions/0003-version-one-heldout-no-go.md",
-        "dbd1d2303d8cf2ca60b34036b37487216f100c3a0ae750188f1fa4a7064cab85",
+        "3637ed6a933a2bc080e4de1c5d67e9fee9d44202a59c679893cf1f6e53d3c131",
     ),
     BEAM: Citation(
         BEAM,
         "Beam feature pipeline integration evidence",
         "experiments/platform/beam-feature-integration.json",
-        "383c7d948f245a09c748517deb468725ef2636fd3f2739d59d4156bbb1ab38d1",
+        "eba6ac5949e78a4b5a1103868d7f811f1e821b12e2d76b99a833e0276425e099",
     ),
 }
 
@@ -207,7 +207,7 @@ class PublicEvidenceTools:
                 ),
                 _fact(
                     "campaign.held_out",
-                    "The official held-out split remains unopened.",
+                    "No held-out comparative campaign was run.",
                     False,
                     None,
                     HELD_OUT,
@@ -352,7 +352,7 @@ class PublicEvidenceTools:
                 ),
                 _fact(
                     "claim.held_out",
-                    "The official held-out WOMD evaluation remains unopened.",
+                    "No held-out comparative WOMD evaluation was run.",
                     False,
                     None,
                     HELD_OUT,
@@ -459,7 +459,7 @@ class LocalEvidenceTools:
                 ),
                 _fact(
                     "campaign.held_out",
-                    "The local evidence contract records that held-out data remains unopened.",
+                    "The local evidence contract records that no held-out comparative campaign ran.",
                     False,
                     None,
                     "local-campaign",
@@ -563,7 +563,7 @@ def _standard_limitations() -> tuple[str, ...]:
     return (
         "This is development evidence, not a broad statistical generalization.",
         "PlanMargin does not evaluate the production Waymo Driver.",
-        "The official held-out WOMD split remains unopened.",
+        "No held-out comparative WOMD evaluation was run.",
     )
 
 

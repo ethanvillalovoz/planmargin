@@ -155,8 +155,8 @@ reproducible feasibility implementation—not as a product capability.
 A passing implementation may be described as a deterministic, trajectory-linked
 LiDAR Gaussian field rendered with Gaussian splatting. It may not be described
 as photorealistic 3DGS, learned scene reconstruction, a production Waymo scene,
-or planner-safety evidence. The official held-out split remains unopened
-regardless of this decision.
+or planner-safety evidence. This study performs no official validation-split
+read regardless of its decision.
 
 ## Pre-execution correction
 

@@ -11,7 +11,7 @@ describe('CampaignSummary', () => {
     fixture.componentInstance.close.subscribe(() => closeCount++);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('The held-out split remains unopened');
+    expect(fixture.nativeElement.textContent).toContain('No held-out comparative campaign ran');
     expect(fixture.nativeElement.textContent).toContain('+14.8125 pp');
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
@@ -41,6 +41,6 @@ describe('CampaignSummary', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('VERIFIED LOCAL CAMPAIGN');
-    expect(fixture.nativeElement.textContent).toContain('The held-out split remains unopened');
+    expect(fixture.nativeElement.textContent).toContain('No held-out comparative campaign ran');
   });
 });

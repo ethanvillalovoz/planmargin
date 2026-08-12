@@ -86,8 +86,9 @@ bounds, or finding rules were relaxed after observing the data.
 
 The campaign tests an independent methodology using Waymax and WOMD. It does
 not evaluate the production Waymo Driver and makes no claim about its safety or
-performance. The official held-out WOMD evaluation remains unopened, so this
-development result is not a held-out confirmation.
+performance. No official held-out WOMD comparative evaluation was run, so this
+development result is not a held-out confirmation. A legacy compatibility
+smoke had accessed one validation record; it supplied no search result.
 
 The implementation and frozen reporting definitions are documented in the
 [natural campaign protocol](matched-search-campaign.md) and the underlying

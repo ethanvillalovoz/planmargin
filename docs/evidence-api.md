@@ -5,6 +5,13 @@ experiment artifacts and local engineering tools. It gives the debugger a
 real-record path without copying restricted WOMD evidence into the Angular
 bundle, Git, CI, browser storage, or a hosted service.
 
+The campaign response contract is version `1.1.0`. It reports
+`held_out_comparison_run: false`, replacing the ambiguous version-1.0
+`held_out_opened` field after the historical access correction in
+[ADR 0007](decisions/0007-correct-validation-access-boundary.md). The Angular
+client rejects any other campaign-contract version instead of guessing at its
+semantics.
+
 ## Source and response boundary
 
 The service reads three fixed artifact families beneath the repository root:
@@ -97,7 +104,7 @@ synthetic fixture.
 | Endpoint | Responsibility |
 | --- | --- |
 | `GET /api/v1/health` | authenticated readiness and active evidence mode |
-| `GET /api/v1/campaign` | immutable experiment-v1 status, cost, privacy, and held-out boundary |
+| `GET /api/v1/campaign` | immutable experiment-v1 status, cost, privacy, and whether a held-out comparison ran |
 | `GET /api/v1/methods` | method-level aggregate comparison |
 | `GET /api/v1/hypotheses` | frozen hypothesis decisions and available comparison values |
 | `GET /api/v1/cells` | redacted cell aggregates with opaque IDs |

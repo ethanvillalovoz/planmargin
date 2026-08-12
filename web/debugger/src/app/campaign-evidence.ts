@@ -14,7 +14,7 @@ export interface CampaignEvidence {
     readonly validity: string;
   };
   readonly nativeKernelSpeedupRange: string;
-  readonly heldOutOpened: boolean;
+  readonly heldOutComparisonRun: boolean;
   readonly mode: 'published-aggregate' | 'real-local-redacted';
 }
 
@@ -51,6 +51,6 @@ export const CAMPAIGN_EVIDENCE: CampaignEvidence = {
     validity: 'Supported',
   },
   nativeKernelSpeedupRange: '585–619×',
-  heldOutOpened: false,
+  heldOutComparisonRun: false,
   mode: 'published-aggregate',
 };

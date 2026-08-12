@@ -53,8 +53,8 @@ maintain separate formulas in the miner and mutation pipeline.
 - dataset: WOMD Motion Dataset `1.3.1`, training split;
 - development scenarios: training shard `00000`, already selected;
 - empirical-reference shards: the following 16 complete training shards;
-- future held-out evaluation: the official WOMD validation split, untouched by
-  this milestone; and
+- future comparative evaluation: this milestone does not read the official
+  WOMD validation split; a legacy smoke had accessed one record; and
 - global shard-selection seed: `20260811` with the exact selected list pinned
   below, so NumPy-version changes cannot alter it.
 

@@ -33,7 +33,7 @@ and calibration criteria. See
 The completed natural development campaign later produced no qualifying
 findings for either method, and the one predeclared regression alternative
 failed its eligibility gate. [ADR 0003](decisions/0003-version-one-heldout-no-go.md)
-therefore keeps the validation split unopened under version one and narrows
+therefore runs no validation-backed comparative campaign under version one and narrows
 the final evidence to the audited development comparison.
 
 ## Version-one scope
@@ -41,8 +41,8 @@ the final evidence to the audited development comparison.
 ### Dataset and simulator
 
 - Waymo Open Motion Dataset training data for the completed development study
-- An unopened WOMD validation split reserved for a separately versioned study;
-  version one did not authorize held-out access
+- WOMD validation reserved from comparative search; a legacy Stage-0
+  compatibility smoke accessed one record before the v1 held-out decision
 - Waymax for deterministic closed-loop rollout and built-in evaluation metrics
 
 ### Initial scenario family

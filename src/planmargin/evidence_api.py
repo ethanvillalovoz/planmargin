@@ -32,7 +32,7 @@ from planmargin import random_search
 from planmargin import rollout_record
 from planmargin import speed_mutation
 
-API_VERSION = "1.0.0"
+API_VERSION = "1.1.0"
 DEFAULT_ANALYTICS = Path("artifacts/analytics/natural-development-v1")
 DEFAULT_CAMPAIGN = Path("artifacts/search-comparison/natural-development-v1")
 DEFAULT_ROLLOUTS = Path("artifacts/stage-0/rollout-records.json")
@@ -52,7 +52,7 @@ class HealthEvidence(EvidenceModel):
 
 
 class CampaignEvidence(EvidenceModel):
-    api_version: str
+    api_version: Literal["1.1.0"]
     evidence_mode: Literal["real_local_redacted"]
     experiment: Literal["v1_immutable"]
     campaign_label: str
@@ -63,7 +63,7 @@ class CampaignEvidence(EvidenceModel):
     waymax_rollout_steps: int
     privacy_scope: str
     integrity: Literal["verified"]
-    held_out_opened: Literal[False]
+    held_out_comparison_run: Literal[False]
 
 
 class MethodEvidence(EvidenceModel):
@@ -442,7 +442,7 @@ class EvidenceRepository:
             "waymax_rollout_steps": row["waymax_rollout_steps"],
             "privacy_scope": manifest["privacy_scope"],
             "integrity": "verified",
-            "held_out_opened": False,
+            "held_out_comparison_run": False,
         }
 
     def methods(self) -> list[dict[str, Any]]:

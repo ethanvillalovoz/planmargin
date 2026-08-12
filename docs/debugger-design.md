@@ -79,7 +79,7 @@ The `Campaign results` surface is the sole exception to the synthetic fixture
 copy above. It contains only the already-published campaign aggregates: method
 budgets, valid rates, zero finding counts, H1/H2/H3 decisions, total physical
 cost, reconstruction/analytics evidence, the isolated native-kernel benchmark,
-and the held-out/production-driver claim boundary. It contains no scenario,
+and the held-out-comparison/production-driver claim boundary. It contains no scenario,
 cell, proposal, controller-trace, feature-vector, or support-score record.
 
 ## Component ownership

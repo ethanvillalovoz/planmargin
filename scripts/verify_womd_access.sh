@@ -3,7 +3,7 @@
 set -euo pipefail
 
 dataset_version="1.3.1"
-shard_uri="gs://waymo_open_dataset_motion_v_1_3_1/uncompressed/tf_example/validation/validation_tfexample.tfrecord-00000-of-00150"
+shard_uri="gs://waymo_open_dataset_motion_v_1_3_1/uncompressed/tf_example/training/training_tfexample.tfrecord-00000-of-01000"
 
 if ! command -v gcloud >/dev/null 2>&1; then
   echo "ERROR: gcloud is not installed or is not on PATH." >&2
@@ -35,8 +35,8 @@ if ! size_bytes="$(
 fi
 
 printf 'dataset_version=%s\n' "${dataset_version}"
-printf 'split=validation\n'
-printf 'shard=00000-of-00150\n'
+printf 'split=training\n'
+printf 'shard=00000-of-01000\n'
 printf 'size_bytes=%s\n' "${size_bytes}"
 printf 'active_account_configured=true\n'
 printf 'application_default_credentials_dataset_access=true\n'

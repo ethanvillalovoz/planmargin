@@ -83,11 +83,14 @@ export function parseCampaign(
   cellsValue: unknown,
 ): { readonly campaign: CampaignEvidence; readonly cells: readonly LocalCell[] } {
   const campaign = object(campaignValue, 'campaign');
+  if (campaign['api_version'] !== '1.1.0') {
+    throw new Error('campaign.api_version is not supported');
+  }
   if (campaign['evidence_mode'] !== 'real_local_redacted') {
     throw new Error('campaign.evidence_mode is not local redacted evidence');
   }
-  if (campaign['held_out_opened'] !== false) {
-    throw new Error('Local evidence claims that the held-out split was opened');
+  if (campaign['held_out_comparison_run'] !== false) {
+    throw new Error('Local evidence claims that a held-out comparison ran');
   }
   const methods = new Map(
     array(methodsValue, 'methods').map((value, index) => {
@@ -180,7 +183,7 @@ export function parseCampaign(
         validity: hypothesisStatus('h3_validity'),
       },
       nativeKernelSpeedupRange: '585–619×',
-      heldOutOpened: false,
+      heldOutComparisonRun: false,
       mode: 'real-local-redacted',
     },
     cells,

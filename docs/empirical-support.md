@@ -4,7 +4,7 @@ This component implements the first half of the frozen
 [empirical-support and matched-search protocol](behavioral-realism-and-matched-search.md).
 It builds a private split-conformal five-nearest-neighbor support model from
 the exact 16 WOMD `1.3.1` training shards named in that protocol. It does not
-read shard `00000`, the official validation split, controller outcomes, or
+read training shard `00000`, the official validation split, controller outcomes, or
 baseline-validation results.
 
 ## Shared feature contract

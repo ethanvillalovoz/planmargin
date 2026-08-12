@@ -124,8 +124,9 @@ import { CAMPAIGN_EVIDENCE, CampaignEvidence } from '../campaign-evidence';
           <div class="scope-note">
             <span>CLAIM BOUNDARY</span>
             <p>
-              Ten training scenarios, five seeds, and no qualifying failures. The held-out split
-              remains unopened. This does not evaluate the production Waymo Driver.
+              Ten training scenarios, five seeds, and no qualifying failures. No held-out
+              comparative campaign ran. A legacy compatibility smoke accessed one validation record.
+              This does not evaluate the production Waymo Driver.
             </p>
           </div>
         </div>
