@@ -13,6 +13,7 @@ flowchart TB
     subgraph P["Private local experiment boundary"]
         A["Authorized WOMD shards"] --> B["Scenario selection and empirical-support extraction"]
         B --> C["JAX / Waymax deterministic replay"]
+        B --> Q["Apache Beam bounded feature mining"]
         C --> G["Random or constrained Bayesian proposer"]
         G --> D["Bounded lead-braking mutation"]
         D --> E["Tested and reference controllers"]
@@ -21,6 +22,8 @@ flowchart TB
         F --> H["Content-sealed cell records"]
         H --> I["Resumable campaign reconstruction"]
         I --> J["Private DuckDB and Parquet analytics"]
+        Q --> R["Deterministic partitioned Parquet"]
+        R --> J
         H --> O["Authenticated localhost FastAPI"]
         J --> O
     end
@@ -51,6 +54,7 @@ flowchart TB
 | Search          | NumPy PCG64, PyTorch, BoTorch    | Produce stateless uniform-random proposals or constrained multi-objective qLogNEHVI proposals under matched budgets.                                |
 | Coordination    | Python, JSON Schema              | Preserve every attempted proposal, account for physical rollout cost, seal checkpoints, and resume without changing decisions.                      |
 | Analytics       | DuckDB, Parquet, SQL             | Normalize sealed campaign summaries privately and independently reconcile published aggregates.                                                     |
+| Feature dataflow | Apache Beam, PyArrow, Parquet    | Mine or ingest bounded training shards, extract the shared behavior features, checkpoint by source, key/group into stable partitions, and reconcile in DuckDB. |
 | Local API       | FastAPI, read-only DuckDB        | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced projections on loopback only.                                     |
 | Evidence UI     | Angular, TypeScript, Three.js    | Boot safely from a synthetic fixture; optionally inspect authenticated, redacted local trajectories and sealed proposal evidence without exporting it. |
 | Automation      | uv, npm, GitHub Actions          | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                     |
@@ -137,7 +141,9 @@ as separately gated program responsibilities rather than silently omitted
 dependencies:
 
 - **Apache Beam:** bounded scenario mining and empirical feature extraction to
-  deterministic partitioned Parquet under DirectRunner.
+  deterministic partitioned Parquet under DirectRunner; implemented with
+  durable source checkpoints, keyed grouping, explicit partitions, and DuckDB
+  reconciliation.
 - **FastAPI:** implemented as a localhost-only, read-only boundary over ignored
   sealed records and verified DuckDB/Parquet evidence; the Angular client uses
   its fixed authenticated projections without persistence or export.

@@ -33,8 +33,8 @@ and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 
 > **Program status:** Experiment v1 is frozen and complete, but the original
 > PlanMargin program remains active. The localhost-only real-record API and
-> debugger mode are complete. The next tracks add a Beam-to-Parquet pipeline, an optional
-> constrained evidence assistant, a gated 3D Gaussian feasibility study, and a
+> debugger mode and Beam-to-Parquet-to-DuckDB pipeline are complete. The next
+> tracks add an optional constrained evidence assistant, a gated 3D Gaussian feasibility study, and a
 > separately frozen experiment v2. See the
 > [recovery decision](docs/decisions/0004-recover-original-program.md).
 
@@ -53,8 +53,9 @@ technology demos:
 - **Optimization:** a stateless uniform-random control and constrained
   multi-objective qLogNEHVI search in PyTorch/BoTorch.
 - **Data engineering:** content-sealed checkpoints, atomic resumability,
-  privacy-preserving DuckDB/Parquet tables, and SQL reconciliation against the
-  published aggregates.
+  Apache Beam keyed transforms, deterministic partitioned Parquet,
+  privacy-preserving DuckDB tables, and SQL reconciliation against the
+  published aggregates and feature rows.
 - **Local evidence service:** a token-authenticated, loopback-only FastAPI
   boundary over verified DuckDB/Parquet, sealed proposal records, and redacted
   real trajectories; no client-supplied SQL or paths.
@@ -113,6 +114,8 @@ flowchart LR
     E --> F["DuckDB · Parquet · SQL verification"]
     E --> G["Aggregate-only public report"]
     E --> J["FastAPI · authenticated local real evidence"]
+    A --> K["Apache Beam · bounded feature dataflow"]
+    K --> F
     H["Synthetic debugger fixture"] --> I["Angular · TypeScript · Three.js"]
     J -->|"authenticated loopback only"| I
     G --> I
@@ -125,10 +128,26 @@ aggregates enter Git. The [architecture document](docs/architecture.md)
 describes each responsibility and public/private boundary.
 
 The implemented stack is Python, JAX/Waymax, PyTorch/BoTorch,
-C++20/pybind11, DuckDB, Parquet, FastAPI, Angular, TypeScript, Three.js, and
-GitHub Actions. Beam, the optional AI explanation layer, and experiment-v2
-learned-policy work remain active program milestones. Hosted infrastructure is
-not required.
+C++20/pybind11, Apache Beam, DuckDB, Parquet, FastAPI, Angular, TypeScript,
+Three.js, and GitHub Actions. The optional AI explanation layer, 3D Gaussian
+feasibility study, and experiment-v2 learned-policy work remain active program
+milestones. Hosted infrastructure is not required.
+
+## Run the Beam feature pipeline
+
+Transform the validated private v1 feature checkpoints into deterministic
+partitioned Parquet and a reconciled DuckDB database without rereading WOMD:
+
+```bash
+uv run --frozen planmargin-build-beam-features \
+  --source-mode sealed-support \
+  --support-dir artifacts/realism/lead-braking-support-v1 \
+  --output-dir artifacts/beam-features/lead-braking-v1
+```
+
+The pipeline resumes sealed per-source-shard checkpoints, assigns eight stable
+hash partitions with Beam `GroupByKey`, and verifies row identity and privacy
+again in DuckDB. See the [Beam feature pipeline contract](docs/beam-feature-pipeline.md).
 
 ## Run the local evidence API
 
@@ -208,9 +227,10 @@ following the [credential-safe setup guide](docs/setup.md).
 - **Measured optimization only.** C++ owns one profiled geometry hotspot, and
   its 585–619× result is reported only as an isolated-kernel benchmark—not an
   end-to-end campaign speedup.
-- **Technology must own a responsibility.** FastAPI now owns the authenticated
-  real-evidence boundary; each remaining active layer must pass its own
-  responsibility and verification gate before it can be claimed.
+- **Technology must own a responsibility.** FastAPI owns the authenticated
+  real-evidence boundary, and Beam owns restartable feature dataflow; each
+  remaining active layer must pass its own responsibility and verification
+  gate before it can be claimed.
 - **Zero-cost execution.** The core system runs on local Apple silicon, CPU
   JAX, optional Colab Free, and data-free GitHub Actions.
 
@@ -222,6 +242,7 @@ following the [credential-safe setup guide](docs/setup.md).
 | Experiment contract      | [Behavioral realism and matched search](docs/behavioral-realism-and-matched-search.md) · [Campaign protocol](docs/matched-search-campaign.md)                                      |
 | Final evidence           | [Aggregate result](docs/natural-development-results.md) · [Held-out decision](docs/decisions/0003-version-one-heldout-no-go.md)                                                    |
 | Data and systems         | [Analytics](docs/analytics.md) · [Native geometry](docs/native-geometry.md) · [Rollout records](docs/rollout-record.md)                                                            |
+| Dataflow                 | [Beam feature pipeline](docs/beam-feature-pipeline.md)                                                                                                                           |
 | Product interface        | [Local evidence API](docs/evidence-api.md) · [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md)                               |
 | Reproduction             | [Local setup](docs/setup.md) · [Data boundary](data/README.md)                                                                                                                     |
 | Active program           | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Open milestones](https://github.com/ethanvillalovoz/planmargin/issues)                             |

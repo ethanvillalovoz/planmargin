@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/beam-feature-manifest-v1.schema.json",
+  "title": "PlanMargin Beam feature manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "record_type",
+    "configuration_fingerprint",
+    "logical_fingerprint",
+    "status",
+    "decision",
+    "source",
+    "parquet",
+    "duckdb",
+    "integrity_gates",
+    "provenance",
+    "privacy",
+    "manifest_sha256"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/beam-feature-manifest-v1.schema.json"
+    },
+    "schema_version": { "const": "1.0.0" },
+    "record_type": { "const": "planmargin.beam_feature_manifest" },
+    "configuration_fingerprint": { "$ref": "#/$defs/sha256" },
+    "logical_fingerprint": { "$ref": "#/$defs/sha256" },
+    "status": { "const": "completed" },
+    "decision": { "const": "beam_pipeline_verified" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "shard_count",
+        "checkpoint_seals",
+        "records_scanned",
+        "accepted_event_count",
+        "feature_rejection_counts"
+      ],
+      "properties": {
+        "mode": { "enum": ["fixture", "sealed-support", "womd-direct"] },
+        "shard_count": { "type": "integer", "minimum": 1 },
+        "checkpoint_seals": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "records_scanned": { "type": "integer", "minimum": 0 },
+        "accepted_event_count": { "type": "integer", "minimum": 0 },
+        "feature_rejection_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "parquet": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/parquetArtifact" }
+    },
+    "duckdb": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytes", "sha256", "metrics"],
+      "properties": {
+        "path": { "const": "beam_features.duckdb" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "row_count",
+            "unique_event_count",
+            "finite_feature_row_count",
+            "source_shard_count",
+            "rows_by_source_shard",
+            "rows_by_partition"
+          ],
+          "properties": {
+            "row_count": { "type": "integer", "minimum": 0 },
+            "unique_event_count": { "type": "integer", "minimum": 0 },
+            "finite_feature_row_count": { "type": "integer", "minimum": 0 },
+            "source_shard_count": { "type": "integer", "minimum": 0 },
+            "rows_by_source_shard": {
+              "type": "object",
+              "additionalProperties": { "type": "integer", "minimum": 1 }
+            },
+            "rows_by_partition": {
+              "type": "object",
+              "additionalProperties": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "integrity_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "all_source_checkpoints_sealed",
+        "partition_count_exact",
+        "row_count_reconciled",
+        "event_keys_unique",
+        "partition_assignments_valid",
+        "feature_rows_finite",
+        "held_out_untouched",
+        "raw_scenario_ids_excluded"
+      ],
+      "properties": {
+        "all_source_checkpoints_sealed": { "const": true },
+        "partition_count_exact": { "const": true },
+        "row_count_reconciled": { "const": true },
+        "event_keys_unique": { "const": true },
+        "partition_assignments_valid": { "const": true },
+        "feature_rows_finite": { "const": true },
+        "held_out_untouched": { "const": true },
+        "raw_scenario_ids_excluded": { "const": true }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apache_beam", "pyarrow", "duckdb", "runner", "builder_source_sha256"],
+      "properties": {
+        "apache_beam": { "type": "string", "minLength": 1 },
+        "pyarrow": { "type": "string", "minLength": 1 },
+        "duckdb": { "type": "string", "minLength": 1 },
+        "runner": { "const": "DirectRunner" },
+        "builder_source_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "private_local_artifact",
+        "raw_scenario_ids_written",
+        "source_uris_written",
+        "held_out_opened"
+      ],
+      "properties": {
+        "private_local_artifact": { "const": true },
+        "raw_scenario_ids_written": { "const": false },
+        "source_uris_written": { "const": false },
+        "held_out_opened": { "const": false }
+      }
+    },
+    "manifest_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "parquetArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytes", "sha256", "row_count"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^dataset/partition=[0-9]{2}/events\\.parquet$"
+        },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "row_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

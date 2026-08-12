@@ -7,6 +7,7 @@ requires-python = ">=3.11,<3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 dependencies = [
+  "apache-beam==2.74.0",
   "botorch==0.18.1",
   "duckdb==1.5.5",
   "fastapi>=0.128,<1",
@@ -29,6 +30,7 @@ planmargin-run-matched-search-smoke = "planmargin.matched_smoke:main"
 planmargin-check-regression-eligibility = "planmargin.regression_eligibility:main"
 planmargin-run-matched-campaign = "planmargin.matched_campaign:main"
 planmargin-build-analytics = "planmargin.analytics:main"
+planmargin-build-beam-features = "planmargin.beam_features:main"
 planmargin-benchmark-geometry = "planmargin.geometry_benchmark:main"
 planmargin-serve-evidence = "planmargin.evidence_api:main"
 
