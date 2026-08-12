@@ -40,3 +40,7 @@ frozen random/Bayesian proposal boundary used by the coordinator.
 The [data-free matched-search cell-coordinator report](matched-search-cell-coordinator.md)
 records method-neutral schema, derivation, accounting, checkpoint, resume, and
 privacy evidence before the bounded private integration smoke test.
+The [bounded private matched-search smoke report](matched-search-private-smoke.md)
+records the aggregate evidence that real mutation, feature, support, and
+controller components compose through that coordinator for exactly two
+predeclared proposals.

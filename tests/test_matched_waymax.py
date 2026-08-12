@@ -255,6 +255,10 @@ def test_smoke_runner_freezes_scope_and_emits_only_aggregate_output(
     def coordinator_run(**kwargs: Any) -> dict[str, Any]:
         calls.append(kwargs)
         if len(calls) == 1:
+            output.mkdir(parents=True, exist_ok=True)
+            (output / "original.json").write_text(
+                json.dumps({"cost": {"total_physical_rollouts": 4}})
+            )
             for index in range(2):
                 parameters = matched_search.random_parameters(
                     seed=0, selection_order=1, proposal_index=index
@@ -313,6 +317,9 @@ def test_smoke_runner_freezes_scope_and_emits_only_aggregate_output(
     assert result["proposal_count"] == 2
     assert result["resume_repeated_evaluation_count"] == 0
     assert result["support_pass_count"] == 1
+    assert result["original_physical_rollouts"] == 4
+    assert result["proposal_physical_rollouts"] == 12
+    assert result["total_physical_rollouts"] == 16
     serialized = json.dumps(result)
     assert "private-manifest" not in serialized
     assert "private-model" not in serialized

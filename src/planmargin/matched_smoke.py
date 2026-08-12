@@ -116,6 +116,7 @@ def run(
     ):
         raise RuntimeError("Coordinator exceeded or missed the bounded smoke budget")
     proposals = _load_proposals(output_dir)
+    original = random_search._read_json_object(output_dir / "original.json")
     _verify_records(output_dir, proposals)
     _verify_order(adapter.events)
 
@@ -161,7 +162,12 @@ def run(
         ),
         "ordering_verified_attempt_count": SMOKE_PROPOSAL_COUNT,
         "resume_repeated_evaluation_count": 0,
-        "total_physical_rollouts": sum(
+        "original_physical_rollouts": original["cost"]["total_physical_rollouts"],
+        "proposal_physical_rollouts": sum(
+            proposal["cost"]["total_physical_rollouts"] for proposal in proposals
+        ),
+        "total_physical_rollouts": original["cost"]["total_physical_rollouts"]
+        + sum(
             proposal["cost"]["total_physical_rollouts"] for proposal in proposals
         ),
         "output": str(output_dir),

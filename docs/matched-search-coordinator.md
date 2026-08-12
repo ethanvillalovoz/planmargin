@@ -89,11 +89,12 @@ and support validity, complete physical cost, duplicate and finding counts, and
 the feasible two-objective hypervolume trace. It does not evaluate H1, H2, or
 H3; those require the later complete campaign.
 
-## Next gate
+## Private integration result
 
-The next milestone is a bounded private adapter and one-scenario, two-proposal
-integration smoke test. That adapter must extract the shared counterfactual
-feature vector before controller execution and then return both controller
-records regardless of the support result. It must not change this coordinator,
-the frozen proposal rule, thresholds, controller configurations, or record
-derivations in response to the smoke-test outcome.
+The bounded [private integration smoke test](matched-search-private-smoke.md)
+passed for the two predeclared random proposals. Its adapter extracted and
+scored the shared counterfactual feature before controller execution, returned
+both controller records, and left all derived values to this coordinator. The
+frozen proposal rule, thresholds, controller configurations, and record
+derivations were unchanged. The next gate is controlled headway-regression
+original eligibility.
