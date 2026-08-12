@@ -38,8 +38,8 @@ and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 > reproducible `no_go` because only 23.66% of the full debugger trajectories fit
 > its frozen crop. The JAX double-DQN study also produced a reproducible
 > `no_go`: 3.125% synthetic collisions exceeded its frozen 1.0% gate. Neither
-> failed technology was forced into the product, and held-out WOMD remains
-> unopened. See the
+> failed technology was forced into the product, and no held-out comparative
+> campaign ran. See the
 > [recovery decision](docs/decisions/0004-recover-original-program.md).
 
 ![Aggregate-only campaign evidence surface](docs/assets/campaign-evidence.png)
@@ -73,7 +73,7 @@ technology demos:
   public-aggregate-only Gemini structured-output adapter.
 - **Learned control research:** a deterministic JAX/Optax double-DQN training,
   evaluation, and tamper-evident checkpoint pipeline whose failed safety gate
-  correctly prevented Waymax deployment and held-out access.
+  correctly prevented Waymax deployment and a held-out campaign.
 - **Reliability:** locked Python and Node environments, versioned JSON Schemas,
   data-free CI, deterministic reconstruction, and repository privacy tests.
 

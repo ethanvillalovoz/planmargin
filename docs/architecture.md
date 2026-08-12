@@ -162,7 +162,7 @@ dependencies:
   for reproducibility.
 - **Learned or RL planner:** the experiment-v2 JAX double-DQN candidate passed
   determinism, compute, and progress gates but failed its predeclared synthetic
-  collision gate. It was not deployed into Waymax and validation stayed closed.
+  collision gate. It was not deployed into Waymax and no v2 validation read ran.
 
 Hosted infrastructure remains unnecessary: every core responsibility must
 retain a free local or data-free execution path. See the

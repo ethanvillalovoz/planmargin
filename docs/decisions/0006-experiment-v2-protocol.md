@@ -255,9 +255,15 @@ margin over the emergency baseline. The result is therefore
 `synthetic_no_go`.
 
 Per the predeclared sequence, PlanMargin did not deploy this checkpoint into
-Waymax, did not run the 100-cell v2 development campaign, and did not open WOMD
-validation. Tuning the reward, training budget, action shield, architecture, or
+Waymax, did not run the 100-cell v2 development campaign, and performed no v2
+validation read. Tuning the reward, training budget, action shield, architecture, or
 threshold after this observation would constitute a new protocol version. The
 implementation and aggregate result remain as evidence of genuine JAX/Optax
 double-DQN engineering and of the project's refusal to promote an unqualified
 controller.
+
+The subsequent full-program audit also found that the legacy Stage 0 smoke test
+had accessed one validation record before the v1 held-out decision. Thus the
+Phase-3 requirement to prove no earlier validation read was already
+unsatisfiable, independently of this controller `no_go`. No validation-backed
+search comparison or v2 held-out campaign was performed.
