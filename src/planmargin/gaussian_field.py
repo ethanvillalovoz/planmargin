@@ -33,6 +33,7 @@ SCHEMA_URI = (
     "schemas/gaussian-field-manifest-v1.schema.json"
 )
 DEFAULT_OUTPUT_DIR = Path("artifacts/gaussian-field/feasibility")
+DEFAULT_BINDING = DEFAULT_OUTPUT_DIR / "source-binding.json"
 MAX_SOURCE_BYTES = 64 * 1024 * 1024
 FRAME_COUNT = 11
 TOP_LASER = 1
@@ -93,6 +94,14 @@ def _canonical_json(value: Any) -> bytes:
 
 def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _peak_rss_bytes() -> int:
@@ -491,7 +500,11 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _validate_identity(
-    scenario_id: str, selection: dict[str, Any], rollouts: dict[str, Any]
+    scenario_id: str,
+    selection: dict[str, Any],
+    rollouts: dict[str, Any],
+    binding: dict[str, Any],
+    lidar_path: Path,
 ) -> None:
     candidates = [
         value
@@ -506,6 +519,24 @@ def _validate_identity(
     }
     if record_ids != {scenario_id}:
         raise GaussianFieldError("Rollout collection does not match the motion input.")
+    required_binding = {
+        "record_type": "planmargin.private_womd_lidar_source_binding",
+        "dataset_version": "1.3.0",
+        "split": "training",
+        "selection_order": 2,
+        "scenario_id": scenario_id,
+        "source_uri": (
+            "gs://waymo_open_dataset_motion_v_1_3_0/uncompressed/"
+            f"lidar_and_camera/training/{scenario_id}.tfrecord"
+        ),
+        "source_sha256": _sha256_file(_private_file(lidar_path)),
+    }
+    binding_without_seal = dict(binding)
+    seal = binding_without_seal.pop("binding_sha256", None)
+    if seal != _sha256_bytes(_canonical_json(binding_without_seal)):
+        raise GaussianFieldError("LiDAR source binding content seal is invalid.")
+    if any(binding.get(key) != value for key, value in required_binding.items()):
+        raise GaussianFieldError("LiDAR source binding does not match frozen input.")
 
 
 def _trajectory_linkage(rollouts: dict[str, Any], center: np.ndarray) -> float:
@@ -567,6 +598,7 @@ def build_field(
     motion_path: Path,
     selection_path: Path,
     rollouts_path: Path,
+    binding_path: Path = DEFAULT_BINDING,
     output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> dict[str, Any]:
     """Run the frozen private feasibility fit and atomically publish its outputs."""
@@ -575,7 +607,8 @@ def build_field(
     boxes, scenario_id = load_actor_boxes(motion_path)
     selection = _load_json(selection_path)
     rollouts = _load_json(rollouts_path)
-    _validate_identity(scenario_id, selection, rollouts)
+    binding = _load_json(binding_path)
+    _validate_identity(scenario_id, selection, rollouts, binding, lidar_path)
     frames = load_sensor_frames(lidar_path)
     alignment = _coordinate_alignment(frames, boxes)
     center = np.array(
@@ -695,6 +728,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--motion", type=Path, required=True)
     parser.add_argument("--selection", type=Path, default=Path("artifacts/stage-0/scenario-selection.json"))
     parser.add_argument("--rollouts", type=Path, default=Path("artifacts/stage-0/rollout-records.json"))
+    parser.add_argument("--binding", type=Path, default=DEFAULT_BINDING)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     return parser
 
@@ -706,6 +740,7 @@ def main(argv: list[str] | None = None) -> None:
         motion_path=args.motion,
         selection_path=args.selection,
         rollouts_path=args.rollouts,
+        binding_path=args.binding,
         output_dir=args.output_dir,
     )
     print(json.dumps({"decision": manifest["decision"], "gates": manifest["gates"]}, sort_keys=True))

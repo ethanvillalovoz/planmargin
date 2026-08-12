@@ -117,7 +117,10 @@ the product. Thresholds may not be relaxed after results are observed.
 
 ## Result
 
-The frozen scenario was evaluated twice locally on the M4 Pro. The field file
+The frozen scenario was evaluated twice locally on the M4 Pro. A private,
+content-sealed binding validates the downloaded sensor-only record against the
+selected scenario and its source hash (the sensor proto has no internal ID).
+The field file
 was byte-identical and the logical fingerprint was identical across clean fits.
 The input, determinism, scale, compute, and geometric-quality gates passed:
 

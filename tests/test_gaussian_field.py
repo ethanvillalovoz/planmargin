@@ -95,3 +95,34 @@ def test_trajectory_linkage_scores_all_valid_samples() -> None:
         },
     }
     assert gaussian_field._trajectory_linkage(rollouts, np.zeros(3)) == pytest.approx(2 / 3)
+
+
+def test_source_binding_rejects_wrong_payload(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    lidar = artifacts / "source.tfrecord"
+    lidar.write_bytes(b"actual sensor payload")
+    selection = {
+        "candidates": [{"selection_order": 2, "scenario_id": "private-id"}]
+    }
+    rollouts = {"records": [{"scenario": {"scenario_id": "private-id"}}]}
+    payload = {
+        "record_type": "planmargin.private_womd_lidar_source_binding",
+        "dataset_version": "1.3.0",
+        "split": "training",
+        "selection_order": 2,
+        "scenario_id": "private-id",
+        "source_uri": (
+            "gs://waymo_open_dataset_motion_v_1_3_0/uncompressed/"
+            "lidar_and_camera/training/private-id.tfrecord"
+        ),
+        "source_sha256": "0" * 64,
+    }
+    payload["binding_sha256"] = gaussian_field._sha256_bytes(
+        gaussian_field._canonical_json(payload)
+    )
+    with pytest.raises(gaussian_field.GaussianFieldError, match="does not match"):
+        gaussian_field._validate_identity(
+            "private-id", selection, rollouts, payload, lidar
+        )
