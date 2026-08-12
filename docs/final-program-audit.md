@@ -15,7 +15,7 @@ was positive.
 | C++20 and pybind11 | Shipped | Native oriented-box interaction kernel retained exact Python parity and measured 604.893× faster in the final isolated 80-state audit fixture. |
 | SQL, DuckDB, and Parquet | Shipped | Sealed experiment reconstruction, allowlisted queries, and row-level reconciliation. |
 | Apache Beam / dataflow | Shipped | Fresh DirectRunner integration processed 16 sealed source shards, 7,796 records, and 265 accepted events into eight deterministic partitions in 10.1 seconds. |
-| FastAPI | Shipped | API v1.1 authenticated the loopback boundary, returned `401` without a token, used `no-store`, exposed four audited fixed routes, and leaked none of the ten known scenario IDs. |
+| FastAPI | Shipped | API v1.1 authenticated the loopback boundary, returned `401` without a token, used `no-store`, passed four representative route audits, and leaked none of the ten known scenario IDs. |
 | Angular, TypeScript, Three.js | Shipped | Synthetic public mode and authenticated real-local redacted mode both build and pass 24 tests; real export remains disabled. |
 | Gemini / agent layer | Conditionally shipped | Five deterministic offline evidence tools ship. The optional Gemini adapter is public-aggregate-only and free-tier-gated; no hosted request was required or made in the final audit. |
 | 3D Gaussian splatting | Evaluated `no_go` | The exact-scenario LiDAR Gaussian field passed input, determinism, scale, compute, and geometry gates, but only 23.66% of full debugger trajectory samples were inside the frozen crop versus a 90% gate. No renderer or private endpoint shipped. |
