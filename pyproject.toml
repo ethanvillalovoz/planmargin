@@ -21,6 +21,7 @@ planmargin-validate-lead-braking-family = "planmargin.family_validation:main"
 planmargin-run-random-baseline = "planmargin.random_search:main"
 planmargin-build-empirical-support = "planmargin.empirical_support:main"
 planmargin-report-matched-search-core = "planmargin.matched_search:main"
+planmargin-run-matched-search-smoke = "planmargin.matched_smoke:main"
 
 [dependency-groups]
 dev = [

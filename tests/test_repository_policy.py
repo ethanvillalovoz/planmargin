@@ -1,5 +1,6 @@
 """Data-free checks for repository artifact boundaries."""
 
+import subprocess
 from pathlib import Path
 
 
@@ -47,4 +48,17 @@ def test_per_scenario_womd_reports_are_not_committed() -> None:
         / "search-comparison",
     )
 
-    assert all(not path.exists() for path in prohibited_reports)
+    tracked = subprocess.run(
+        [
+            "git",
+            "ls-files",
+            "--",
+            *(str(path.relative_to(REPOSITORY_ROOT)) for path in prohibited_reports),
+        ],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+
+    assert tracked == []
