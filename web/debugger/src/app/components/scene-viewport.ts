@@ -2,10 +2,12 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   effect,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 import type * as THREE from 'three';
@@ -18,11 +20,56 @@ const COLORS: Record<TrajectoryKind, number> = {
   recorded: 0x858d93,
 };
 
+interface FallbackScene {
+  readonly viewBox: string;
+  readonly roadCenterlines: readonly string[];
+  readonly conflictRegion: string;
+  readonly trajectories: readonly {
+    readonly kind: TrajectoryKind;
+    readonly points: string;
+    readonly current: Point2d;
+  }[];
+  readonly markerRadius: number;
+}
+
 @Component({
   selector: 'app-scene-viewport',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div #viewport class="viewport" aria-label="Synthetic trajectory scene"></div>
+    <div
+      #viewport
+      class="viewport"
+      [attr.aria-label]="
+        store.run().synthetic ? 'Synthetic trajectory scene' : 'Real local trajectory scene'
+      "
+    ></div>
+    @if (rendererUnavailable()) {
+      <svg
+        class="fallback"
+        [attr.viewBox]="fallbackScene().viewBox"
+        role="img"
+        aria-label="Trajectory scene rendered without WebGL"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <g>
+          @for (road of fallbackScene().roadCenterlines; track $index) {
+            <polyline class="road" [attr.points]="road" />
+          }
+          @if (fallbackScene().conflictRegion) {
+            <polygon class="conflict" [attr.points]="fallbackScene().conflictRegion" />
+          }
+          @for (trajectory of fallbackScene().trajectories; track trajectory.kind) {
+            <polyline [attr.class]="trajectory.kind" [attr.points]="trajectory.points" />
+            <circle
+              [attr.class]="trajectory.kind"
+              [attr.cx]="trajectory.current.x"
+              [attr.cy]="-trajectory.current.y"
+              [attr.r]="fallbackScene().markerRadius"
+            />
+          }
+        </g>
+      </svg>
+    }
     <div class="scene-label">
       <strong>Scene</strong>
       <span>{{ store.selectedHypothesis().label }}</span>
@@ -47,6 +94,47 @@ const COLORS: Record<TrajectoryKind, number> = {
     .viewport {
       position: absolute;
       inset: 0;
+    }
+    .fallback {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--app-bg);
+    }
+    .fallback :is(polyline, polygon, circle) {
+      vector-effect: non-scaling-stroke;
+    }
+    .fallback polyline {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .fallback .road {
+      stroke: #35434c;
+      stroke-width: 1;
+    }
+    .fallback .conflict {
+      fill: rgb(255 121 0 / 10%);
+      stroke: var(--tested);
+      stroke-width: 1;
+      stroke-dasharray: 4 4;
+    }
+    .fallback .tested {
+      fill: var(--tested);
+      stroke: var(--tested);
+      stroke-width: 2;
+    }
+    .fallback .reference {
+      fill: var(--reference);
+      stroke: var(--reference);
+      stroke-width: 2;
+    }
+    .fallback .recorded {
+      fill: var(--recorded);
+      stroke: var(--recorded);
+      stroke-width: 1.5;
+      stroke-dasharray: 4 4;
     }
     .viewport canvas {
       display: block;
@@ -146,6 +234,40 @@ const COLORS: Record<TrajectoryKind, number> = {
 })
 export class SceneViewport {
   protected readonly store = inject(DebuggerStore);
+  protected readonly rendererUnavailable = signal(false);
+  protected readonly fallbackScene = computed((): FallbackScene => {
+    const run = this.store.run();
+    const hypothesis = this.store.selectedHypothesis();
+    const index = this.store.timestepIndex();
+    const allPoints = [
+      ...run.roadCenterlines.flat(),
+      ...hypothesis.trajectories.tested,
+      ...hypothesis.trajectories.reference,
+      ...hypothesis.trajectories.recorded,
+    ];
+    const xs = allPoints.map((point) => point.x);
+    const ys = allPoints.map((point) => point.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const width = Math.max(10, maxX - minX);
+    const height = Math.max(10, maxY - minY);
+    const padding = Math.max(3, width * 0.08, height * 0.08);
+    const points = (line: readonly Point2d[]): string =>
+      line.map((point) => `${point.x},${-point.y}`).join(' ');
+    return {
+      viewBox: `${minX - padding} ${-(maxY + padding)} ${width + padding * 2} ${height + padding * 2}`,
+      roadCenterlines: run.roadCenterlines.map(points),
+      conflictRegion: run.conflictRegion.length >= 3 ? points(run.conflictRegion) : '',
+      trajectories: (Object.keys(COLORS) as TrajectoryKind[]).map((kind) => ({
+        kind,
+        points: points(hypothesis.trajectories[kind]),
+        current: hypothesis.trajectories[kind][index],
+      })),
+      markerRadius: Math.max(width, height) * 0.012,
+    };
+  });
   private readonly destroyRef = inject(DestroyRef);
   private readonly viewport = viewChild.required<ElementRef<HTMLDivElement>>('viewport');
   private renderer: THREE.WebGLRenderer | undefined;
@@ -163,6 +285,12 @@ export class SceneViewport {
     });
 
     afterNextRender(async () => {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('webgl2');
+      if (context === null) {
+        this.rendererUnavailable.set(true);
+        return;
+      }
       const THREE = await import('three');
       if (this.destroyRef.destroyed) return;
       this.three = THREE;
@@ -171,7 +299,12 @@ export class SceneViewport {
       this.camera.position.z = 20;
       this.scene.background = new THREE.Color(0x080d11);
       const host = this.viewport().nativeElement;
-      this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      this.renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        canvas,
+        context,
+      });
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       this.renderer.domElement.setAttribute('aria-hidden', 'true');
       host.append(this.renderer.domElement);
@@ -192,13 +325,6 @@ export class SceneViewport {
     if (renderer === undefined || camera === undefined) return;
     const { clientWidth, clientHeight } = this.viewport().nativeElement;
     renderer.setSize(Math.max(1, clientWidth), Math.max(1, clientHeight), false);
-    const aspect = clientWidth / Math.max(1, clientHeight);
-    const vertical = 32;
-    camera.left = -vertical * aspect;
-    camera.right = vertical * aspect;
-    camera.top = vertical;
-    camera.bottom = -vertical;
-    camera.updateProjectionMatrix();
     this.renderScene();
   }
 
@@ -208,11 +334,18 @@ export class SceneViewport {
     const camera = this.camera;
     if (renderer === undefined || scene === undefined || camera === undefined) return;
     this.clearScene();
-    this.drawGrid();
     const run = this.store.run();
-    run.roadCenterlines.forEach((line) => this.drawLine(line, 0x35434c, 0));
-    this.drawConflictRegion(run.conflictRegion);
     const hypothesis = this.store.selectedHypothesis();
+    const allPoints = [
+      ...run.roadCenterlines.flat(),
+      ...hypothesis.trajectories.tested,
+      ...hypothesis.trajectories.reference,
+      ...hypothesis.trajectories.recorded,
+    ];
+    const bounds = this.fitCamera(allPoints);
+    this.drawGrid(bounds);
+    run.roadCenterlines.forEach((line) => this.drawLine(line, 0x35434c, 0));
+    if (run.conflictRegion.length >= 3) this.drawConflictRegion(run.conflictRegion);
     (Object.keys(COLORS) as TrajectoryKind[]).forEach((kind) => {
       this.drawLine(hypothesis.trajectories[kind], COLORS[kind], kind === 'recorded' ? 0.25 : 0.55);
       const point = hypothesis.trajectories[kind][this.store.timestepIndex()];
@@ -241,26 +374,65 @@ export class SceneViewport {
     }
   }
 
-  private drawGrid(): void {
+  private fitCamera(points: readonly Point2d[]): {
+    readonly minX: number;
+    readonly maxX: number;
+    readonly minY: number;
+    readonly maxY: number;
+  } {
+    const camera = this.camera;
+    if (camera === undefined || points.length === 0) {
+      return { minX: -32, maxX: 32, minY: -32, maxY: 32 };
+    }
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
+    const source = {
+      minX: Math.min(...xs),
+      maxX: Math.max(...xs),
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys),
+    };
+    const centerX = (source.minX + source.maxX) / 2;
+    const centerY = (source.minY + source.maxY) / 2;
+    const { clientWidth, clientHeight } = this.viewport().nativeElement;
+    const aspect = clientWidth / Math.max(1, clientHeight);
+    const halfHeight = Math.max(
+      8,
+      (source.maxY - source.minY) * 0.6,
+      ((source.maxX - source.minX) * 0.6) / Math.max(0.25, aspect),
+    );
+    const halfWidth = halfHeight * aspect;
+    camera.left = centerX - halfWidth;
+    camera.right = centerX + halfWidth;
+    camera.top = centerY + halfHeight;
+    camera.bottom = centerY - halfHeight;
+    camera.position.set(0, 0, 20);
+    camera.updateProjectionMatrix();
+    return {
+      minX: camera.left,
+      maxX: camera.right,
+      minY: camera.bottom,
+      maxY: camera.top,
+    };
+  }
+
+  private drawGrid(bounds: {
+    readonly minX: number;
+    readonly maxX: number;
+    readonly minY: number;
+    readonly maxY: number;
+  }): void {
     const THREE = this.three;
     const scene = this.scene;
     if (THREE === undefined || scene === undefined) return;
     const vertices: number[] = [];
-    for (let coordinate = -50; coordinate <= 50; coordinate += 5) {
-      vertices.push(
-        -60,
-        coordinate,
-        -2,
-        60,
-        coordinate,
-        -2,
-        coordinate,
-        -60,
-        -2,
-        coordinate,
-        60,
-        -2,
-      );
+    const startX = Math.floor(bounds.minX / 5) * 5;
+    const startY = Math.floor(bounds.minY / 5) * 5;
+    for (let x = startX; x <= bounds.maxX; x += 5) {
+      vertices.push(x, bounds.minY, -2, x, bounds.maxY, -2);
+    }
+    for (let y = startY; y <= bounds.maxY; y += 5) {
+      vertices.push(bounds.minX, y, -2, bounds.maxX, y, -2);
     }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
@@ -270,7 +442,7 @@ export class SceneViewport {
   private drawLine(points: readonly Point2d[], color: number, opacity: number): void {
     const THREE = this.three;
     const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
+    if (THREE === undefined || scene === undefined || points.length < 2) return;
     const geometry = new THREE.BufferGeometry().setFromPoints(
       points.map((point) => new THREE.Vector3(point.x, point.y, 0)),
     );

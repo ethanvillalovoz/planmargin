@@ -1,4 +1,31 @@
-export const CAMPAIGN_EVIDENCE = {
+export interface CampaignEvidence {
+  readonly campaignId: string;
+  readonly cells: number;
+  readonly proposals: number;
+  readonly physicalRollouts: number;
+  readonly rolloutSteps: number;
+  readonly methods: {
+    readonly random: MethodEvidence;
+    readonly bayesian: MethodEvidence;
+  };
+  readonly hypotheses: {
+    readonly efficiency: string;
+    readonly minimality: string;
+    readonly validity: string;
+  };
+  readonly nativeKernelSpeedupRange: string;
+  readonly heldOutOpened: boolean;
+  readonly mode: 'published-aggregate' | 'real-local-redacted';
+}
+
+export interface MethodEvidence {
+  readonly proposals: number;
+  readonly qualifyingFindings: number;
+  readonly validRatePercent: number;
+  readonly finalHypervolume: number;
+}
+
+export const CAMPAIGN_EVIDENCE: CampaignEvidence = {
   campaignId: 'natural-development-v1',
   cells: 100,
   proposals: 3_200,
@@ -25,4 +52,5 @@ export const CAMPAIGN_EVIDENCE = {
   },
   nativeKernelSpeedupRange: '585–619×',
   heldOutOpened: false,
-} as const;
+  mode: 'published-aggregate',
+};

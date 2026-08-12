@@ -7,8 +7,10 @@ import { EvidenceInspector } from './components/evidence-inspector';
 import { MetricTimeline } from './components/metric-timeline';
 import { MobileSceneSummary } from './components/mobile-scene-summary';
 import { MobileViewNav } from './components/mobile-view-nav';
+import { LocalEvidencePanel } from './components/local-evidence-panel';
 import { RunRail } from './components/run-rail';
 import { SceneViewport } from './components/scene-viewport';
+import { LocalEvidenceService } from './local-evidence.service';
 
 @Component({
   selector: 'app-root',
@@ -18,6 +20,7 @@ import { SceneViewport } from './components/scene-viewport';
     MetricTimeline,
     MobileSceneSummary,
     MobileViewNav,
+    LocalEvidencePanel,
     RunRail,
     SceneViewport,
   ],
@@ -37,18 +40,74 @@ import { SceneViewport } from './components/scene-viewport';
         />
         <button
           type="button"
+          class="mode"
+          [attr.aria-label]="local.connected() ? 'Real local evidence' : 'Synthetic demo'"
+          [class.real]="local.connected()"
+          [attr.aria-expanded]="showLocalEvidence()"
+          (click)="showLocalEvidence.set(true)"
+        >
+          <i></i>
+          <span class="desktop-label">{{
+            local.connected() ? 'Real local' : 'Synthetic demo'
+          }}</span>
+          <span class="mobile-label">{{ local.connected() ? 'Local' : 'Demo' }}</span>
+        </button>
+        <button
+          type="button"
           class="results"
+          aria-label="Campaign results"
           [attr.aria-expanded]="showCampaign()"
           (click)="showCampaign.set(true)"
         >
-          Campaign results
+          <span class="desktop-label">Campaign results</span>
+          <span class="mobile-label">Results</span>
         </button>
-        <button type="button" (click)="runInput.click()">Open run</button>
-        <button type="button" class="primary" (click)="exportView()">Export view</button>
+        <button
+          type="button"
+          class="desktop-action"
+          aria-label="Open run"
+          (click)="runInput.click()"
+        >
+          <span class="desktop-label">Open run</span><span class="mobile-label">Open</span>
+        </button>
+        <button
+          type="button"
+          class="primary desktop-action"
+          [attr.aria-label]="store.run().synthetic ? 'Export synthetic view' : 'Export blocked'"
+          [disabled]="!store.run().synthetic"
+          [attr.title]="
+            store.run().synthetic
+              ? 'Export synthetic view'
+              : 'Real local evidence cannot be exported'
+          "
+          (click)="exportView()"
+        >
+          <span class="desktop-label">{{
+            store.run().synthetic ? 'Export view' : 'Export blocked'
+          }}</span>
+          <span class="mobile-label">{{ store.run().synthetic ? 'Export' : 'Blocked' }}</span>
+        </button>
+        <details class="mobile-menu">
+          <summary aria-label="More actions">⋮</summary>
+          <div>
+            <button type="button" (click)="runInput.click()">Open run</button>
+            <button
+              type="button"
+              class="primary"
+              [disabled]="!store.run().synthetic"
+              (click)="exportView()"
+            >
+              {{ store.run().synthetic ? 'Export view' : 'Export blocked' }}
+            </button>
+          </div>
+        </details>
       </div>
     </header>
     @if (showCampaign()) {
-      <app-campaign-summary (close)="showCampaign.set(false)" />
+      <app-campaign-summary [evidence]="local.campaign()" (close)="showCampaign.set(false)" />
+    }
+    @if (showLocalEvidence()) {
+      <app-local-evidence-panel (close)="showLocalEvidence.set(false)" />
     }
     <app-mobile-view-nav />
     @if (notice()) {
@@ -108,6 +167,12 @@ import { SceneViewport } from './components/scene-viewport';
       display: flex;
       gap: 0.5rem;
     }
+    .mobile-label {
+      display: none;
+    }
+    .mobile-menu {
+      display: none;
+    }
     button {
       min-height: 32px;
       padding: 0 0.75rem;
@@ -126,9 +191,32 @@ import { SceneViewport } from './components/scene-viewport';
       border-color: var(--tested);
       color: var(--tested);
     }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
     button.results {
       border-color: #4f626f;
       background: #101820;
+    }
+    button.mode {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      border-color: #4f626f;
+    }
+    button.mode i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--recorded);
+    }
+    button.mode.real {
+      border-color: #4f713e;
+      color: var(--success);
+    }
+    button.mode.real i {
+      background: var(--success);
     }
     main {
       display: grid;
@@ -191,12 +279,52 @@ import { SceneViewport } from './components/scene-viewport';
         display: none;
       }
       .actions button {
-        padding: 0 0.55rem;
+        padding: 0 0.48rem;
         font-size: 0.62rem;
       }
-      .actions button.results {
-        max-width: 72px;
-        line-height: 1.05;
+      .desktop-label {
+        display: none;
+      }
+      .mobile-label {
+        display: inline;
+      }
+      .desktop-action {
+        display: none;
+      }
+      .mobile-menu {
+        position: relative;
+        display: block;
+      }
+      .mobile-menu summary {
+        display: grid;
+        width: 32px;
+        min-height: 32px;
+        cursor: pointer;
+        list-style: none;
+        place-items: center;
+        border: 1px solid var(--divider);
+        border-radius: 2px;
+        color: var(--primary);
+        font-size: 1.1rem;
+      }
+      .mobile-menu summary::-webkit-details-marker {
+        display: none;
+      }
+      .mobile-menu div {
+        position: absolute;
+        z-index: 30;
+        top: calc(100% + 0.4rem);
+        right: 0;
+        display: grid;
+        width: 132px;
+        gap: 0.35rem;
+        padding: 0.5rem;
+        border: 1px solid var(--divider);
+        background: var(--rail);
+        box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
+      }
+      .mobile-menu button {
+        width: 100%;
       }
       main {
         display: block;
@@ -222,16 +350,31 @@ import { SceneViewport } from './components/scene-viewport';
         display: none;
       }
     }
+    @media (max-width: 420px) {
+      .topbar {
+        padding-right: 0.45rem;
+        padding-left: 0.65rem;
+      }
+      .actions {
+        gap: 0.28rem;
+      }
+      .actions button {
+        min-height: 30px;
+        padding: 0 0.38rem;
+      }
+    }
   `,
 })
 export class App {
   protected readonly store = inject(DebuggerStore);
+  protected readonly local = inject(LocalEvidenceService);
   private readonly exporter = inject(ExportService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly notice = signal<string | undefined>(undefined);
   protected readonly showCampaign = signal(
     new URLSearchParams(window.location.search).has('evidence'),
   );
+  protected readonly showLocalEvidence = signal(false);
   private noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
@@ -241,6 +384,10 @@ export class App {
   }
 
   protected exportView(): void {
+    if (!this.store.run().synthetic) {
+      this.showNotice('Real local evidence export is disabled');
+      return;
+    }
     this.exporter.download(
       this.store.run(),
       this.store.selectedHypothesisId(),
@@ -258,6 +405,7 @@ export class App {
         throw new Error('Run file exceeds the 5 MB local limit');
       }
       const run = parseDebuggerRun(JSON.parse(await file.text()) as unknown);
+      this.local.disconnect();
       this.store.loadRun(run);
       this.showNotice('Synthetic run opened');
     } catch (error: unknown) {

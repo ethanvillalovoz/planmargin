@@ -21,15 +21,15 @@ import { DebuggerStore } from '../debugger.store';
     <div class="summary">
       <div>
         <strong>{{ store.selectedHypothesis().label }}</strong>
-        <span>Qualifying (synthetic)</span>
+        <span>{{ store.run().synthetic ? 'Synthetic fixture' : 'Real local evidence' }}</span>
       </div>
       <dl>
         <div>
-          <dt>Onset</dt>
-          <dd>{{ store.selectedHypothesis().onsetSeconds.toFixed(1) }} s</dd>
+          <dt>{{ mutationLabel() }}</dt>
+          <dd>{{ mutationValue() }}</dd>
         </div>
         <div>
-          <dt>Speed</dt>
+          <dt>{{ store.run().synthetic ? 'Speed' : 'Target speed' }}</dt>
           <dd>{{ store.selectedHypothesis().speedMetersPerSecond.toFixed(1) }} m/s</dd>
         </div>
       </dl>
@@ -183,5 +183,18 @@ export class MobileSceneSummary {
         return `${x.toFixed(1)},${(90 - normalized * 80).toFixed(1)}`;
       })
       .join(' ');
+  }
+
+  protected mutationLabel(): string {
+    return this.store.selectedHypothesis().mutationParameters['speed_multiplier'] === undefined
+      ? 'Onset'
+      : 'Multiplier';
+  }
+
+  protected mutationValue(): string {
+    const multiplier = this.store.selectedHypothesis().mutationParameters['speed_multiplier'];
+    return multiplier === undefined
+      ? `${this.store.selectedHypothesis().onsetSeconds.toFixed(1)} s`
+      : multiplier.toFixed(4);
   }
 }

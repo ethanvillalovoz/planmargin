@@ -40,4 +40,19 @@ describe('DebuggerStore', () => {
     expect(store.playing()).toBe(false);
     vi.useRealTimers();
   });
+
+  it('restores the public synthetic fixture after local evidence disconnects', () => {
+    store.loadRun({
+      ...store.run(),
+      runId: 'temporary-local',
+      source: 'local-api',
+      synthetic: false,
+    });
+    store.resetToSynthetic();
+
+    expect(store.run().runId).toBe('synthetic-demo-v1');
+    expect(store.run().synthetic).toBe(true);
+    expect(store.selectedHypothesisId()).toBe('proposal-02');
+    expect(store.timestepIndex()).toBe(48);
+  });
 });

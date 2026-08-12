@@ -32,8 +32,8 @@ Driver. See the [aggregate-only result](docs/natural-development-results.md)
 and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 
 > **Program status:** Experiment v1 is frozen and complete, but the original
-> PlanMargin program remains active. The next tracks add a localhost-only
-> real-record API and debugger mode, a Beam-to-Parquet pipeline, an optional
+> PlanMargin program remains active. The localhost-only real-record API and
+> debugger mode are complete. The next tracks add a Beam-to-Parquet pipeline, an optional
 > constrained evidence assistant, a gated 3D Gaussian feasibility study, and a
 > separately frozen experiment v2. See the
 > [recovery decision](docs/decisions/0004-recover-original-program.md).
@@ -61,7 +61,8 @@ technology demos:
 - **Systems work:** a C++20/pybind11 interaction-metrics kernel selected by
   profiling and protected by randomized parity tests against the Python oracle.
 - **Product engineering:** a responsive Angular/TypeScript/Three.js debugger
-  with strict synthetic-input validation and an aggregate-only campaign view.
+  with strict synthetic-input validation, an authenticated real-record mode,
+  sealed proposal inspection, and an aggregate campaign view.
 - **Reliability:** locked Python and Node environments, versioned JSON Schemas,
   data-free CI, deterministic reconstruction, and repository privacy tests.
 
@@ -113,6 +114,7 @@ flowchart LR
     E --> G["Aggregate-only public report"]
     E --> J["FastAPI · authenticated local real evidence"]
     H["Synthetic debugger fixture"] --> I["Angular · TypeScript · Three.js"]
+    J -->|"authenticated loopback only"| I
     G --> I
 ```
 
@@ -140,12 +142,13 @@ uv run --frozen planmargin-serve-evidence
 It binds only to `127.0.0.1:8765`, verifies the campaign, analytical database,
 and rollout collection before serving, and prints an ephemeral local token.
 See the [real-record API contract](docs/evidence-api.md) for its fixed endpoints
-and privacy boundary. The Angular real-data provider is the next active
-milestone; the current public debugger still starts in synthetic mode.
+and privacy boundary. The debugger intentionally starts in synthetic mode.
+Select **Synthetic demo**, paste the ephemeral terminal token, and choose
+**Connect local evidence** to switch to ignored, verified local records.
 
 ## Run the evidence debugger
 
-The debugger uses a bundled synthetic fixture; it never loads or uploads WOMD
+The debugger boots with a bundled synthetic fixture and never uploads WOMD
 records. With Node.js 24.15.0 or a compatible Node 24 release:
 
 ```bash
@@ -157,7 +160,9 @@ npm start
 Open `http://127.0.0.1:4200`. Use `?evidence=1` to open the campaign view
 directly. The interface supports proposal selection, playback, timeline
 scrubbing, responsive Scene/Evidence/Metrics views, validated synthetic JSON
-imports, and a compact view export.
+imports, and a compact synthetic-view export. When the local evidence API is
+running, it also supports a verified campaign-cell browser, sealed proposal
+details, redacted real trajectories, and an export-disabled real-record mode.
 
 Validate the frontend independently with:
 

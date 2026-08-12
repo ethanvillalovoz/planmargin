@@ -77,6 +77,21 @@ curl --fail \
 The generated token is intentionally ephemeral. Do not commit it, paste it in
 an issue, or reuse it as a hosted credential.
 
+## Connect the debugger
+
+Start the Angular debugger separately at `http://127.0.0.1:4200`, select
+**Synthetic demo**, paste the ephemeral token into **Local evidence**, and
+choose **Connect local evidence**. The client performs a sequential verified
+handshake, then exposes the validated replay records and campaign cell/proposal
+browser. It sends no writes and makes no outbound request beyond this fixed
+loopback API.
+
+The token is kept in a private in-memory field and the input is cleared after
+connection. It is never persisted to local/session storage, a URL, a file, or
+an export. Real-data export is disabled in both the interface and export
+service. Disconnecting clears local evidence and restores the deterministic
+synthetic fixture.
+
 ## Fixed endpoints
 
 | Endpoint | Responsibility |
