@@ -9,11 +9,15 @@ import { DebuggerStore } from '../debugger.store';
       <p class="eyebrow" id="run-heading">RUN</p>
       <strong>{{ store.run().runId }}</strong>
       <span>{{ store.run().scenarioLabel }}</span>
-      <span>local_fixture</span>
-      <span class="demo-flag">Demo fixture</span>
+      <span>{{ store.run().source }}</span>
+      <span class="demo-flag" [class.real]="!store.run().synthetic">
+        {{ store.run().synthetic ? 'Demo fixture' : 'Real local · redacted' }}
+      </span>
     </section>
     <section class="rail-section proposals" aria-labelledby="proposal-heading">
-      <p class="eyebrow" id="proposal-heading">PROPOSALS</p>
+      <p class="eyebrow" id="proposal-heading">
+        {{ store.run().synthetic ? 'PROPOSALS' : 'EVIDENCE CASE' }}
+      </p>
       @for (hypothesis of store.run().hypotheses; track hypothesis.id) {
         <button
           type="button"
@@ -78,6 +82,7 @@ import { DebuggerStore } from '../debugger.store';
     .rail-section strong {
       color: var(--primary);
       font-size: 0.82rem;
+      overflow-wrap: anywhere;
     }
     .eyebrow {
       margin: 0 0 0.25rem;
@@ -92,6 +97,10 @@ import { DebuggerStore } from '../debugger.store';
       padding: 0.2rem 0.35rem;
       border: 1px solid var(--divider);
       color: var(--reference);
+    }
+    .demo-flag.real {
+      border-color: #4f713e;
+      color: var(--success);
     }
     .proposals {
       gap: 0.2rem;

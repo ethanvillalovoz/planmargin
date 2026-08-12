@@ -35,6 +35,13 @@ export class DebuggerStore {
     this.timestepIndex.set(0);
   }
 
+  resetToSynthetic(): void {
+    this.stop();
+    this.run.set(SYNTHETIC_DEBUGGER_RUN);
+    this.selectedHypothesisId.set('proposal-02');
+    this.timestepIndex.set(48);
+  }
+
   selectHypothesis(id: string): void {
     if (!this.run().hypotheses.some((hypothesis) => hypothesis.id === id)) {
       throw new Error(`Unknown hypothesis: ${id}`);

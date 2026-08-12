@@ -1,5 +1,12 @@
-import { ChangeDetectionStrategy, Component, HostListener, output } from '@angular/core';
-import { CAMPAIGN_EVIDENCE } from '../campaign-evidence';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  HostListener,
+  input,
+  output,
+} from '@angular/core';
+import { CAMPAIGN_EVIDENCE, CampaignEvidence } from '../campaign-evidence';
 
 @Component({
   selector: 'app-campaign-summary',
@@ -15,7 +22,13 @@ import { CAMPAIGN_EVIDENCE } from '../campaign-evidence';
       >
         <header>
           <div>
-            <p>FROZEN DEVELOPMENT CAMPAIGN</p>
+            <p>
+              {{
+                evidence().mode === 'real-local-redacted'
+                  ? 'VERIFIED LOCAL CAMPAIGN'
+                  : 'FROZEN DEVELOPMENT CAMPAIGN'
+              }}
+            </p>
             <h1 id="campaign-title">What the experiment established</h1>
           </div>
           <button
@@ -30,19 +43,19 @@ import { CAMPAIGN_EVIDENCE } from '../campaign-evidence';
 
         <div class="scale" aria-label="Campaign scale">
           <article>
-            <strong>{{ evidence.cells }}</strong>
+            <strong>{{ evidence().cells }}</strong>
             <span>matched cells</span>
           </article>
           <article>
-            <strong>{{ evidence.proposals.toLocaleString() }}</strong>
+            <strong>{{ evidence().proposals.toLocaleString() }}</strong>
             <span>proposals</span>
           </article>
           <article>
-            <strong>{{ evidence.physicalRollouts.toLocaleString() }}</strong>
+            <strong>{{ evidence().physicalRollouts.toLocaleString() }}</strong>
             <span>physical rollouts</span>
           </article>
           <article>
-            <strong>{{ evidence.rolloutSteps.toLocaleString() }}</strong>
+            <strong>{{ evidence().rolloutSteps.toLocaleString() }}</strong>
             <span>Waymax steps</span>
           </article>
         </div>
@@ -53,21 +66,24 @@ import { CAMPAIGN_EVIDENCE } from '../campaign-evidence';
               <p>ELIGIBLE PROPOSAL YIELD</p>
               <h2>Bayesian search preserved validity</h2>
             </div>
-            <strong>+{{ validRateLiftPoints.toFixed(4) }} pp</strong>
+            <strong>+{{ validRateLiftPoints().toFixed(4) }} pp</strong>
           </div>
           <div class="method-row">
             <span>Random</span>
             <div class="track">
-              <i class="random" [style.width.%]="evidence.methods.random.validRatePercent"></i>
+              <i class="random" [style.width.%]="evidence().methods.random.validRatePercent"></i>
             </div>
-            <strong>{{ evidence.methods.random.validRatePercent.toFixed(4) }}%</strong>
+            <strong>{{ evidence().methods.random.validRatePercent.toFixed(4) }}%</strong>
           </div>
           <div class="method-row">
             <span>Bayesian</span>
             <div class="track">
-              <i class="bayesian" [style.width.%]="evidence.methods.bayesian.validRatePercent"></i>
+              <i
+                class="bayesian"
+                [style.width.%]="evidence().methods.bayesian.validRatePercent"
+              ></i>
             </div>
-            <strong>{{ evidence.methods.bayesian.validRatePercent.toFixed(4) }}%</strong>
+            <strong>{{ evidence().methods.bayesian.validRatePercent.toFixed(4) }}%</strong>
           </div>
           <p class="caption">
             Support-and-pipeline-valid proposals under equal 1,600-proposal method budgets.
@@ -77,17 +93,17 @@ import { CAMPAIGN_EVIDENCE } from '../campaign-evidence';
         <div class="decisions">
           <article>
             <span>H1 · Efficiency</span>
-            <strong class="neutral">{{ evidence.hypotheses.efficiency }}</strong>
+            <strong class="neutral">{{ evidence().hypotheses.efficiency }}</strong>
             <p>No qualifying finding from either method.</p>
           </article>
           <article>
             <span>H2 · Minimality</span>
-            <strong class="neutral">{{ evidence.hypotheses.minimality }}</strong>
+            <strong class="neutral">{{ evidence().hypotheses.minimality }}</strong>
             <p>No paired failure-inducing mutations.</p>
           </article>
           <article>
             <span>H3 · Validity</span>
-            <strong class="positive">{{ evidence.hypotheses.validity }}</strong>
+            <strong class="positive">{{ evidence().hypotheses.validity }}</strong>
             <p>Passed the frozen noninferiority rule.</p>
           </article>
         </div>
@@ -100,7 +116,7 @@ import { CAMPAIGN_EVIDENCE } from '../campaign-evidence';
               <li>Every cell replayed from sealed checkpoints</li>
               <li>DuckDB SQL reconciled the published aggregates</li>
               <li>
-                C++20 geometry kernel measured at {{ evidence.nativeKernelSpeedupRange }} in
+                C++20 geometry kernel measured at {{ evidence().nativeKernelSpeedupRange }} in
                 isolation
               </li>
             </ul>
@@ -384,10 +400,12 @@ import { CAMPAIGN_EVIDENCE } from '../campaign-evidence';
   `,
 })
 export class CampaignSummary {
-  protected readonly evidence = CAMPAIGN_EVIDENCE;
-  protected readonly validRateLiftPoints =
-    CAMPAIGN_EVIDENCE.methods.bayesian.validRatePercent -
-    CAMPAIGN_EVIDENCE.methods.random.validRatePercent;
+  readonly evidence = input<CampaignEvidence>(CAMPAIGN_EVIDENCE);
+  protected readonly validRateLiftPoints = computed(
+    () =>
+      this.evidence().methods.bayesian.validRatePercent -
+      this.evidence().methods.random.validRatePercent,
+  );
   readonly close = output<void>();
 
   @HostListener('document:keydown.escape')

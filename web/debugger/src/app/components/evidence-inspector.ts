@@ -7,17 +7,31 @@ import { DebuggerStore } from '../debugger.store';
   template: `
     <header>
       <span>Evidence</span>
-      <span class="qualifying">Qualifying (synthetic)</span>
+      <span class="qualifying">
+        {{ store.run().synthetic ? 'Synthetic fixture' : 'Real local evidence' }}
+      </span>
     </header>
     <section>
       <h2>Mutation</h2>
       <dl>
         <div>
-          <dt>Onset</dt>
-          <dd>{{ store.selectedHypothesis().onsetSeconds.toFixed(1) }} s</dd>
+          <dt>Type</dt>
+          <dd>{{ mutationType() }}</dd>
         </div>
+        @if (hasParameter('braking_onset_offset_s')) {
+          <div>
+            <dt>Onset offset</dt>
+            <dd>{{ parameter('braking_onset_offset_s')!.toFixed(1) }} s</dd>
+          </div>
+        }
+        @if (hasParameter('speed_multiplier')) {
+          <div>
+            <dt>Speed multiplier</dt>
+            <dd>{{ parameter('speed_multiplier')!.toFixed(4) }}</dd>
+          </div>
+        }
         <div>
-          <dt>Speed</dt>
+          <dt>{{ store.run().synthetic ? 'Speed' : 'Target initial speed' }}</dt>
           <dd>{{ store.selectedHypothesis().speedMetersPerSecond.toFixed(1) }} m/s</dd>
         </div>
       </dl>
@@ -26,15 +40,19 @@ import { DebuggerStore } from '../debugger.store';
       <h2>Validity</h2>
       <dl>
         <div>
-          <dt>Supported (fixture)</dt>
-          <dd class="pass">Yes</dd>
+          <dt>Supported{{ store.run().synthetic ? ' (fixture)' : '' }}</dt>
+          <dd [class.pass]="store.selectedHypothesis().supported">
+            {{ store.selectedHypothesis().supported ? 'Yes' : 'No' }}
+          </dd>
         </div>
         <div>
           <dt>Deterministic</dt>
-          <dd class="pass">Yes</dd>
+          <dd [class.pass]="store.selectedHypothesis().deterministic">
+            {{ store.selectedHypothesis().deterministic ? 'Yes' : 'No' }}
+          </dd>
         </div>
       </dl>
-      <p class="checks">All checks passed</p>
+      <p class="checks">{{ store.selectedHypothesis().validationChecks.length }} checks verified</p>
     </section>
     <section>
       <h2>Controller outcomes</h2>
@@ -58,7 +76,7 @@ import { DebuggerStore } from '../debugger.store';
       <dl>
         <div>
           <dt>Source</dt>
-          <dd>Bundled demo data</dd>
+          <dd>{{ sourceLabel() }}</dd>
         </div>
         <div>
           <dt>Run</dt>
@@ -157,5 +175,25 @@ export class EvidenceInspector {
 
   protected outcome(value: 'fails' | 'succeeds'): string {
     return value === 'fails' ? 'Fails' : 'Succeeds';
+  }
+
+  protected sourceLabel(): string {
+    return this.store.run().source === 'local-api'
+      ? 'Authenticated local API'
+      : this.store.run().source === 'local-file'
+        ? 'Validated local file'
+        : 'Bundled demo data';
+  }
+
+  protected parameter(name: string): number | undefined {
+    return this.store.selectedHypothesis().mutationParameters[name];
+  }
+
+  protected hasParameter(name: string): boolean {
+    return this.parameter(name) !== undefined;
+  }
+
+  protected mutationType(): string {
+    return this.store.selectedHypothesis().mutationType.replaceAll('_', ' ');
   }
 }

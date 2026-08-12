@@ -1,8 +1,9 @@
 # Scenario debugger design specification
 
 The thin debugger is a local engineering instrument built from code-native UI,
-Three.js geometry, and a bundled synthetic fixture. The accepted desktop and
-mobile concepts are retained solely as implementation references:
+Three.js geometry, a bundled synthetic fixture, and an optional authenticated
+real-record adapter. The accepted desktop and mobile concepts are retained
+solely as implementation references:
 
 - [desktop concept](assets/debugger/desktop-concept.png)
 - [mobile concept](assets/debugger/mobile-concept.png)
@@ -46,7 +47,9 @@ markers. Shadows, glass, glow, gradients, and decorative cards are prohibited.
 The mobile shell does not compress all desktop panels. It provides a shared
 `Scene` / `Evidence` / `Metrics` view selector. Scene is the default and shows
 the canvas, compact legend, playback row, Proposal 02 summary, and the beginning
-of the first metric plot to communicate scroll continuation.
+of the first metric plot to communicate scroll continuation. File and export
+actions move into the compact overflow menu while evidence mode and campaign
+results remain visible.
 
 ## Allowed visible copy
 
@@ -62,9 +65,15 @@ the following accessibility equivalents:
 - `Fails`, `Succeeds`, `Qualifying (synthetic)`, `Bundled demo data`
 - `Signed separation`, `Longitudinal TTC`, `Real-time`
 
-The synthetic disclosure is mandatory. The interface must not claim to inspect
+The synthetic disclosure is mandatory in fixture mode. The interface must not claim to inspect
 the production Waymo Driver, name a real map or person, or expose restricted
 record fields.
+
+Real mode adds only the local API's closed, privacy-reduced vocabulary: opaque
+run and cell IDs, redacted mutation parameters, outcomes, support decisions,
+cost, road geometry, trajectories, and interaction metrics. It is labeled
+`Real local · redacted`; export is disabled. The token is memory-only, and
+disconnect restores the synthetic fixture.
 
 The `Campaign results` surface is the sole exception to the synthetic fixture
 copy above. It contains only the already-published campaign aggregates: method
@@ -81,6 +90,11 @@ cell, proposal, controller-trace, feature-vector, or support-score record.
 - `EvidenceInspector`: deterministic evidence sections from typed fixture data.
 - `MetricTimeline`: shared scrubber and two SVG plots.
 - `CampaignSummary`: aggregate-only campaign evidence and explicit claim scope.
+- `LocalEvidenceService`: sequential authenticated reads from fixed loopback
+  endpoints, strict response parsing, memory-only token lifecycle, and
+  synthetic restoration on disconnect.
+- `LocalEvidencePanel`: connection/privacy states plus campaign cell and sealed
+  proposal inspection.
 - `MobileViewNav`: responsive region selection without duplicated state.
 - `ExportService`: stable, synthetic-view JSON export.
 
@@ -90,12 +104,18 @@ rendered from Angular, CSS, SVG, and Three.js.
 
 ## Verification contract
 
-The shipped slice is deliberately synthetic-only. A run is rendered only when
-it passes `planmargin.debugger.v1` validation: positive fixed timestep, finite
+The shipped slice always has a data-free synthetic path. A local run file is
+rendered only when it passes `planmargin.debugger.v1` validation: positive fixed timestep, finite
 geometry and metrics, unique proposal identifiers, aligned trajectory and
 metric lengths, deterministic/support flags, and a timeline matching the
 declared step. Local files are capped at 5 MB. View exports contain selection
 and timestep metadata, not trajectory arrays or private provenance fields.
+
+Real records are accepted only from the authenticated fixed-origin service and
+must pass the dedicated closed-response parsers. Nullable longitudinal TTC is
+rendered as “Not closing” and as a chart gap rather than imputed. Browser
+storage, URL tokens, arbitrary paths, arbitrary queries, and real-data exports
+are prohibited.
 
 Before merge, the implementation must pass:
 

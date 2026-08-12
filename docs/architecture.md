@@ -36,6 +36,7 @@ flowchart TB
     end
 
     I -->|"permitted aggregates only"| L
+    O -->|"authenticated loopback projections"| M
 ```
 
 ## Component responsibilities
@@ -51,7 +52,7 @@ flowchart TB
 | Coordination    | Python, JSON Schema              | Preserve every attempted proposal, account for physical rollout cost, seal checkpoints, and resume without changing decisions.                      |
 | Analytics       | DuckDB, Parquet, SQL             | Normalize sealed campaign summaries privately and independently reconcile published aggregates.                                                     |
 | Local API       | FastAPI, read-only DuckDB        | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced projections on loopback only.                                     |
-| Evidence UI     | Angular, TypeScript, Three.js    | Inspect a validated synthetic scenario and present only already-published aggregate campaign evidence.                                              |
+| Evidence UI     | Angular, TypeScript, Three.js    | Boot safely from a synthetic fixture; optionally inspect authenticated, redacted local trajectories and sealed proposal evidence without exporting it. |
 | Automation      | uv, npm, GitHub Actions          | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                     |
 
 ## Experiment execution
@@ -138,8 +139,8 @@ dependencies:
 - **Apache Beam:** bounded scenario mining and empirical feature extraction to
   deterministic partitioned Parquet under DirectRunner.
 - **FastAPI:** implemented as a localhost-only, read-only boundary over ignored
-  sealed records and verified DuckDB/Parquet evidence; Angular consumption
-  remains tracked separately.
+  sealed records and verified DuckDB/Parquet evidence; the Angular client uses
+  its fixed authenticated projections without persistence or export.
 - **Evidence assistant:** optional explanation and allowlisted aggregate-query
   tools; never metric generation, finding certification, or vehicle control.
 - **3D Gaussian splatting:** a frozen feasibility study for an authorized

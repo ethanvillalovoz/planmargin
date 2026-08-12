@@ -7,7 +7,7 @@ interface ChartDefinition {
   readonly unit: string;
   readonly min: number;
   readonly max: number;
-  readonly value: (sample: MetricSample) => number;
+  readonly value: (sample: MetricSample) => number | null;
 }
 
 @Component({
@@ -31,7 +31,7 @@ interface ChartDefinition {
         <figure>
           <figcaption>
             <span>{{ chart.title }}</span>
-            <strong>{{ chart.value(store.metricSample()).toFixed(2) }} {{ chart.unit }}</strong>
+            <strong>{{ displayValue(chart) }}</strong>
           </figcaption>
           <svg
             viewBox="0 0 1000 104"
@@ -41,9 +41,11 @@ interface ChartDefinition {
           >
             <path class="grid" d="M0 18H1000 M0 52H1000 M0 86H1000"></path>
             <path class="threshold" d="M0 86H1000"></path>
-            <polyline class="series recorded" [attr.points]="plot(chart, 0.78)"></polyline>
-            <polyline class="series reference" [attr.points]="plot(chart, 0.3)"></polyline>
-            <polyline class="series tested" [attr.points]="plot(chart, 0)"></polyline>
+            @if (store.run().synthetic) {
+              <path class="series recorded" [attr.d]="plot(chart, 0.78)"></path>
+              <path class="series reference" [attr.d]="plot(chart, 0.3)"></path>
+            }
+            <path class="series tested" [attr.d]="plot(chart, 0)"></path>
             <line class="cursor" [attr.x1]="cursorX()" y1="0" [attr.x2]="cursorX()" y2="104"></line>
           </svg>
         </figure>
@@ -174,17 +176,31 @@ export class MetricTimeline {
     () => this.store.selectedHypothesis().metrics.at(-1)?.timeSeconds ?? 0,
   );
 
+  protected displayValue(chart: ChartDefinition): string {
+    const value = chart.value(this.store.metricSample());
+    return value === null ? 'Not closing' : `${value.toFixed(2)} ${chart.unit}`;
+  }
+
   protected plot(chart: ChartDefinition, offset: number): string {
     const samples = this.store.selectedHypothesis().metrics;
+    let drawing = false;
     return samples
       .map((sample, index) => {
+        const value = chart.value(sample);
+        if (value === null) {
+          drawing = false;
+          return '';
+        }
         const x = (index / Math.max(1, samples.length - 1)) * 1000;
         const normalized = Math.max(
           0,
-          Math.min(1, (chart.value(sample) + offset - chart.min) / (chart.max - chart.min)),
+          Math.min(1, (value + offset - chart.min) / (chart.max - chart.min)),
         );
-        return `${x.toFixed(1)},${(98 - normalized * 88).toFixed(1)}`;
+        const command = drawing ? 'L' : 'M';
+        drawing = true;
+        return `${command}${x.toFixed(1)} ${(98 - normalized * 88).toFixed(1)}`;
       })
+      .filter((command) => command.length > 0)
       .join(' ');
   }
 

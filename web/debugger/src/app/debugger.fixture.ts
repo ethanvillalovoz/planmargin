@@ -56,6 +56,11 @@ function hypothesis(
     label,
     onsetSeconds,
     speedMetersPerSecond,
+    mutationType: 'synthetic_lead_braking',
+    mutationParameters: {
+      braking_onset_offset_s: onsetSeconds,
+      target_speed_mps: speedMetersPerSecond,
+    },
     supported: true,
     deterministic: true,
     validationChecks: ['schema', 'finite-values', 'aligned-timeline'],
@@ -191,6 +196,16 @@ export function parseDebuggerRun(value: unknown): DebuggerRun {
     const speedMetersPerSecond = finiteNumber(
       hypothesisValue['speedMetersPerSecond'],
       `${path}.speedMetersPerSecond`,
+    );
+    if (typeof hypothesisValue['mutationType'] !== 'string') {
+      throw new Error(`${path}.mutationType must be a string`);
+    }
+    const mutationParameters = hypothesisValue['mutationParameters'];
+    if (!isRecord(mutationParameters)) {
+      throw new Error(`${path}.mutationParameters must be an object`);
+    }
+    Object.entries(mutationParameters).forEach(([name, parameter]) =>
+      finiteNumber(parameter, `${path}.mutationParameters.${name}`),
     );
     if (onsetSeconds < 0 || speedMetersPerSecond < 0) {
       throw new Error(`${path} onset and speed must be non-negative`);

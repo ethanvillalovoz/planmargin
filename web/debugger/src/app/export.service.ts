@@ -7,6 +7,9 @@ export function serializeView(
   timestepIndex: number,
   exportedAt: string,
 ): ExportedView {
+  if (!run.synthetic) {
+    throw new Error('Real local evidence cannot be exported');
+  }
   const hypothesis = run.hypotheses.find((candidate) => candidate.id === selectedHypothesisId);
   if (hypothesis === undefined) {
     throw new Error(`Unknown hypothesis: ${selectedHypothesisId}`);

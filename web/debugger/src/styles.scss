@@ -51,3 +51,110 @@ input:focus-visible {
   background: var(--tested);
   color: #080d11;
 }
+
+app-local-evidence-panel {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+}
+app-local-evidence-panel .backdrop {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: 1.5rem;
+  overflow: auto;
+  background: rgb(2 6 9 / 84%);
+  backdrop-filter: blur(8px);
+}
+app-local-evidence-panel .panel {
+  width: min(1040px, 100%);
+  max-height: calc(100dvh - 3rem);
+  overflow: auto;
+  border: 1px solid #4c5962;
+  background: #0b1217;
+  box-shadow: 0 30px 90px rgb(0 0 0 / 55%);
+}
+app-local-evidence-panel header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem 1.4rem;
+  border-bottom: 1px solid var(--divider);
+}
+app-local-evidence-panel :is(h1, h2, p) {
+  margin: 0;
+}
+app-local-evidence-panel h1 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+app-local-evidence-panel header p,
+app-local-evidence-panel form > p {
+  margin-top: 0.35rem;
+  color: var(--secondary);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+app-local-evidence-panel :is(button, select, input) {
+  min-height: 34px;
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.68rem;
+}
+app-local-evidence-panel button {
+  padding: 0 0.75rem;
+}
+app-local-evidence-panel :is(button, select, input):hover {
+  border-color: var(--secondary);
+}
+app-local-evidence-panel button.primary {
+  border-color: var(--tested);
+  color: var(--tested);
+}
+app-local-evidence-panel :is(button, input):disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+app-local-evidence-panel form {
+  display: grid;
+  width: min(560px, 100%);
+  gap: 0.65rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+app-local-evidence-panel form label {
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+app-local-evidence-panel form code {
+  color: var(--reference);
+}
+app-local-evidence-panel form input {
+  width: 100%;
+  padding: 0 0.7rem;
+  background: #080d11;
+}
+app-local-evidence-panel .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+@media (max-width: 760px) {
+  app-local-evidence-panel .backdrop {
+    align-items: start;
+    padding: 0;
+  }
+  app-local-evidence-panel .panel {
+    width: 100%;
+    max-height: none;
+    min-height: 100dvh;
+    border: 0;
+  }
+}

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { CAMPAIGN_EVIDENCE } from '../campaign-evidence';
 import { CampaignSummary } from './campaign-summary';
 
 describe('CampaignSummary', () => {
@@ -29,5 +30,17 @@ describe('CampaignSummary', () => {
     expect(closeCount).toBe(0);
     backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(closeCount).toBe(1);
+  });
+
+  it('labels campaign evidence loaded from the authenticated local service', () => {
+    const fixture = TestBed.createComponent(CampaignSummary);
+    fixture.componentRef.setInput('evidence', {
+      ...CAMPAIGN_EVIDENCE,
+      mode: 'real-local-redacted',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('VERIFIED LOCAL CAMPAIGN');
+    expect(fixture.nativeElement.textContent).toContain('The held-out split remains unopened');
   });
 });
