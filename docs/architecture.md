@@ -2,9 +2,9 @@
 
 PlanMargin is a local counterfactual stress-testing workbench with two strict
 boundaries: deterministic code owns scientific decisions, and restricted WOMD
-records never enter the public repository. Version one is complete at this
-boundary; this document describes the system that exists rather than a future
-platform.
+records never enter the public repository. Experiment v1 is complete at this
+boundary. The broader program now adds platform layers without changing that
+frozen scientific result.
 
 ## System flow
 
@@ -21,6 +21,8 @@ flowchart TB
         F --> H["Content-sealed cell records"]
         H --> I["Resumable campaign reconstruction"]
         I --> J["Private DuckDB and Parquet analytics"]
+        H --> O["Authenticated localhost FastAPI"]
+        J --> O
     end
 
     subgraph U["Public data-free boundary"]
@@ -48,6 +50,7 @@ flowchart TB
 | Search          | NumPy PCG64, PyTorch, BoTorch    | Produce stateless uniform-random proposals or constrained multi-objective qLogNEHVI proposals under matched budgets.                                |
 | Coordination    | Python, JSON Schema              | Preserve every attempted proposal, account for physical rollout cost, seal checkpoints, and resume without changing decisions.                      |
 | Analytics       | DuckDB, Parquet, SQL             | Normalize sealed campaign summaries privately and independently reconcile published aggregates.                                                     |
+| Local API       | FastAPI, read-only DuckDB        | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced projections on loopback only.                                     |
 | Evidence UI     | Angular, TypeScript, Three.js    | Inspect a validated synthetic scenario and present only already-published aggregate campaign evidence.                                              |
 | Automation      | uv, npm, GitHub Actions          | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                     |
 
@@ -121,6 +124,11 @@ See the [analytics contract](analytics.md).
 Repository policy tests and `.gitignore` enforce this separation. The debugger
 ships no private data and does not upload local records.
 
+The implemented local API can expose redacted real evidence only to an
+authenticated process on the same machine. It is not a public-data boundary:
+coordinates and proposal facts remain restricted even after identifiers are
+removed. See the [local evidence API contract](evidence-api.md).
+
 ## Reopened program responsibilities
 
 Experiment v1 did not require the following layers, but ADR 0004 restores them
@@ -129,8 +137,9 @@ dependencies:
 
 - **Apache Beam:** bounded scenario mining and empirical feature extraction to
   deterministic partitioned Parquet under DirectRunner.
-- **FastAPI:** a localhost-only, read-only boundary over ignored sealed records
-  and DuckDB/Parquet evidence for the real-data debugger mode.
+- **FastAPI:** implemented as a localhost-only, read-only boundary over ignored
+  sealed records and verified DuckDB/Parquet evidence; Angular consumption
+  remains tracked separately.
 - **Evidence assistant:** optional explanation and allowlisted aggregate-query
   tools; never metric generation, finding certification, or vehicle control.
 - **3D Gaussian splatting:** a frozen feasibility study for an authorized

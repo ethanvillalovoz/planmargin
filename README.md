@@ -10,7 +10,7 @@ smallest realistic change to a recorded driving scenario that exposes an
 avoidable planner failure. It combines Waymo Open Motion Dataset (WOMD)
 scenarios, Waymax closed-loop simulation, constrained Bayesian optimization,
 sealed experiment records, verified analytics, a measured native kernel, and
-an interactive evidence debugger.
+an authenticated local evidence API, and an interactive evidence debugger.
 
 ## Version-one evidence
 
@@ -55,6 +55,9 @@ technology demos:
 - **Data engineering:** content-sealed checkpoints, atomic resumability,
   privacy-preserving DuckDB/Parquet tables, and SQL reconciliation against the
   published aggregates.
+- **Local evidence service:** a token-authenticated, loopback-only FastAPI
+  boundary over verified DuckDB/Parquet, sealed proposal records, and redacted
+  real trajectories; no client-supplied SQL or paths.
 - **Systems work:** a C++20/pybind11 interaction-metrics kernel selected by
   profiling and protected by randomized parity tests against the Python oracle.
 - **Product engineering:** a responsive Angular/TypeScript/Three.js debugger
@@ -108,6 +111,7 @@ flowchart LR
     D --> E
     E --> F["DuckDB · Parquet · SQL verification"]
     E --> G["Aggregate-only public report"]
+    E --> J["FastAPI · authenticated local real evidence"]
     H["Synthetic debugger fixture"] --> I["Angular · TypeScript · Three.js"]
     G --> I
 ```
@@ -119,9 +123,25 @@ aggregates enter Git. The [architecture document](docs/architecture.md)
 describes each responsibility and public/private boundary.
 
 The implemented stack is Python, JAX/Waymax, PyTorch/BoTorch,
-C++20/pybind11, DuckDB, Parquet, Angular, TypeScript, Three.js, and GitHub
-Actions. Beam, FastAPI, hosted infrastructure, and an AI explanation layer were
-not added because version one did not give them a necessary responsibility.
+C++20/pybind11, DuckDB, Parquet, FastAPI, Angular, TypeScript, Three.js, and
+GitHub Actions. Beam, the optional AI explanation layer, and experiment-v2
+learned-policy work remain active program milestones. Hosted infrastructure is
+not required.
+
+## Run the local evidence API
+
+If the ignored real experiment artifacts exist locally, start the
+token-authenticated service with:
+
+```bash
+uv run --frozen planmargin-serve-evidence
+```
+
+It binds only to `127.0.0.1:8765`, verifies the campaign, analytical database,
+and rollout collection before serving, and prints an ephemeral local token.
+See the [real-record API contract](docs/evidence-api.md) for its fixed endpoints
+and privacy boundary. The Angular real-data provider is the next active
+milestone; the current public debugger still starts in synthetic mode.
 
 ## Run the evidence debugger
 
@@ -183,8 +203,9 @@ following the [credential-safe setup guide](docs/setup.md).
 - **Measured optimization only.** C++ owns one profiled geometry hotspot, and
   its 585–619× result is reported only as an isolated-kernel benchmark—not an
   end-to-end campaign speedup.
-- **Technology must own a responsibility.** Unneeded Beam, FastAPI, cloud, and
-  AI layers were omitted instead of being added for keyword coverage.
+- **Technology must own a responsibility.** FastAPI now owns the authenticated
+  real-evidence boundary; each remaining active layer must pass its own
+  responsibility and verification gate before it can be claimed.
 - **Zero-cost execution.** The core system runs on local Apple silicon, CPU
   JAX, optional Colab Free, and data-free GitHub Actions.
 
@@ -196,7 +217,7 @@ following the [credential-safe setup guide](docs/setup.md).
 | Experiment contract      | [Behavioral realism and matched search](docs/behavioral-realism-and-matched-search.md) · [Campaign protocol](docs/matched-search-campaign.md)                                      |
 | Final evidence           | [Aggregate result](docs/natural-development-results.md) · [Held-out decision](docs/decisions/0003-version-one-heldout-no-go.md)                                                    |
 | Data and systems         | [Analytics](docs/analytics.md) · [Native geometry](docs/native-geometry.md) · [Rollout records](docs/rollout-record.md)                                                            |
-| Product interface        | [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md)                                                                          |
+| Product interface        | [Local evidence API](docs/evidence-api.md) · [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md)                               |
 | Reproduction             | [Local setup](docs/setup.md) · [Data boundary](data/README.md)                                                                                                                     |
 | Active program           | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Open milestones](https://github.com/ethanvillalovoz/planmargin/issues)                             |
 

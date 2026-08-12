@@ -9,6 +9,8 @@ license-files = ["LICENSE"]
 dependencies = [
   "botorch==0.18.1",
   "duckdb==1.5.5",
+  "fastapi>=0.128,<1",
+  "uvicorn>=0.40,<1",
   "waymo-waymax @ git+https://github.com/waymo-research/waymax.git@a64dfec9be8576b60d9cecc94f406d9812d4a7d0",
 ]
 
@@ -28,9 +30,11 @@ planmargin-check-regression-eligibility = "planmargin.regression_eligibility:mai
 planmargin-run-matched-campaign = "planmargin.matched_campaign:main"
 planmargin-build-analytics = "planmargin.analytics:main"
 planmargin-benchmark-geometry = "planmargin.geometry_benchmark:main"
+planmargin-serve-evidence = "planmargin.evidence_api:main"
 
 [dependency-groups]
 dev = [
+  "httpx2>=2.10,<3",
   "jsonschema>=4.25,<5",
   "pytest>=8.4,<9",
   "ruff>=0.12,<0.13",
