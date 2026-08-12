@@ -46,6 +46,7 @@ OPTIMIZER_MAX_ITERATIONS = 200
 ACQUISITION_TIE_TOLERANCE = 1e-12
 REFERENCE_POINT = (0.0, 0.0)
 SUPPORT_ALPHA = 0.05
+TORCH_INTRAOP_THREADS = 1
 TORCH_DTYPE = torch.float64
 TORCH_DEVICE = torch.device("cpu")
 
@@ -67,6 +68,7 @@ class MatchedSearchConfig:
     maximum_speed_multiplier: float = MAXIMUM_SPEED_MULTIPLIER
     numeric_dtype: str = "float64"
     device: str = "cpu"
+    torch_intraop_threads: int = TORCH_INTRAOP_THREADS
     acquisition: str = "qLogNoisyExpectedHypervolumeImprovement"
     q: int = 1
     independent_exact_gp_outputs: int = 5
@@ -164,6 +166,7 @@ def dependency_report() -> dict[str, Any]:
         "linear_operator": linear_operator.__version__,
         "device": str(TORCH_DEVICE),
         "dtype": str(TORCH_DTYPE).removeprefix("torch."),
+        "torch_intraop_threads": TORCH_INTRAOP_THREADS,
         "cuda_used": False,
         "mps_used": False,
         "configuration": asdict(MatchedSearchConfig()),
@@ -443,7 +446,7 @@ def _optimize_bayesian(
     if sum(observation.objective_available for observation in observations) < 2:
         raise ValueError("insufficient_accepted_objectives")
     torch.manual_seed(_stable_uint32("model", seed, selection_order, proposal_index))
-    torch.use_deterministic_algorithms(True)
+    torch.set_num_threads(TORCH_INTRAOP_THREADS)
     try:
         with warnings.catch_warnings(record=True) as model_warnings:
             warnings.simplefilter("always")
@@ -524,6 +527,7 @@ def _optimize_bayesian(
         "warnings": warning_messages,
         "device": str(train_x.device),
         "dtype": str(train_x.dtype).removeprefix("torch."),
+        "torch_intraop_threads": torch.get_num_threads(),
     }
 
 
@@ -578,6 +582,7 @@ def bayesian_proposal(
                 ),
                 "device": str(TORCH_DEVICE),
                 "dtype": str(TORCH_DTYPE).removeprefix("torch."),
+                "torch_intraop_threads": TORCH_INTRAOP_THREADS,
             },
         )
     selected_optimizer = optimizer
@@ -630,6 +635,7 @@ def bayesian_proposal(
                 ),
                 "device": str(TORCH_DEVICE),
                 "dtype": str(TORCH_DTYPE).removeprefix("torch."),
+                "torch_intraop_threads": TORCH_INTRAOP_THREADS,
             },
         )
 

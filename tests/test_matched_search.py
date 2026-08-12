@@ -84,6 +84,7 @@ def test_exact_configuration_dependency_stack_and_cpu_float64() -> None:
     assert report["linear_operator"] == linear_operator.__version__ == "0.6.1"
     assert report["device"] == "cpu"
     assert report["dtype"] == "float64"
+    assert report["torch_intraop_threads"] == 1
     assert report["cuda_used"] is False
     assert report["mps_used"] is False
 
@@ -305,6 +306,7 @@ def test_sobol_fallback_is_stateless_across_failure_classes() -> None:
         "accepted_objective_count": 8,
         "device": "cpu",
         "dtype": "float64",
+        "torch_intraop_threads": 1,
     }
     assert second.diagnostics["failure_type"] == "ArithmeticError"
 
@@ -382,6 +384,7 @@ def test_real_qlognehvi_transition_uses_mixed_domain_on_cpu() -> None:
     assert decision.diagnostics["accepted_objective_count"] == 8
     assert decision.diagnostics["device"] == "cpu"
     assert decision.diagnostics["dtype"] == "float64"
+    assert decision.diagnostics["torch_intraop_threads"] == 1
     assert len(decision.diagnostics["model_fingerprint"]) == 64
 
 

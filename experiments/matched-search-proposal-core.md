@@ -11,7 +11,7 @@ Waymax rollouts, private artifacts, MPS, CUDA, or paid compute?
 - Python `3.11` with exact `uv.lock` resolution;
 - PyTorch `2.13.0`, BoTorch `0.18.1`, GPyTorch `1.15.2`, and
   linear_operator `0.6.1`;
-- float64 CPU tensors only;
+- float64 CPU tensors and one PyTorch intra-operation thread only;
 - five seeds, 32 proposals, and eight scrambled Sobol initial proposals;
 - five independent exact standardized GP outputs;
 - constrained qLogNEHVI with two objectives, three negative-feasible outcome

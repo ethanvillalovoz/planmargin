@@ -20,7 +20,7 @@ The released CPU stack is resolved exactly in `uv.lock` for Python 3.11:
 BoTorch is a direct exact dependency. The other versions are transitive exact
 resolutions in the lockfile. The proposal core creates tensors only with
 `torch.float64` on `cpu`; it never selects CUDA or MPS. Reproduce the public
-machine-readable report with:
+machine-readable report with one frozen PyTorch intra-operation thread:
 
 ```bash
 uv sync --frozen
@@ -57,6 +57,13 @@ path fix one exact onset value at a time while optimizing the bounded speed
 multiplier. This exposes all six discrete candidates to the predeclared
 SHA-256 tie rule instead of allowing an internal array-order tie to become the
 scientific rule.
+
+The numerical path fixes all model, QMC, and optimizer seeds and uses one CPU
+intra-operation thread. It deliberately does not call TorchInductor or
+`torch.use_deterministic_algorithms`: PyTorch 2.13's latter entry point imports
+the installed Triton/CUDA bindings on Linux even for a CPU tensor path. The
+operations used by this exact-GP path are CPU operations, and reproducibility
+is tested directly rather than inferred from an accelerator-oriented flag.
 
 Each optimizer call uses 10 restarts, 256 raw samples, and at most 200
 iterations. Model construction, QMC sampling, and optimizer initialization are
