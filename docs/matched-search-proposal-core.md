@@ -83,8 +83,9 @@ model/acquisition/optimizer integration on CPU; the full state-machine
 reproducibility test injects a deterministic optimizer seam so CI does not
 confuse repeated numerical optimization with proposal-accounting coverage.
 
-This milestone establishes only a deterministic search component. The next
-private integration must supply method-neutral records, support scores,
-rollouts, controller outcomes, physical-cost accounting, checkpoint/resume,
-and the frozen finding classifier. No search-efficiency or safety claim follows
-from the synthetic fixture.
+This milestone establishes only a deterministic search component. The
+[method-neutral cell coordinator](matched-search-coordinator.md) now supplies
+the durable record, derivation, accounting, and resume boundary. Its next gate
+is a bounded private evaluator adapter and one-scenario, two-proposal smoke
+test. No search-efficiency or safety claim follows from either synthetic
+fixture.
