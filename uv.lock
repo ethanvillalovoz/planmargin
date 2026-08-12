@@ -1694,6 +1694,7 @@ dependencies = [
     { name = "botorch" },
     { name = "duckdb" },
     { name = "fastapi" },
+    { name = "scipy" },
     { name = "uvicorn" },
     { name = "waymo-waymax" },
 ]
@@ -1718,6 +1719,7 @@ requires-dist = [
     { name = "duckdb", specifier = "==1.5.5" },
     { name = "fastapi", specifier = ">=0.128,<1" },
     { name = "google-genai", marker = "extra == 'assistant'", specifier = "==2.17.0" },
+    { name = "scipy", specifier = ">=1.17,<2" },
     { name = "uvicorn", specifier = ">=0.40,<1" },
     { name = "waymo-waymax", git = "https://github.com/waymo-research/waymax.git?rev=a64dfec9be8576b60d9cecc94f406d9812d4a7d0" },
 ]

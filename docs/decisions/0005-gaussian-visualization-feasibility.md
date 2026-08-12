@@ -1,6 +1,6 @@
 # ADR 0005: Freeze the Waymo-linked Gaussian visualization gate
 
-- **Status:** accepted; evaluation pending
+- **Status:** accepted; evaluated `no_go`
 - **Date:** 2026-08-12
 - **Tracking:** #55
 
@@ -114,6 +114,38 @@ All mandatory gates must pass on the frozen scenario:
 If any input, geometry, trajectory, performance, or privacy gate fails, record a
 `no_go` with the observed aggregate values and do not force the technology into
 the product. Thresholds may not be relaxed after results are observed.
+
+## Result
+
+The frozen scenario was evaluated twice locally on the M4 Pro. The field file
+was byte-identical and the logical fingerprint was identical across clean fits.
+The input, determinism, scale, compute, and geometric-quality gates passed:
+
+| Aggregate | Observed |
+| --- | ---: |
+| Frames | 11 (6 fit / 5 evaluation) |
+| Gaussian primitives | 75,000 |
+| Binary PLY size | 4.86 MiB |
+| Fit-and-score runtime | 3.76 s |
+| Peak RSS | 702.1 MiB |
+| Median nearest-mean distance | 0.105 m |
+| 90th-percentile nearest-mean distance | 0.172 m |
+| Evaluation points within 0.50 m | 98.44% |
+| Median / maximum XY coordinate error | 0.151 m / 0.171 m |
+| Valid trajectory samples inside expanded crop | **23.66%** |
+
+The trajectory-linkage threshold was 90%, so the result is `no_go`. This is not
+a reconstruction failure: the sensor field covers the first 1.1 seconds around
+the current pose, while the debugger compares 8-second rollout trajectories
+that travel beyond the frozen 40-meter crop. Expanding the crop, shortening the
+trajectory metric, substituting another scene, or reclassifying the gate after
+seeing this result would violate the precommitted protocol.
+
+Consequently PlanMargin retains the existing map-and-trajectory debugger and
+does not ship the Gaussian field, its private endpoint, or a renderer. The
+ignored private manifest remains the machine-readable audit record. The
+data-free decoder, fitter, PLY writer, schema, and privacy tests remain as the
+reproducible feasibility implementation—not as a product capability.
 
 ## Claim boundary
 

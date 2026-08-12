@@ -156,8 +156,10 @@ dependencies:
   tools, a deterministic offline default, sealed citations, and an optional
   public-only Gemini structured-output adapter; never metric generation,
   finding certification, or vehicle control.
-- **3D Gaussian splatting:** a frozen feasibility study for an authorized
-  Waymo-linked reconstruction and trajectory-inspection responsibility.
+- **3D Gaussian splatting:** the frozen exact-scenario LiDAR feasibility study
+  completed `no_go` on trajectory coverage; its private field is not served and
+  no renderer was added. Decoder/fitter code and aggregate audit results remain
+  for reproducibility.
 - **Learned or RL planner:** an experiment-v2 candidate that must earn a role
   through compute, determinism, and scientific-design gates.
 

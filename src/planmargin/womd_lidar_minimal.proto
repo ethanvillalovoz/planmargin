@@ -1,0 +1,58 @@
+// Minimal wire-compatible subset of the Apache-2.0 Waymo Open Dataset protos.
+// Source definitions:
+// https://github.com/waymo-research/waymo-open-dataset/blob/master/src/waymo_open_dataset/dataset.proto
+// https://github.com/waymo-research/waymo-open-dataset/blob/master/src/waymo_open_dataset/protos/compressed_lidar.proto
+// https://github.com/waymo-research/waymo-open-dataset/blob/master/src/waymo_open_dataset/protos/scenario.proto
+//
+// Unknown fields are intentionally ignored. This subset exists so PlanMargin's
+// locked TensorFlow/JAX environment can read WOMD-LiDAR without installing the
+// incompatible historical waymo-open-dataset wheel.
+
+syntax = "proto2";
+
+package planmargin.womd;
+
+message Transform {
+  repeated double transform = 1;
+}
+
+message LaserCalibration {
+  optional int32 name = 1;
+  repeated double beam_inclinations = 2;
+  optional double beam_inclination_min = 3;
+  optional double beam_inclination_max = 4;
+  optional Transform extrinsic = 5;
+}
+
+message CompressedRangeImage {
+  optional bytes range_image_delta_compressed = 1;
+  optional bytes range_image_pose_delta_compressed = 4;
+}
+
+message CompressedLaser {
+  optional int32 name = 1;
+  optional CompressedRangeImage ri_return1 = 2;
+  optional CompressedRangeImage ri_return2 = 3;
+}
+
+message CompressedFrameLaserData {
+  repeated CompressedLaser lasers = 1;
+  repeated LaserCalibration laser_calibrations = 2;
+  optional Transform pose = 3;
+}
+
+message Metadata {
+  repeated int32 shape = 1 [packed = true];
+  repeated float quant_precision = 2 [packed = true];
+}
+
+message DeltaEncodedData {
+  repeated sint64 residual = 1 [packed = true];
+  repeated uint32 mask = 2 [packed = true];
+  optional Metadata metadata = 3;
+}
+
+message Scenario {
+  optional string scenario_id = 5;
+  repeated CompressedFrameLaserData compressed_frame_laser_data = 12;
+}
