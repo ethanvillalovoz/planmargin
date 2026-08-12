@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/gaussian-field-manifest-v1.schema.json",
+  "title": "PlanMargin LiDAR Gaussian field manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "record_type", "decision", "held_out_opened",
+    "source_scope", "representation", "claim_boundary", "privacy", "integration_gates",
+    "configuration", "field_sha256", "observed", "gates",
+    "logical_fingerprint", "manifest_sha256"
+  ],
+  "properties": {
+    "$schema": {"const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/gaussian-field-manifest-v1.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "planmargin.lidar_gaussian_field_manifest"},
+    "decision": {"enum": ["go", "no_go"]},
+    "held_out_opened": {"const": false},
+    "source_scope": {"const": "frozen_training_scenario_selection_order_2"},
+    "representation": {"const": "deterministic_lidar_gaussian_field"},
+    "claim_boundary": {"const": "not_photorealistic_not_learned_not_safety_evidence"},
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_scenario_id", "contains_source_uri", "contains_raw_points", "unrestricted_export"],
+      "properties": {
+        "contains_scenario_id": {"const": false},
+        "contains_source_uri": {"const": false},
+        "contains_raw_points": {"const": false},
+        "unrestricted_export": {"const": false}
+      }
+    },
+    "integration_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["debugging_value", "browser_performance", "privacy", "data_free_reliability"],
+      "properties": {
+        "debugging_value": {"const": "not_run_after_trajectory_no_go"},
+        "browser_performance": {"const": "not_run_after_trajectory_no_go"},
+        "privacy": {"const": "not_run_after_trajectory_no_go"},
+        "data_free_reliability": {"const": "pass"}
+      }
+    },
+    "configuration": {"type": "object"},
+    "field_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "observed": {"type": "object"},
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorized_exact_input", "determinism", "scale", "local_compute", "geometric_quality", "trajectory_linkage"],
+      "properties": {
+        "authorized_exact_input": {"type": "boolean"},
+        "determinism": {"type": "boolean"},
+        "scale": {"type": "boolean"},
+        "local_compute": {"type": "boolean"},
+        "geometric_quality": {"type": "boolean"},
+        "trajectory_linkage": {"type": "boolean"}
+      }
+    },
+    "logical_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

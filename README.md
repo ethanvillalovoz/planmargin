@@ -34,8 +34,10 @@ and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 > **Program status:** Experiment v1 is frozen and complete, but the original
 > PlanMargin program remains active. The localhost-only real-record API and
 > debugger mode, Beam-to-Parquet-to-DuckDB pipeline, and constrained evidence
-> assistant are complete. The next tracks add a gated 3D Gaussian feasibility
-> study and a separately frozen experiment v2. See the
+> assistant are complete. The exact-scenario LiDAR Gaussian study produced a
+> reproducible `no_go` because only 23.66% of the full debugger trajectories fit
+> its frozen crop; the renderer was therefore not forced into the product. The
+> remaining active track is a separately frozen experiment v2. See the
 > [recovery decision](docs/decisions/0004-recover-original-program.md).
 
 ![Aggregate-only campaign evidence surface](docs/assets/campaign-evidence.png)
@@ -135,9 +137,9 @@ describes each responsibility and public/private boundary.
 
 The implemented stack is Python, JAX/Waymax, PyTorch/BoTorch,
 C++20/pybind11, Apache Beam, DuckDB, Parquet, FastAPI, Angular, TypeScript,
-Three.js, an optional Gemini adapter, and GitHub Actions. The 3D Gaussian
-feasibility study and experiment-v2 learned-policy work remain active program
-milestones. Hosted infrastructure is not required.
+Three.js, an optional Gemini adapter, and GitHub Actions. The Gaussian study is
+complete as an audited negative engineering result; experiment-v2 learned-policy
+work remains active. Hosted infrastructure is not required.
 
 ## Ask the evidence assistant
 
