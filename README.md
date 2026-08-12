@@ -11,8 +11,9 @@ PlanMargin is an independent research and engineering project that searches for 
 > track, while empirical behavioral realism and the recruiter-facing product
 > layers remain incomplete. The frozen WOMD empirical-support gate is now
 > implemented and validated on 265 events from the exact 16-shard reference
-> sample. The next milestone is the method-neutral, five-seed random/Bayesian
-> development comparison. No planner-performance claims have been made.
+> sample. The data-free, CPU-only matched-search proposal core is also complete;
+> the next milestone is its method-neutral private coordinator and checkpoint
+> boundary. No planner-performance claims have been made.
 
 ## The problem
 
@@ -96,7 +97,8 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Freeze the version-one product checkpoint
 - [x] Resolve the behavioral-realism contract and freeze matched search
 - [x] Implement the WOMD empirical-support gate
-- [ ] Implement constrained Bayesian search
+- [x] Implement the data-free constrained-Bayesian proposal core
+- [ ] Implement method-neutral matched-search records and coordination
 - [ ] Build the thin interactive scenario-debugger slice
 - [ ] Run equal-budget evaluation on held-out scenarios
 - [ ] Add the analytical data layer and measured systems optimization
@@ -112,6 +114,7 @@ See the [local setup guide](docs/setup.md),
 [deterministic random-search protocol](docs/random-search.md),
 [WOMD empirical-support and matched-search protocol](docs/behavioral-realism-and-matched-search.md),
 [WOMD empirical-support implementation](docs/empirical-support.md),
+[matched-search proposal core](docs/matched-search-proposal-core.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md), and
