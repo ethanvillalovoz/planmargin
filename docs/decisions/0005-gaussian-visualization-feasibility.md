@@ -65,9 +65,9 @@ passes.
 ## Frozen inputs and split
 
 - Use the already-selected experiment-v1 **training** scenario with
-  `selection_order = 1`, the earliest item under the frozen selection ordering.
-  Do not substitute a scene after checking LiDAR availability or viewing
-  Gaussian results.
+  `selection_order = 2`, which is the scenario in the sealed Stage 0 rollout
+  collection and authenticated real debugger. Do not substitute a scene after
+  checking this scenario or viewing Gaussian results.
 - Read no official held-out or test split.
 - Consume at most the 11 WOMD-LiDAR input frames associated with that scenario.
 - Use even-indexed frames for fitting and odd-indexed frames for geometric
@@ -122,3 +122,15 @@ LiDAR Gaussian field rendered with Gaussian splatting. It may not be described
 as photorealistic 3DGS, learned scene reconstruction, a production Waymo scene,
 or planner-safety evidence. The official held-out split remains unopened
 regardless of this decision.
+
+## Pre-execution correction
+
+The first committed protocol named `selection_order = 1` solely because it was
+the earliest frozen selection. A metadata-only lookup confirmed that its LiDAR
+object existed, after which inspection of the already-sealed product contract
+showed that the real debugger trajectory belongs to `selection_order = 2`.
+Order 1's LiDAR payload was downloaded but never decoded, rendered, fitted, or
+scored. Before any Gaussian result was observed, the input was corrected to the
+existing debugger scenario so the trajectory-linkage gate is meaningful. This
+correction is preserved in Git history and does not change any quantitative
+threshold. No further scenario substitution is permitted.
