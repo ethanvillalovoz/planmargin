@@ -13,6 +13,23 @@ PlanMargin is an independent research and engineering project that searches for 
 > See the [aggregate-only results](docs/natural-development-results.md). No
 > production-planner performance claim is made.
 
+## Five-minute review
+
+![Aggregate-only campaign evidence surface](docs/assets/campaign-evidence.png)
+
+1. Read the [aggregate result](docs/natural-development-results.md): 100 matched
+   cells, 3,200 proposals, zero qualifying findings, H1/H2 untestable, and H3
+   supported.
+2. Open the local debugger below and select `Proposal 02` to inspect how the
+   synthetic finding contract, trajectories, and metric timelines fit together.
+3. Select **Campaign results** to see the real aggregate evidence and its claim
+   boundary, or open `http://127.0.0.1:4200/?evidence=1` directly.
+4. Review the [DuckDB/Parquet reconciliation](docs/analytics.md) and the
+   [measured C++20 kernel](docs/native-geometry.md) for data and systems depth.
+5. Review the [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md)
+   for the negative-result judgment: validation remained unopened instead of
+   tuning the protocol after observing no failures.
+
 ## The problem
 
 Autonomous-driving planners can perform well on average while remaining sensitive to small changes in difficult interactions. Randomly mutating scenarios wastes simulation time, and simply generating collisions is not useful: a collision may be physically implausible or unavoidable by any controller.
@@ -41,9 +58,9 @@ A generated event is accepted only when all of the following are true:
 
 This prevents the search process from “winning” by creating impossible or inevitable crashes.
 
-## Initial experiment
+## Version-one experiment
 
-The first experiment will use a deliberately narrow scope:
+The completed development experiment used a deliberately narrow scope:
 
 - **Data:** Waymo Open Motion Dataset (WOMD)
 - **Simulator:** Waymax
@@ -53,24 +70,28 @@ The first experiment will use a deliberately narrow scope:
 - **Proposed method:** constrained Bayesian optimization
 - **Primary metrics:** valid failure discovery rate, simulations to first valid failure, minimum mutation distance, realism pass rate, and reference-controller avoidability rate
 
-The comparison will use equal rollout budgets and held-out scenarios.
+The comparison used equal rollout budgets on the frozen training scenarios.
+The held-out split remains unopened under the version-one `no_go` decision.
 
-## Planned architecture
+## Implemented architecture
 
 ```mermaid
 flowchart LR
-    A["Waymo Open Motion Dataset"] --> B["C++ geometry and validation kernels"]
-    B --> C["Beam scenario mining"]
-    C --> D["Parquet and DuckDB"]
-    D --> E["Waymax closed-loop rollouts"]
-    D --> F["Random and Bayesian search"]
-    E --> G["Evaluation records"]
-    F --> G
-    G --> H["Angular scenario debugger"]
-    G --> I["Reproducible experiment reports"]
+    A["Waymo Open Motion Dataset"] --> B["Python and JAX / Waymax"]
+    B --> C["Random and constrained Bayesian search"]
+    B --> D["C++20 interaction metrics"]
+    C --> E["Sealed experiment records"]
+    D --> E
+    E --> F["DuckDB and Parquet analytics"]
+    E --> G["Aggregate research report"]
+    H["Synthetic fixture"] --> I["Angular and Three.js debugger"]
+    G --> I
 ```
 
-Planned technologies include C++20, Python, JAX/Waymax, PyTorch/BoTorch, Apache Beam, Arrow/Parquet, DuckDB, Angular, TypeScript, Three.js, FastAPI, Docker, and GitHub Actions. Each technology will be added only when it owns a real system responsibility.
+The implemented stack is Python, JAX/Waymax, PyTorch/BoTorch, C++20/pybind11,
+DuckDB, Parquet, Angular, TypeScript, Three.js, and GitHub Actions. Beam,
+FastAPI, hosted infrastructure, and an AI explanation layer were not added
+because version one did not give them a necessary responsibility.
 
 ## Zero-cost design constraint
 
@@ -104,7 +125,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Resolve the version-one held-out gate (`no_go`; split remains unopened)
 - [x] Add the private DuckDB/Parquet analytical data layer
 - [x] Add measured C++20 interaction-metrics optimization
-- [ ] Polish the reproducible recruiter-facing demonstration
+- [x] Polish the reproducible recruiter-facing demonstration
 
 See the [local setup guide](docs/setup.md),
 [scenario-selection protocol](docs/scenario-selection.md),
@@ -146,8 +167,10 @@ npm start
 
 Open `http://127.0.0.1:4200`. The interface supports proposal selection,
 play/pause/step, timeline scrubbing, responsive Scene/Evidence/Metrics views,
-strictly validated synthetic JSON files, and a compact view export. Run
-`npm run check` for strict typechecking, unit tests, and a production build.
+strictly validated synthetic JSON files, a compact view export, and an
+aggregate-only campaign evidence surface. No private scenario, cell, or
+proposal data is bundled. Run `npm run check` for strict typechecking, unit
+tests, and a production build.
 
 ## Reproducibility principles
 

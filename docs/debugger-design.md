@@ -31,7 +31,8 @@ markers. Shadows, glass, glow, gradients, and decorative cards are prohibited.
 
 ## Desktop composition
 
-- 56 px top bar: `PlanMargin`, `Scenario debugger`, `Open run`, `Export view`.
+- 56 px top bar: `PlanMargin`, `Scenario debugger`, `Campaign results`,
+  `Open run`, `Export view`.
 - 210 px run rail: run metadata, Original/Proposal 01/Proposal 02 selection,
   playback controls, time, step, and speed.
 - Flexible scene canvas: roadgraph, conflict region, three trajectories,
@@ -65,6 +66,13 @@ The synthetic disclosure is mandatory. The interface must not claim to inspect
 the production Waymo Driver, name a real map or person, or expose restricted
 record fields.
 
+The `Campaign results` surface is the sole exception to the synthetic fixture
+copy above. It contains only the already-published campaign aggregates: method
+budgets, valid rates, zero finding counts, H1/H2/H3 decisions, total physical
+cost, reconstruction/analytics evidence, the isolated native-kernel benchmark,
+and the held-out/production-driver claim boundary. It contains no scenario,
+cell, proposal, controller-trace, feature-vector, or support-score record.
+
 ## Component ownership
 
 - `DebuggerStore`: selected proposal, timestep, playing state, mobile view.
@@ -72,6 +80,7 @@ record fields.
 - `SceneViewport`: Three.js lifecycle, resizing, trajectories, vehicle state.
 - `EvidenceInspector`: deterministic evidence sections from typed fixture data.
 - `MetricTimeline`: shared scrubber and two SVG plots.
+- `CampaignSummary`: aggregate-only campaign evidence and explicit claim scope.
 - `MobileViewNav`: responsive region selection without duplicated state.
 - `ExportService`: stable, synthetic-view JSON export.
 
