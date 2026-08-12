@@ -44,3 +44,6 @@ The [bounded private matched-search smoke report](matched-search-private-smoke.m
 records the aggregate evidence that real mutation, feature, support, and
 controller components compose through that coordinator for exactly two
 predeclared proposals.
+The [controlled headway-regression eligibility report](regression-eligibility.md)
+records the valid `no_go` that closes the injected-regression track without
+changing its frozen configuration or the natural experiment.

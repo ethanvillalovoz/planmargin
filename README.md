@@ -100,7 +100,7 @@ The core project must run without purchasing compute or hosted infrastructure.
 - [x] Implement the data-free constrained-Bayesian proposal core
 - [x] Implement method-neutral matched-search records and coordination
 - [x] Run the one-scenario, two-proposal private integration smoke test
-- [ ] Establish controlled headway-regression original eligibility
+- [x] Establish controlled headway-regression original eligibility (`no_go`)
 - [ ] Build the thin interactive scenario-debugger slice
 - [ ] Run equal-budget evaluation on held-out scenarios
 - [ ] Add the analytical data layer and measured systems optimization
@@ -119,6 +119,7 @@ See the [local setup guide](docs/setup.md),
 [matched-search proposal core](docs/matched-search-proposal-core.md),
 [matched-search cell coordinator](docs/matched-search-coordinator.md),
 [private matched-search integration smoke test](docs/matched-search-private-smoke.md),
+[controlled headway-regression eligibility](docs/regression-eligibility.md),
 [project specification](docs/project-spec.md),
 [architecture](docs/architecture.md), and
 [initial scope decision](docs/decisions/0001-project-scope.md), and
