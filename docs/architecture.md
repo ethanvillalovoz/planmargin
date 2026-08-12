@@ -1,118 +1,139 @@
-# Architecture
+# Implemented version-one architecture
 
-## Design principles
+PlanMargin is a local counterfactual stress-testing workbench with two strict
+boundaries: deterministic code owns scientific decisions, and restricted WOMD
+records never enter the public repository. Version one is complete at this
+boundary; this document describes the system that exists rather than a future
+platform.
 
-1. Establish the scientific experiment before building the platform around it.
-2. Keep raw sensor and trajectory data outside relational databases and Git.
-3. Separate deterministic metric computation from optional AI-generated explanation.
-4. Make every expensive stage restartable from immutable inputs.
-5. Add infrastructure only after a measured bottleneck or scaling requirement appears.
+## System flow
 
-## Planned layers
+```mermaid
+flowchart TB
+    subgraph P["Private local experiment boundary"]
+        A["Authorized WOMD shards"] --> B["Scenario selection and empirical-support extraction"]
+        B --> C["JAX / Waymax deterministic replay"]
+        C --> G["Random or constrained Bayesian proposer"]
+        G --> D["Bounded lead-braking mutation"]
+        D --> E["Tested and reference controllers"]
+        E --> F["Physical, map, behavior, failure, and rerun gates"]
+        F -->|"method-neutral outcome"| G
+        F --> H["Content-sealed cell records"]
+        H --> I["Resumable campaign reconstruction"]
+        I --> J["Private DuckDB and Parquet analytics"]
+    end
 
-### Dataset adapter
+    subgraph U["Public data-free boundary"]
+        K["Versioned schemas and synthetic fixtures"]
+        L["Aggregate-only campaign report"]
+        M["Angular / Three.js evidence debugger"]
+        N["Python and native parity tests"]
+        K --> M
+        L --> M
+        K --> N
+    end
 
-Loads selected Waymo Open Motion scenarios and converts them into an internal, versioned representation. Scenario identity and source-version metadata must remain attached to all derived records.
+    I -->|"permitted aggregates only"| L
+```
 
-### Geometry and validation library
+## Component responsibilities
 
-The first measured native kernel aggregates oriented-box separation and
-longitudinal TTC across aligned controller traces. C++20 owns the per-state
-geometry loop through pybind11; Python retains schema validation and final
-rounding. The original Python algorithm remains a parity oracle, with edge-case
-and randomized equivalence tests required before the native result is
-authoritative. Other geometry stays in Python until profiling gives it a real
-native responsibility. See the [native geometry benchmark](native-geometry.md).
+| Layer           | Implementation                   | Responsibility                                                                                                                                      |
+| --------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dataset adapter | Python, TensorFlow records, WOMD | Stream authorized shards, retain source identity privately, and normalize scenario inputs.                                                          |
+| Simulation      | JAX, Waymax                      | Deterministic original and counterfactual closed-loop rollouts.                                                                                     |
+| Mutation        | Python                           | Apply bounded braking-onset and speed changes while retaining the recorded spatial route.                                                           |
+| Controllers     | Waymax IDM configurations        | Compare a tested technical controller with a conservative technical reference under the identical mutation.                                         |
+| Validation      | Python plus C++20/pybind11       | Enforce initial, physical, map, empirical-support, failure, reference-success, and rerun gates; accelerate one profiled interaction-metrics kernel. |
+| Search          | NumPy PCG64, PyTorch, BoTorch    | Produce stateless uniform-random proposals or constrained multi-objective qLogNEHVI proposals under matched budgets.                                |
+| Coordination    | Python, JSON Schema              | Preserve every attempted proposal, account for physical rollout cost, seal checkpoints, and resume without changing decisions.                      |
+| Analytics       | DuckDB, Parquet, SQL             | Normalize sealed campaign summaries privately and independently reconcile published aggregates.                                                     |
+| Evidence UI     | Angular, TypeScript, Three.js    | Inspect a validated synthetic scenario and present only already-published aggregate campaign evidence.                                              |
+| Automation      | uv, npm, GitHub Actions          | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                     |
 
-### Scenario miner
+## Experiment execution
 
-An Apache Beam pipeline will classify and shard scenarios, compute reusable features, and write columnar Parquet outputs. Development uses the local Direct Runner. Cloud Dataflow is optional and never a core requirement.
+1. The selection stage identifies ten training scenarios and extracts a bounded
+   empirical-support model from authorized WOMD training shards.
+2. Each method receives the same scenario, seed, mutation bounds, controller
+   parameters, proposal count, and validity contract.
+3. The proposer selects a two-dimensional mutation. The method-neutral
+   coordinator evaluates it through Waymax and retains accepted and rejected
+   attempts in the audit trail.
+4. A candidate is a qualifying finding only when the tested controller fails,
+   the reference succeeds, every feasibility gate passes, and deterministic
+   reruns agree.
+5. Each cell is written atomically with content hashes. The campaign report is
+   reconstructed from sealed cells rather than from a second in-memory result
+   path.
+6. The analytical builder validates those seals again, recreates method totals
+   with SQL, reads back each Parquet table, and publishes only after all
+   reconciliation checks agree.
+7. Campaign-level aggregates cross the public boundary. Scenario identifiers,
+   proposal records, trajectories, controller traces, feature vectors, support
+   scores, and cell-level facts do not.
 
-### Analytical data layer
+## Frozen scientific invariants
 
-- Object storage or local files: source shards and large artifacts
-- Parquet/Arrow: derived scenario, rollout, and metric tables
-- DuckDB: analytical SQL, comparisons, slicing, and report generation
+- Random and Bayesian search share proposal budgets, mutation bounds,
+  controllers, physical-cost definitions, and validity gates.
+- Rejected and invalid proposals remain part of the primary budget.
+- The optimizer can propose a mutation but cannot certify a finding.
+- No result is accepted without deterministic reconstruction from sealed
+  records.
+- Hypothesis rules are evaluated as frozen; budget-censored discovery values
+  are not reported as observed costs.
+- The held-out WOMD split remains unopened under the version-one `no_go`
+  decision.
 
-The version-one implementation deliberately begins at the aggregate boundary.
-It normalizes sealed campaign and cell reports into a private DuckDB database
-and Zstandard-compressed Parquet tables, then uses SQL to reproduce the sealed
-method totals before accepting the export. It does not duplicate proposal
-records, scenario identifiers, trajectories, or support vectors. See the
-[analytics contract](analytics.md).
+## Native geometry boundary
 
-### Simulation and evaluation
+Profiling identified signed oriented-box separation as the bounded Python
+hotspot inside continuous interaction metrics. C++20 owns the aligned
+per-state geometry loop; Python retains schema validation and final rounding.
+The original Python implementation remains the parity oracle.
 
-Waymax runs closed-loop policies and produces trajectory states. PlanMargin adds custom failure, near-failure, realism, and reference-controller checks while preserving the individual metric components behind any composite score.
+On the development M4 Pro, the native path measured 585–619× faster than the
+Python oracle for one deterministic 80-state synthetic trace. This is an
+isolated-kernel result, not an end-to-end Waymax or campaign speedup. See the
+[benchmark and parity contract](native-geometry.md).
 
-Version one defines realism narrowly as a deterministic WOMD empirical-support
-gate over interpretable lead-braking and interaction features. A bounded
-training-shard extractor fits a robust split-conformal nearest-neighbor model;
-per-event features remain private, while only aggregate calibration evidence is
-public. The gate does not claim universal human-driving realism.
+## Analytical data boundary
 
-### Search coordinator
+The implemented analytical layer begins at sealed campaign and cell summaries.
+It writes a private DuckDB database and Zstandard-compressed Parquet tables,
+recomputes the published method metrics with SQL, and records reproducible
+logical provenance. It intentionally does not duplicate raw dataset records,
+proposal checkpoints, scenario identities, trajectories, or support vectors.
+See the [analytics contract](analytics.md).
 
-The coordinator presents identical mutation bounds and rollout budgets to random and Bayesian search, records every attempted mutation, and never discards invalid candidates from the audit trail.
+## Public and private artifacts
 
-The first implementation was the
-[deterministic uniform-random baseline](random-search.md). Stateless PCG64
-proposals make execution order and resume boundaries irrelevant. Atomic,
-content-hashed checkpoints retain every original and proposal evaluation, and
-the completed aggregate is rebuilt from those checkpoints rather than a
-second in-memory result path. The implemented method-neutral coordinator now
-preserves the same proposal budget, mutation/controller treatment, empirical
-support, and cost definitions for random and Bayesian search. The final
-comparison uses that shared contract for both methods; it does not compare the
-new Bayesian pipeline directly with the historical random report.
+| Public and tracked                             | Private and ignored                       |
+| ---------------------------------------------- | ----------------------------------------- |
+| Source code and JSON Schemas                   | Raw or cached WOMD shards                 |
+| Synthetic fixtures and parity cases            | Scenario and object identifiers           |
+| Frozen protocols and decision records          | Original and mutated trajectories         |
+| Campaign-level aggregate results               | Proposal and cell records                 |
+| Screenshots of aggregate or synthetic evidence | Feature vectors and support scores        |
+| Data-free CI configuration                     | DuckDB, Parquet, and checkpoint artifacts |
 
-The frozen
-[matched-search protocol](behavioral-realism-and-matched-search.md) replaces a
-weighted scalar score with constrained multi-objective search over criticality
-and mutation minimality. Uniform random and qLogNEHVI methods emit one
-method-neutral checkpoint contract so the analytical layer and debugger do not
-depend on optimizer-specific files.
+Repository policy tests and `.gitignore` enforce this separation. The debugger
+ships no private data and does not upload local records.
 
-### API and scenario debugger
+## Deliberate omissions
 
-A FastAPI service will expose experiment metadata and selected artifacts to an Angular/Three.js interface. The interface will compare original and counterfactual rollouts, policy and reference behavior, and metric timelines.
+- **Apache Beam:** the bounded local extraction did not justify a separate
+  distributed pipeline responsibility.
+- **FastAPI:** the final debugger can satisfy its public role with a synthetic
+  fixture and static aggregate evidence; no private-record API is needed.
+- **Hosted infrastructure:** local execution and GitHub Actions cover the
+  reproducibility contract at zero cost.
+- **AI explanation:** deterministic evidence is already concise, and an
+  assistant would not own metric generation or safety decisions.
+- **Gaussian splatting:** it does not help answer the version-one research
+  question or inspect the frozen evidence.
 
-An optional Gemini assistant may summarize evidence already computed by deterministic tools. It cannot generate safety metrics or control a simulated vehicle.
-
-## Reproducibility record
-
-Every rollout result should be traceable to:
-
-- scenario ID and dataset version
-- source and derived-data checksums
-- Git commit
-- policy and reference-controller versions
-- mutation parameters
-- random seed
-- metric configuration
-- runtime environment
-- hardware class
-- start, completion, and failure status
-
-The Stage 0 implementation serializes this contract as the versioned
-[rollout-record collection](rollout-record.md). Restricted identifiers and
-trajectories remain in ignored local artifacts; only the JSON Schema and
-privacy-safe aggregate report are committed.
-
-The first consumer is the deterministic
-[trajectory-visualization protocol](trajectory-visualization.md): a static,
-responsive SVG comparison that exercises the record boundary before the API
-and Angular debugger exist.
-
-The first multi-scenario consumer is the
-[lead-braking family-validation protocol](family-validation.md). It runs a
-fixed two-dimensional mutation grid, preserves every rejection, and adds
-continuous oriented-box separation and longitudinal TTC metrics before any
-search method is allowed to optimize the space.
-
-## Zero-cost execution
-
-- Apple-silicon Mac: primary development, preprocessing, C++, DuckDB, Beam Direct Runner, frontend, and PyTorch MPS
-- CPU JAX: deterministic smoke tests and reduced batches
-- Colab Free: optional accelerated batches with resumable shards
-- GitHub Actions: small fixture-based checks only; no restricted data
+These are scope decisions, not missing dependencies. New infrastructure belongs
+in a future version only after a measured product or scaling requirement gives
+it a concrete responsibility.

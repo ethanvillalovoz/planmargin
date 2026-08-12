@@ -40,8 +40,9 @@ the final evidence to the audited development comparison.
 
 ### Dataset and simulator
 
-- Waymo Open Motion Dataset training data for development
-- A held-out validation subset for final comparisons
+- Waymo Open Motion Dataset training data for the completed development study
+- An unopened WOMD validation split reserved for a separately versioned study;
+  version one did not authorize held-out access
 - Waymax for deterministic closed-loop rollout and built-in evaluation metrics
 
 ### Initial scenario family
@@ -76,7 +77,7 @@ and [family-validation protocol](family-validation.md).
 
 ### Tested and reference controllers
 
-The feasibility spike will compare:
+The feasibility spike compared:
 
 - Waymax's built-in route-following IDM policy;
 - an explicitly parameterized conservative IDM technical reference; and
@@ -89,8 +90,8 @@ configuration-specific behavior rather than independent planning algorithms.
 The reference is a conservative technical controller, not a legal or
 human-driver model. See the
 [controller-comparison protocol](controller-comparison.md). A custom controller
-or small learned planner may be added later, but neither is required for the
-first harness result.
+or small learned planner may be added in a separately versioned extension, but
+neither was required for the completed version-one harness.
 
 ## Acceptance gates
 
