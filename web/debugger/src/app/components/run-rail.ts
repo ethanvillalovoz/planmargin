@@ -122,7 +122,7 @@ import { DebuggerStore } from '../debugger.store';
     .proposals button:hover,
     .proposals button.active {
       border-color: var(--divider);
-      background: #111a20;
+      background: #eef4f8;
       color: var(--primary);
     }
     .marker {
@@ -178,7 +178,7 @@ import { DebuggerStore } from '../debugger.store';
     select {
       border: 1px solid var(--divider);
       border-radius: 2px;
-      background: #080d11;
+      background: #fff;
       color: var(--primary);
       padding: 0.3rem;
       font: inherit;

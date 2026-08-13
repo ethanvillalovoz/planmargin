@@ -145,16 +145,17 @@ import { CAMPAIGN_EVIDENCE, CampaignEvidence } from '../campaign-evidence';
       place-items: center;
       padding: 1.5rem;
       overflow: auto;
-      background: rgb(2 6 9 / 82%);
+      background: rgb(13 31 44 / 58%);
       backdrop-filter: blur(8px);
     }
     .sheet {
       width: min(960px, 100%);
       max-height: calc(100dvh - 3rem);
       overflow: auto;
-      border: 1px solid #4c5962;
-      background: #0b1217;
-      box-shadow: 0 30px 90px rgb(0 0 0 / 55%);
+      border: 1px solid var(--divider);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: 0 30px 90px rgb(13 31 44 / 28%);
     }
     header {
       position: relative;
@@ -267,7 +268,7 @@ import { CAMPAIGN_EVIDENCE, CampaignEvidence } from '../campaign-evidence';
     }
     .track {
       height: 7px;
-      background: #172129;
+      background: #e8eef3;
     }
     .track i {
       display: block;
@@ -303,7 +304,7 @@ import { CAMPAIGN_EVIDENCE, CampaignEvidence } from '../campaign-evidence';
       font-weight: 600;
     }
     .decisions .neutral {
-      color: #e2b65e;
+      color: #9a6b12;
     }
     .decisions .positive {
       color: var(--success);
@@ -330,7 +331,7 @@ import { CAMPAIGN_EVIDENCE, CampaignEvidence } from '../campaign-evidence';
     }
     .scope-note {
       border-left: 1px solid var(--divider);
-      background: #101419;
+      background: #fff5f1;
     }
     .scope-note span {
       color: var(--failure);

@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from planmargin import analytics
+from planmargin import evidence_assistant
 from planmargin import evidence_api
 from planmargin import random_search
 
@@ -104,6 +105,52 @@ def _seed_repository(repository: evidence_api.EvidenceRepository) -> None:
     repository.collection = _collection()
     repository._run_id = "run_opaque"
     repository._cell_by_id = {CELL_ID: ("bayesian", 0, 1)}
+
+
+def _seed_gaussian(root: Path) -> bytes:
+    directory = root / evidence_api.DEFAULT_GAUSSIAN
+    directory.mkdir(parents=True, exist_ok=True)
+    field = b"ply\nformat ascii 1.0\nelement vertex 0\nend_header\n"
+    field_path = directory / "field.ply"
+    field_path.write_bytes(field)
+    manifest = random_search._seal_record(
+        {
+            "record_type": "planmargin.lidar_gaussian_field_manifest",
+            "schema_version": "1.0.0",
+            "decision": "no_go",
+            "representation": "deterministic_lidar_gaussian_field",
+            "field_sha256": random_search._file_sha256(field_path),
+            "observed": {
+                "primitive_count": 75_000,
+                "field_bytes": len(field),
+                "runtime_seconds": 3.7,
+                "trajectory_linkage_fraction": 0.2366,
+                "geometric_quality": {
+                    "median_nearest_mean_distance_m": 0.105,
+                    "p90_nearest_mean_distance_m": 0.172,
+                    "coverage_within_0_50_m": 0.9844,
+                },
+            },
+            "gates": {
+                "authorized_exact_input": True,
+                "determinism": True,
+                "geometric_quality": True,
+                "local_compute": True,
+                "scale": True,
+                "trajectory_linkage": False,
+            },
+            "privacy": {
+                "contains_scenario_id": False,
+                "contains_source_uri": False,
+                "contains_raw_points": False,
+                "unrestricted_export": False,
+            },
+            "claim_boundary": "not_photorealistic_not_learned_not_safety_evidence",
+        },
+        "manifest_sha256",
+    )
+    (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return field
 
 
 def _fake_query(sql: str) -> list[dict[str, Any]]:
@@ -237,6 +284,61 @@ def test_authenticated_routes_are_redacted_and_not_cached(
                 headers={**headers, "Host": "attacker.example"},
             ).status_code
             == 400
+        )
+
+
+def test_assistant_and_gaussian_workspaces_are_authenticated(
+    app_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    field = _seed_gaussian(app_root)
+
+    def open_repository(repository: evidence_api.EvidenceRepository) -> None:
+        _seed_repository(repository)
+
+    monkeypatch.setattr(evidence_api.EvidenceRepository, "open", open_repository)
+    monkeypatch.setattr(
+        evidence_assistant.LocalEvidenceTools,
+        "execute",
+        lambda _self, query_id: evidence_assistant.PublicEvidenceTools().execute(
+            query_id
+        ),
+    )
+    app = evidence_api.create_app(root=app_root, token=TOKEN)
+
+    with TestClient(app) as client:
+        headers = {"X-PlanMargin-Token": TOKEN}
+        status_response = client.get("/api/v1/assistant/status", headers=headers)
+        questions = client.get("/api/v1/assistant/questions", headers=headers)
+        answer = client.get("/api/v1/assistant/method_comparison", headers=headers)
+        summary = client.get("/api/v1/gaussian-field", headers=headers)
+        field_response = client.get(
+            "/api/v1/gaussian-field/field.ply", headers=headers
+        )
+
+        assert status_response.json() == {
+            "provider_id": "offline_deterministic",
+            "model": None,
+            "source_mode": "real_local_redacted",
+            "gemini_configured": False,
+            "explanation_only": True,
+        }
+        assert len(questions.json()) == 5
+        assert answer.status_code == 200
+        assert answer.json()["question"]["query_id"] == "method_comparison"
+        assert answer.json()["privacy"]["private_data_sent_to_provider"] is False
+        assert summary.json()["primitive_count"] == 75_000
+        assert summary.json()["gates"]["trajectory_linkage"] is False
+        assert field_response.content == field
+        assert field_response.headers["cache-control"] == "no-store"
+        assert field_response.headers["content-type"].startswith(
+            "application/octet-stream"
+        )
+
+        assert client.get("/api/v1/assistant/status").status_code == 401
+        assert client.get("/api/v1/gaussian-field").status_code == 401
+        assert (
+            client.get("/api/v1/assistant/not-allowlisted", headers=headers).status_code
+            == 404
         )
 
 

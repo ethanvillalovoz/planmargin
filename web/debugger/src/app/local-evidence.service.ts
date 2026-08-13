@@ -15,6 +15,14 @@ import {
   LocalProposal,
   LocalRunSummary,
 } from './local-evidence.types';
+import {
+  AssistantAnswer,
+  AssistantQueryId,
+  AssistantQuestion,
+  AssistantStatus,
+  GaussianFieldBundle,
+  GaussianFieldSummary,
+} from './product-evidence.types';
 
 const API_ROOT = 'http://127.0.0.1:8765/api/v1';
 
@@ -121,6 +129,31 @@ export class LocalEvidenceService {
     this.selectedProposalNumber.set(proposalNumber);
   }
 
+  async assistantCatalog(): Promise<{
+    readonly status: AssistantStatus;
+    readonly questions: readonly AssistantQuestion[];
+  }> {
+    const [status, questions] = await Promise.all([
+      this.authorizedGet('/assistant/status') as Promise<AssistantStatus>,
+      this.authorizedGet('/assistant/questions') as Promise<readonly AssistantQuestion[]>,
+    ]);
+    return { status, questions };
+  }
+
+  async askAssistant(queryId: AssistantQueryId): Promise<AssistantAnswer> {
+    return this.authorizedGet(
+      `/assistant/${encodeURIComponent(queryId)}`,
+    ) as Promise<AssistantAnswer>;
+  }
+
+  async gaussianField(): Promise<GaussianFieldBundle> {
+    const [summary, bytes] = await Promise.all([
+      this.authorizedGet('/gaussian-field') as Promise<GaussianFieldSummary>,
+      this.authorizedBytes('/gaussian-field/field.ply'),
+    ]);
+    return { summary, bytes };
+  }
+
   disconnect(): void {
     this.requestGeneration++;
     this.token = undefined;
@@ -142,7 +175,24 @@ export class LocalEvidenceService {
     return this.get(path, this.token);
   }
 
+  private async authorizedBytes(path: string): Promise<ArrayBuffer> {
+    const response = await this.authorizedFetch(path);
+    return response.arrayBuffer();
+  }
+
   private async get(path: string, token: string): Promise<unknown> {
+    const response = await this.fetchWithToken(path, token);
+    return response.json() as Promise<unknown>;
+  }
+
+  private authorizedFetch(path: string): Promise<Response> {
+    if (this.token === undefined || this.state() !== 'connected') {
+      return Promise.reject(new Error('Local evidence is not connected'));
+    }
+    return this.fetchWithToken(path, this.token);
+  }
+
+  private async fetchWithToken(path: string, token: string): Promise<Response> {
     const response = await fetch(`${API_ROOT}${path}`, {
       method: 'GET',
       headers: { 'X-PlanMargin-Token': token },
@@ -155,7 +205,7 @@ export class LocalEvidenceService {
       if (response.status === 401) throw new Error('The local evidence token was rejected');
       throw new Error(`Local evidence request failed (${response.status})`);
     }
-    return response.json() as Promise<unknown>;
+    return response;
   }
 
   private record(value: unknown, path: string): Record<string, unknown> {

@@ -150,7 +150,7 @@ import { DebuggerStore } from '../debugger.store';
       margin: 0.7rem 0 0;
       padding: 0.45rem 0.55rem;
       border-left: 2px solid var(--success);
-      background: #101b14;
+      background: #eff8ec;
       color: var(--success);
       font-size: 0.68rem;
     }

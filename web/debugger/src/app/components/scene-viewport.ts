@@ -15,9 +15,9 @@ import { DebuggerStore } from '../debugger.store';
 import { Point2d, TrajectoryKind } from '../debugger.types';
 
 const COLORS: Record<TrajectoryKind, number> = {
-  tested: 0xff7900,
-  reference: 0x17b9d6,
-  recorded: 0x858d93,
+  tested: 0xf16347,
+  reference: 0x0ba8bd,
+  recorded: 0x83919c,
 };
 
 interface FallbackScene {
@@ -151,11 +151,11 @@ interface FallbackScene {
       pointer-events: none;
     }
     .scene-label strong {
-      color: var(--primary);
+      color: #f4f8fa;
       font-size: 0.78rem;
     }
     .scene-label span {
-      color: var(--secondary);
+      color: #aab9c4;
       font-size: 0.64rem;
     }
     .orientation {
@@ -164,14 +164,14 @@ interface FallbackScene {
       right: 1rem;
       display: grid;
       justify-items: center;
-      color: var(--secondary);
+      color: #aab9c4;
       font-size: 0.58rem;
     }
     .orientation i {
       width: 1px;
       height: 24px;
       margin-top: 2px;
-      background: var(--secondary);
+      background: #aab9c4;
     }
     .legend {
       position: absolute;
@@ -182,7 +182,7 @@ interface FallbackScene {
       padding: 0.4rem 0.55rem;
       border: 1px solid var(--divider);
       background: #080d11dd;
-      color: var(--secondary);
+      color: #b8c5ce;
       font-size: 0.6rem;
     }
     .legend span {
@@ -208,7 +208,7 @@ interface FallbackScene {
       position: absolute;
       left: 1rem;
       bottom: 0.8rem;
-      color: var(--secondary);
+      color: #aab9c4;
       font-size: 0.58rem;
     }
     .scale i {
@@ -216,9 +216,9 @@ interface FallbackScene {
       width: 58px;
       height: 5px;
       margin-bottom: 0.25rem;
-      border-right: 1px solid var(--secondary);
-      border-bottom: 1px solid var(--secondary);
-      border-left: 1px solid var(--secondary);
+      border-right: 1px solid #aab9c4;
+      border-bottom: 1px solid #aab9c4;
+      border-left: 1px solid #aab9c4;
     }
     @media (max-width: 760px) {
       :host {
@@ -344,7 +344,7 @@ export class SceneViewport {
     ];
     const bounds = this.fitCamera(allPoints);
     this.drawGrid(bounds);
-    run.roadCenterlines.forEach((line) => this.drawLine(line, 0x35434c, 0));
+    run.roadCenterlines.forEach((line) => this.drawLine(line, 0x435766, 0));
     if (run.conflictRegion.length >= 3) this.drawConflictRegion(run.conflictRegion);
     (Object.keys(COLORS) as TrajectoryKind[]).forEach((kind) => {
       this.drawLine(hypothesis.trajectories[kind], COLORS[kind], kind === 'recorded' ? 0.25 : 0.55);
@@ -436,7 +436,7 @@ export class SceneViewport {
     }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    scene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0x162129 })));
+    scene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0x182731 })));
   }
 
   private drawLine(points: readonly Point2d[], color: number, opacity: number): void {
@@ -464,7 +464,7 @@ export class SceneViewport {
     );
     shape.closePath();
     const material = new THREE.MeshBasicMaterial({
-      color: 0xff7900,
+      color: 0xf16347,
       transparent: true,
       opacity: 0.08,
       side: THREE.DoubleSide,

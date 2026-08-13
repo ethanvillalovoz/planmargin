@@ -14,13 +14,14 @@ semantics.
 
 ## Source and response boundary
 
-The service reads three fixed artifact families beneath the repository root:
+The service reads four fixed artifact families beneath the repository root:
 
 | Source | Verification | Exposed projection |
 | --- | --- | --- |
 | `artifacts/analytics/natural-development-v1` | sealed manifest, DuckDB hash and size, exact table allowlist, row counts | campaign, method, hypothesis, and cell aggregates |
 | `artifacts/search-comparison/natural-development-v1` | sealed campaign identity linked by the analytics manifest; sealed cell/proposal checkpoints on access | selected proposal parameters, outcomes, support decisions, findings, and cost |
 | `artifacts/stage-0/rollout-records.json` | rollout collection schema, stable identities, trajectory and scene-context hashes | local road geometry, redacted trajectories, controller outcomes, and recomputed interaction timelines |
+| `artifacts/gaussian-field/feasibility` | sealed manifest, exact gate allowlist, privacy declaration, PLY size and SHA-256 | geometry metrics, integration decision, and authenticated binary field |
 
 Campaign proposal records contain hashes but not replayable trajectories. The
 API therefore never represents proposal-level campaign evidence as trajectory
@@ -45,8 +46,9 @@ run and cell IDs are derived from local identities and reveal no source ID.
 - The API accepts no SQL, filesystem path, query expression, mutation, or
   write operation from a client. Every DuckDB query is source-controlled and
   each connection is opened read-only.
-- Artifact and database symlinks are rejected. Required content validation
-  completes during application startup before a request is served.
+- Artifact and database symlinks are rejected. Core campaign/replay validation
+  completes during startup; the optional Gaussian artifact is sealed and
+  revalidated on every summary or binary request.
 - The service performs no outbound network request.
 
 These controls complement one another. CORS is a browser boundary, not
@@ -86,12 +88,13 @@ an issue, or reuse it as a hosted credential.
 
 ## Connect the debugger
 
-Start the Angular debugger separately at `http://127.0.0.1:4200`, select
-**Synthetic demo**, paste the ephemeral token into **Local evidence**, and
-choose **Connect local evidence**. The client performs a sequential verified
+Start the Angular debugger separately at `http://127.0.0.1:4200`, choose
+**Connect local evidence**, paste the ephemeral token into **Local evidence**,
+and connect. The client performs a sequential verified
 handshake, then exposes the validated replay records and campaign cell/proposal
-browser. It sends no writes and makes no outbound request beyond this fixed
-loopback API.
+browser, bounded assistant, and local Gaussian field. It sends no writes and,
+in the default offline-assistant mode, makes no outbound request beyond this
+fixed loopback API.
 
 The token is kept in a private in-memory field and the input is cleared after
 connection. It is never persisted to local/session storage, a URL, a file, or
@@ -111,6 +114,11 @@ synthetic fixture.
 | `GET /api/v1/cells/{cell_id}/proposals` | sealed proposal evidence for an opaque cell |
 | `GET /api/v1/runs` | available validated replay evidence |
 | `GET /api/v1/runs/{run_id}` | redacted scene, trajectories, outcomes, and interaction timeline |
+| `GET /api/v1/assistant/status` | active explanation provider and input scope |
+| `GET /api/v1/assistant/questions` | five natural-language questions mapped to a closed query allowlist |
+| `GET /api/v1/assistant/{query_id}` | cited facts, bounded explanation, limitations, and privacy receipt |
+| `GET /api/v1/gaussian-field` | privacy-reduced geometry metrics and frozen integration gates |
+| `GET /api/v1/gaussian-field/field.ply` | sealed local Gaussian PLY for in-browser rendering |
 | `GET /api/v1/openapi.json` | authenticated OpenAPI 3 contract generated from closed response models |
 
 The run timeline computes oriented-box separation with the same parity-tested
@@ -123,6 +131,7 @@ made-up finite number for display convenience.
 `tests/test_evidence_api.py` exercises token enforcement, explicit CORS,
 trusted hosts, no-cache headers, redaction, opaque lookup behavior, database
 hashes, manifest seals, exact table allowlists, path confinement, and rejected
-tampering. Synthetic two-step traces exercise the real-response transformation
+tampering. It also covers assistant allowlisting/privacy and Gaussian binary
+authentication/integrity. Synthetic two-step traces exercise the real-response transformation
 without WOMD access. Existing analytics and rollout-record tests remain the
 source-contract tests below the API.

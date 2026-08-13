@@ -1,16 +1,27 @@
 :root {
-  color-scheme: dark;
-  --app-bg: #080d11;
-  --rail: #0b1217;
-  --primary: #f3f6f8;
-  --secondary: #aab4bc;
-  --divider: #3b464e;
-  --grid: #162129;
-  --tested: #ff7900;
-  --reference: #17b9d6;
-  --recorded: #858d93;
-  --success: #73d12f;
-  --failure: #ff3b30;
+  color-scheme: light;
+  --app-bg: #f4f7f9;
+  --surface: #ffffff;
+  --surface-subtle: #f6f8fa;
+  --rail: #fbfcfd;
+  --primary: #132433;
+  --secondary: #5f7180;
+  --tertiary: #8b9aa7;
+  --divider: #dbe3e9;
+  --divider-soft: #edf1f4;
+  --divider-strong: #c8d2da;
+  --grid: #dfe7ec;
+  --tested: #f16347;
+  --reference: #0ba8bd;
+  --recorded: #83919c;
+  --success: #4f9d3f;
+  --failure: #df4b3f;
+  --accent-coral: #f16347;
+  --accent-green: #63a93e;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 2px 10px rgb(24 48 66 / 8%);
+  --shadow: 0 12px 34px rgb(24 48 66 / 12%);
   font-family:
     Inter,
     ui-sans-serif,
@@ -49,7 +60,7 @@ input:focus-visible {
 }
 ::selection {
   background: var(--tested);
-  color: #080d11;
+  color: #fff;
 }
 
 app-local-evidence-panel {
@@ -63,16 +74,17 @@ app-local-evidence-panel .backdrop {
   place-items: center;
   padding: 1.5rem;
   overflow: auto;
-  background: rgb(2 6 9 / 84%);
+  background: rgb(13 31 44 / 58%);
   backdrop-filter: blur(8px);
 }
 app-local-evidence-panel .panel {
   width: min(1040px, 100%);
   max-height: calc(100dvh - 3rem);
   overflow: auto;
-  border: 1px solid #4c5962;
-  background: #0b1217;
-  box-shadow: 0 30px 90px rgb(0 0 0 / 55%);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: 0 30px 90px rgb(13 31 44 / 28%);
 }
 app-local-evidence-panel header {
   display: flex;
@@ -101,7 +113,7 @@ app-local-evidence-panel :is(button, select, input) {
   min-height: 34px;
   border: 1px solid var(--divider);
   border-radius: 2px;
-  background: transparent;
+  background: #fff;
   color: var(--primary);
   font: inherit;
   font-size: 0.68rem;
@@ -114,7 +126,8 @@ app-local-evidence-panel :is(button, select, input):hover {
 }
 app-local-evidence-panel button.primary {
   border-color: var(--tested);
-  color: var(--tested);
+  background: var(--tested);
+  color: #fff;
 }
 app-local-evidence-panel :is(button, input):disabled {
   cursor: wait;
@@ -138,7 +151,7 @@ app-local-evidence-panel form code {
 app-local-evidence-panel form input {
   width: 100%;
   padding: 0 0.7rem;
-  background: #080d11;
+  background: #f7f9fb;
 }
 app-local-evidence-panel .form-actions {
   display: flex;

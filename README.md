@@ -193,8 +193,22 @@ It binds only to `127.0.0.1:8765`, verifies the campaign, analytical database,
 and rollout collection before serving, and prints an ephemeral local token.
 See the [real-record API contract](docs/evidence-api.md) for its fixed endpoints
 and privacy boundary. The debugger intentionally starts in synthetic mode.
-Select **Synthetic demo**, paste the ephemeral terminal token, and choose
-**Connect local evidence** to switch to ignored, verified local records.
+Choose **Connect local evidence**, paste the ephemeral terminal token, and
+connect to switch the workbench to ignored, verified local records. This also
+enables the bounded Evidence Assistant and authenticated Gaussian Field.
+
+Offline assistant explanations are the default and require no account. To use
+the optional Gemini explanation adapter, set `GEMINI_API_KEY` and explicitly
+confirm the free-tier boundary:
+
+```bash
+uv run --frozen planmargin-serve-evidence \
+  --assistant-provider gemini \
+  --confirm-gemini-free-tier
+```
+
+Gemini receives only the allowlisted public aggregate packet; it never receives
+the raw question or ignored local evidence.
 
 ## Run the evidence debugger
 
@@ -208,11 +222,14 @@ npm start
 ```
 
 Open `http://127.0.0.1:4200`. Use `?evidence=1` to open the campaign view
-directly. The interface supports proposal selection, playback, timeline
-scrubbing, responsive Scene/Evidence/Metrics views, validated synthetic JSON
-imports, and a compact synthetic-view export. When the local evidence API is
-running, it also supports a verified campaign-cell browser, sealed proposal
-details, redacted real trajectories, and an export-disabled real-record mode.
+directly. The overview explains the evidence path; Scenario Lab supports
+proposal selection, playback, timeline scrubbing, responsive
+Scene/Evidence/Metrics views, validated synthetic JSON imports, and compact
+synthetic-view export. When the local evidence API is running, the workbench
+also exposes a campaign-cell browser, sealed proposal details, redacted real
+trajectories, five bounded assistant questions with citations, and an
+interactive local 75,000-primitive Gaussian field with its frozen integration
+gate. Real-record and Gaussian export remain disabled.
 
 Validate the frontend independently with:
 

@@ -18,12 +18,13 @@ import duckdb
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, Security, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, ConfigDict
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from planmargin import analytics
+from planmargin import evidence_assistant
 from planmargin import interaction_metrics
 from planmargin import matched_campaign
 from planmargin import matched_coordinator
@@ -36,8 +37,17 @@ API_VERSION = "1.1.0"
 DEFAULT_ANALYTICS = Path("artifacts/analytics/natural-development-v1")
 DEFAULT_CAMPAIGN = Path("artifacts/search-comparison/natural-development-v1")
 DEFAULT_ROLLOUTS = Path("artifacts/stage-0/rollout-records.json")
+DEFAULT_GAUSSIAN = Path("artifacts/gaussian-field/feasibility")
 DEFAULT_ORIGINS = ("http://127.0.0.1:4200", "http://localhost:4200")
 MAX_JSON_BYTES = 128 * 1024 * 1024
+GAUSSIAN_LINKAGE_GATE = 0.90
+ASSISTANT_QUESTIONS = {
+    "campaign_overview": "What happened in the development campaign?",
+    "method_comparison": "How did Bayesian compare with random search?",
+    "hypothesis_decisions": "What happened to H1, H2, and H3?",
+    "claim_boundary": "What is the defensible claim and limitation?",
+    "beam_pipeline": "What did the Beam feature pipeline process?",
+}
 
 
 class EvidenceModel(BaseModel):
@@ -199,6 +209,104 @@ class RunEvidence(EvidenceModel):
     privacy: PrivacyEvidence
 
 
+class AssistantQuestionEvidence(EvidenceModel):
+    query_id: str
+    label: str
+    question: str
+
+
+class AssistantStatusEvidence(EvidenceModel):
+    provider_id: Literal["offline_deterministic", "gemini_public_aggregate"]
+    model: str | None
+    source_mode: Literal["real_local_redacted", "public_aggregate"]
+    gemini_configured: bool
+    explanation_only: Literal[True]
+
+
+class AssistantFactEvidence(EvidenceModel):
+    fact_id: str
+    statement: str
+    value: str | int | float | bool | None
+    unit: str | None
+    citation_id: str
+
+
+class AssistantCitationEvidence(EvidenceModel):
+    citation_id: str
+    title: str
+    repository_path: str
+    sha256: str
+
+
+class AssistantToolResultEvidence(EvidenceModel):
+    query_id: str
+    title: str
+    source_mode: Literal["real_local_redacted", "public_aggregate"]
+    facts: list[AssistantFactEvidence]
+    citations: list[AssistantCitationEvidence]
+
+
+class AssistantExplanationEvidence(EvidenceModel):
+    summary: str
+    interpretation: str
+    cited_fact_ids: list[str]
+    limitation: str
+    citation_ids: list[str]
+
+
+class AssistantProviderEvidence(EvidenceModel):
+    id: Literal["offline_deterministic", "gemini_public_aggregate"]
+    model: str | None
+    role: Literal["explanation_only"]
+
+
+class AssistantQuestionResultEvidence(EvidenceModel):
+    sha256: str
+    query_id: str
+    query_label: str
+
+
+class AssistantPrivacyEvidence(EvidenceModel):
+    raw_question_persisted: Literal[False]
+    raw_question_sent_to_provider: Literal[False]
+    private_data_sent_to_provider: Literal[False]
+    provider_input_scope: Literal["none", "public_aggregate_tool_result_only"]
+
+
+class AssistantResponseEvidence(EvidenceModel):
+    record_type: Literal["planmargin.evidence_assistant_response"]
+    schema_version: Literal["1.0.0"]
+    status: Literal["answered"]
+    question: AssistantQuestionResultEvidence
+    provider: AssistantProviderEvidence
+    tool_result: AssistantToolResultEvidence
+    explanation: AssistantExplanationEvidence
+    privacy: AssistantPrivacyEvidence
+    limitations: list[str]
+
+
+class GaussianGeometryEvidence(EvidenceModel):
+    median_nearest_mean_distance_m: float
+    p90_nearest_mean_distance_m: float
+    coverage_within_0_50_m: float
+
+
+class GaussianFieldEvidence(EvidenceModel):
+    schema_version: Literal["1.0.0"]
+    evidence_mode: Literal["real_local_redacted"]
+    decision: Literal["no_go", "go"]
+    representation: Literal["deterministic_lidar_gaussian_field"]
+    primitive_count: int
+    field_bytes: int
+    runtime_seconds: float
+    trajectory_linkage_fraction: float
+    trajectory_linkage_gate: float
+    geometry: GaussianGeometryEvidence
+    gates: dict[str, bool]
+    claim_boundary: str
+    unrestricted_export: Literal[False]
+
+
 @dataclass(frozen=True)
 class EvidencePaths:
     """Fixed artifact locations beneath one repository root."""
@@ -232,6 +340,12 @@ def _json_object(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"Evidence file is not a JSON object: {path}")
     return value
+
+
+def _confine_artifact(path: Path, root: Path) -> None:
+    artifacts = (root / "artifacts").resolve(strict=True)
+    if not path.is_relative_to(artifacts):
+        raise ValueError("Evidence path escapes the repository artifact root")
 
 
 def _rows(connection: duckdb.DuckDBPyConnection, sql: str) -> list[dict[str, Any]]:
@@ -666,6 +780,79 @@ class EvidenceRepository:
             },
         }
 
+    def gaussian_field(self) -> tuple[dict[str, Any], Path]:
+        """Verify and project the ignored local Gaussian feasibility artifact."""
+        directory = (self.paths.root / DEFAULT_GAUSSIAN).resolve()
+        _confine_artifact(directory, self.paths.root)
+        manifest_path = directory / "manifest.json"
+        field_path = directory / "field.ply"
+        for path in (manifest_path, field_path):
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("Gaussian evidence must be regular local files")
+            _confine_artifact(path.resolve(), self.paths.root)
+        manifest = _json_object(manifest_path)
+        if manifest.get("record_type") != "planmargin.lidar_gaussian_field_manifest":
+            raise ValueError("Gaussian manifest record type is invalid")
+        if manifest.get("schema_version") != "1.0.0":
+            raise ValueError("Gaussian manifest schema version is invalid")
+        random_search._validate_seal(
+            manifest, "manifest_sha256", path=manifest_path
+        )
+        observed = manifest.get("observed")
+        privacy = manifest.get("privacy")
+        gates = manifest.get("gates")
+        if not isinstance(observed, dict) or not isinstance(privacy, dict):
+            raise ValueError("Gaussian manifest is incomplete")
+        if not isinstance(gates, dict) or set(gates) != {
+            "authorized_exact_input",
+            "determinism",
+            "scale",
+            "local_compute",
+            "geometric_quality",
+            "trajectory_linkage",
+        }:
+            raise ValueError("Gaussian gate allowlist mismatch")
+        if privacy != {
+            "contains_scenario_id": False,
+            "contains_source_uri": False,
+            "contains_raw_points": False,
+            "unrestricted_export": False,
+        }:
+            raise ValueError("Gaussian privacy boundary is invalid")
+        if field_path.stat().st_size != observed.get("field_bytes"):
+            raise ValueError("Gaussian field size does not match its manifest")
+        if random_search._file_sha256(field_path) != manifest.get("field_sha256"):
+            raise ValueError("Gaussian field hash does not match its manifest")
+        geometric = observed.get("geometric_quality")
+        if not isinstance(geometric, dict):
+            raise ValueError("Gaussian geometry evidence is missing")
+        summary = {
+            "schema_version": "1.0.0",
+            "evidence_mode": "real_local_redacted",
+            "decision": manifest["decision"],
+            "representation": manifest["representation"],
+            "primitive_count": observed["primitive_count"],
+            "field_bytes": observed["field_bytes"],
+            "runtime_seconds": observed["runtime_seconds"],
+            "trajectory_linkage_fraction": observed[
+                "trajectory_linkage_fraction"
+            ],
+            "trajectory_linkage_gate": GAUSSIAN_LINKAGE_GATE,
+            "geometry": {
+                "median_nearest_mean_distance_m": geometric[
+                    "median_nearest_mean_distance_m"
+                ],
+                "p90_nearest_mean_distance_m": geometric[
+                    "p90_nearest_mean_distance_m"
+                ],
+                "coverage_within_0_50_m": geometric["coverage_within_0_50_m"],
+            },
+            "gates": gates,
+            "claim_boundary": manifest["claim_boundary"],
+            "unrestricted_export": False,
+        }
+        return summary, field_path
+
     @staticmethod
     def _require(value: Any) -> Any:
         if value is None:
@@ -774,12 +961,33 @@ def create_app(
     root: Path,
     token: str,
     origins: Sequence[str] = DEFAULT_ORIGINS,
+    assistant_provider: Literal["offline", "gemini"] = "offline",
+    confirm_gemini_free_tier: bool = False,
+    gemini_model: str = evidence_assistant.DEFAULT_MODEL,
 ) -> FastAPI:
     """Create an authenticated app without performing import-time I/O."""
     if len(token) < 16:
         raise ValueError("Local API token must contain at least 16 characters")
     paths = EvidencePaths.from_root(root)
     repository = EvidenceRepository(paths)
+    if assistant_provider == "gemini":
+        explainer: evidence_assistant.ExplanationProvider = (
+            evidence_assistant.GeminiProvider(
+                api_key=os.environ.get("GEMINI_API_KEY", ""),
+                model=gemini_model,
+                confirmed_free_tier=confirm_gemini_free_tier,
+            )
+        )
+        assistant_tools: evidence_assistant.EvidenceTools = (
+            evidence_assistant.PublicEvidenceTools()
+        )
+        assistant_source: Literal["real_local_redacted", "public_aggregate"] = (
+            "public_aggregate"
+        )
+    else:
+        explainer = evidence_assistant.OfflineProvider()
+        assistant_tools = evidence_assistant.LocalEvidenceTools(repository)
+        assistant_source = "real_local_redacted"
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -888,6 +1096,73 @@ def create_app(
             raise HTTPException(status_code=404, detail="Run not found") from error
 
     @app.get(
+        "/api/v1/assistant/status",
+        dependencies=[auth],
+        response_model=AssistantStatusEvidence,
+    )
+    def assistant_status() -> dict[str, Any]:
+        return {
+            "provider_id": explainer.provider_id,
+            "model": getattr(explainer, "_model", None),
+            "source_mode": assistant_source,
+            "gemini_configured": assistant_provider == "gemini",
+            "explanation_only": True,
+        }
+
+    @app.get(
+        "/api/v1/assistant/questions",
+        dependencies=[auth],
+        response_model=list[AssistantQuestionEvidence],
+    )
+    def assistant_questions() -> list[dict[str, str]]:
+        return [
+            {
+                "query_id": query_id,
+                "label": evidence_assistant.QUERY_LABELS[query_id],
+                "question": question,
+            }
+            for query_id, question in ASSISTANT_QUESTIONS.items()
+        ]
+
+    @app.get(
+        "/api/v1/assistant/{query_id}",
+        dependencies=[auth],
+        response_model=AssistantResponseEvidence,
+    )
+    def assistant_answer(query_id: str) -> dict[str, Any]:
+        question = ASSISTANT_QUESTIONS.get(query_id)
+        if question is None:
+            raise HTTPException(status_code=404, detail="Assistant question not found")
+        response = evidence_assistant.answer_question(
+            question, tools=assistant_tools, provider=explainer
+        )
+        return {key: value for key, value in response.items() if key != "$schema"}
+
+    @app.get(
+        "/api/v1/gaussian-field",
+        dependencies=[auth],
+        response_model=GaussianFieldEvidence,
+    )
+    def gaussian_summary() -> dict[str, Any]:
+        summary, _ = repository.gaussian_field()
+        return summary
+
+    @app.get(
+        "/api/v1/gaussian-field/field.ply",
+        dependencies=[auth],
+        response_class=FileResponse,
+        responses={200: {"content": {"application/octet-stream": {}}}},
+    )
+    def gaussian_field_file() -> FileResponse:
+        _, path = repository.gaussian_field()
+        return FileResponse(
+            path,
+            media_type="application/octet-stream",
+            filename="planmargin-local-field.ply",
+            content_disposition_type="inline",
+        )
+
+    @app.get(
         "/api/v1/openapi.json",
         dependencies=[auth],
         include_in_schema=False,
@@ -909,6 +1184,11 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument(
+        "--assistant-provider", choices=("offline", "gemini"), default="offline"
+    )
+    parser.add_argument("--confirm-gemini-free-tier", action="store_true")
+    parser.add_argument("--gemini-model", default=evidence_assistant.DEFAULT_MODEL)
     return parser.parse_args()
 
 
@@ -917,10 +1197,17 @@ def main() -> None:
     if not 1024 <= args.port <= 65535:
         raise SystemExit("--port must be between 1024 and 65535")
     token = os.environ.get("PLANMARGIN_API_TOKEN") or secrets.token_urlsafe(32)
-    app = create_app(root=args.root, token=token)
+    app = create_app(
+        root=args.root,
+        token=token,
+        assistant_provider=args.assistant_provider,
+        confirm_gemini_free_tier=args.confirm_gemini_free_tier,
+        gemini_model=args.gemini_model,
+    )
     print("PlanMargin local evidence API")
     print(f"URL: http://127.0.0.1:{args.port}")
     print(f"X-PlanMargin-Token: {token}")
+    print(f"Evidence assistant: {args.assistant_provider}")
     print("Private evidence remains local; responses are not cached.")
     uvicorn.run(app, host="127.0.0.1", port=args.port)
 

@@ -1,132 +1,87 @@
-# Scenario debugger design specification
+# PlanMargin engineering workbench design
 
-The thin debugger is a local engineering instrument built from code-native UI,
-Three.js geometry, a bundled synthetic fixture, and an optional authenticated
-real-record adapter. The accepted desktop and mobile concepts are retained
-solely as implementation references:
+PlanMargin is a local counterfactual stress-testing workbench. Its primary user
+question is: **what is the smallest behaviorally plausible scene change that
+causes the tested planner to fail while a reference planner succeeds?** The UI
+must make that question, the evidence path, and the claim boundary visible
+before it exposes implementation detail.
 
-- [desktop concept](assets/debugger/desktop-concept.png)
-- [mobile concept](assets/debugger/mobile-concept.png)
+## Information architecture
+
+The persistent navigation owns five surfaces:
+
+1. **Overview** explains the product, selected planner outcomes, four-step
+   workflow, and Waymo-scenario → Beam-features → matched-search → sealed-evidence
+   pipeline.
+2. **Scenario Lab** synchronizes scene replay, run/case selection, controller
+   evidence, and interaction metrics.
+3. **Search Campaign** compares Bayesian and random search under matched
+   physical-rollout budgets and displays the frozen H1/H2/H3 decisions.
+4. **Evidence Assistant** answers five allowlisted questions over measured facts
+   and shows citations, source seals, limitations, provider scope, and privacy.
+5. **Gaussian Field** renders the authenticated local PLY and explains the
+   exact no-go gate that keeps it experimental.
+
+The interface never presents a terminal-only capability as a product feature.
+If a capability is named in the workbench, it must have a visible status,
+action, result, evidence source, and limitation.
 
 ## Visual system
 
-| Token | Value | Responsibility |
-| --- | --- | --- |
-| App background | `#080d11` | global shell and canvas |
-| Raised rail | `#0b1217` | run/evidence rails and mobile sheets |
-| Primary text | `#f3f6f8` | titles and active values |
-| Secondary text | `#aab4bc` | labels and inactive controls |
-| Divider | `#3b464e` | panel and section boundaries |
-| Subtle grid | `#162129` | canvas and chart grids |
-| Tested | `#ff7900` | tested trajectory and metric series |
-| Reference | `#17b9d6` | reference trajectory and metric series |
-| Recorded | `#858d93` | recorded trajectory and metric series |
-| Success | `#73d12f` | supported/succeeds values |
-| Failure | `#ff3b30` | failure and threshold values |
+The workbench uses a bright engineering-instrument palette rather than copying
+Waymo branding or product chrome. White and cool gray surfaces keep dense
+evidence readable. Deep blue-gray is the primary ink; coral identifies the
+tested planner or a no-go boundary; cyan identifies the reference planner;
+green identifies passed validation; violet identifies explanation; and lime
+identifies experimental geometry. Corners are restrained and shadows are used
+only for hierarchy.
 
-Typography uses `Inter`, then the operating-system sans-serif stack. Titles are
-600 weight; labels and controls are 500; evidence values are 400. Desktop UI
-chrome uses a 12–14 px scale, while mobile uses 14–17 px for touch readability.
-Corners remain square except for 2 px control rounding and circular trajectory
-markers. Shadows, glass, glow, gradients, and decorative cards are prohibited.
+The PlanMargin mark is original repository artwork. No Waymo logo, proprietary
+UI, map tile, or brand asset is copied. “Waymo scenario” describes the input
+dataset family, not an affiliation or production-driver claim.
 
-## Desktop composition
+## Evidence and safety boundary
 
-- 56 px top bar: `PlanMargin`, `Scenario debugger`, `Campaign results`,
-  `Open run`, `Export view`.
-- 210 px run rail: run metadata, Original/Proposal 01/Proposal 02 selection,
-  playback controls, time, step, and speed.
-- Flexible scene canvas: roadgraph, conflict region, three trajectories,
-  current vehicle states, legend, scale, and north marker.
-- 300 px evidence rail: Mutation, Validity, Controller outcomes, Provenance.
-- 210 px bottom timeline: scrubber plus signed-separation and longitudinal-TTC
-  plots synchronized to the scene.
-
-## Mobile composition
-
-The mobile shell does not compress all desktop panels. It provides a shared
-`Scene` / `Evidence` / `Metrics` view selector. Scene is the default and shows
-the canvas, compact legend, playback row, Proposal 02 summary, and the beginning
-of the first metric plot to communicate scroll continuation. File and export
-actions move into the compact overflow menu while evidence mode and campaign
-results remain visible.
-
-## Allowed visible copy
-
-Above the fold may contain only the accepted concepts' interface strings and
-the following accessibility equivalents:
-
-- `PlanMargin`, `Scenario debugger`, `Open run`, `Export view`
-- `RUN`, `PROPOSALS`, `Original`, `Proposal 01`, `Proposal 02`
-- `synthetic-demo-v1`, `lead_braking_fixture`, `local_fixture`, `Demo fixture`
-- `Scene`, `Evidence`, `Metrics`, `Tested`, `Reference`, `Recorded`
-- `Mutation`, `Validity`, `Controller outcomes`, `Provenance`
-- `Onset`, `Speed`, `Supported (fixture)`, `Deterministic`, `All checks passed`
-- `Fails`, `Succeeds`, `Qualifying (synthetic)`, `Bundled demo data`
-- `Signed separation`, `Longitudinal TTC`, `Real-time`
-
-The synthetic disclosure is mandatory in fixture mode. The interface must not claim to inspect
-the production Waymo Driver, name a real map or person, or expose restricted
-record fields.
-
-Real mode adds only the local API's closed, privacy-reduced vocabulary: opaque
-run and cell IDs, redacted mutation parameters, outcomes, support decisions,
-cost, road geometry, trajectories, and interaction metrics. It is labeled
-`Real local · redacted`; export is disabled. The token is memory-only, and
-disconnect restores the synthetic fixture.
-
-The `Campaign results` surface is the sole exception to the synthetic fixture
-copy above. It contains only the already-published campaign aggregates: method
-budgets, valid rates, zero finding counts, H1/H2/H3 decisions, total physical
-cost, reconstruction/analytics evidence, the isolated native-kernel benchmark,
-and the held-out-comparison/production-driver claim boundary. It contains no scenario,
-cell, proposal, controller-trace, feature-vector, or support-score record.
+- Synthetic fixture mode is always data-free and exportable.
+- Real local evidence requires the authenticated loopback API. Its token remains
+  memory-only and all real-record export is disabled.
+- The assistant receives a closed tool result, never SQL. Offline explanation is
+  fully functional. Optional Gemini explanation receives only public aggregates,
+  requires explicit free-tier confirmation, and never receives raw questions or
+  private records.
+- Gaussian rendering is deterministic LiDAR Gaussian geometry, not
+  photorealistic 3DGS, learned reconstruction, planner input, or safety evidence.
+  Its 23.66% trajectory linkage fails the frozen 90% integration gate.
+- Results describe the frozen development campaign and validated local artifacts;
+  they do not establish production Waymo Driver behavior or real-world safety.
 
 ## Component ownership
 
-- `DebuggerStore`: selected proposal, timestep, playing state, mobile view.
-- `RunRail`: metadata, proposal selection, transport controls.
-- `SceneViewport`: Three.js lifecycle, resizing, trajectories, vehicle state.
-- `EvidenceInspector`: deterministic evidence sections from typed fixture data.
-- `MetricTimeline`: shared scrubber and two SVG plots.
-- `CampaignSummary`: aggregate-only campaign evidence and explicit claim scope.
-- `LocalEvidenceService`: sequential authenticated reads from fixed loopback
-  endpoints, strict response parsing, memory-only token lifecycle, and
-  synthetic restoration on disconnect.
-- `LocalEvidencePanel`: connection/privacy states plus campaign cell and sealed
-  proposal inspection.
-- `MobileViewNav`: responsive region selection without duplicated state.
-- `ExportService`: stable, synthetic-view JSON export.
-
-No generated bitmap is consumed by the application. The concepts define the
-visual contract; the shipped scene, plots, controls, labels, and icons are
-rendered from Angular, CSS, SVG, and Three.js.
+- `ProjectOverview`: purpose, selected outcomes, workflow, evidence pipeline.
+- `DebuggerStore`: selected case, timestep, playback, and responsive view state.
+- `RunRail`, `SceneViewport`, `EvidenceInspector`, `MetricTimeline`: synchronized
+  Scenario Lab.
+- `CampaignSummary`: frozen aggregate comparison and claim boundary.
+- `EvidenceAssistantPanel`: question catalog, provider status, facts, citations,
+  limitations, and privacy receipt.
+- `GaussianFieldPanel`: authenticated PLY lifecycle, Spark/Three.js viewer,
+  geometric metrics, and integration gates.
+- `LocalEvidenceService`: fixed authenticated reads, memory-only token, no-store
+  requests, and binary field loading.
+- `LocalEvidencePanel`: connection, campaign cell, and sealed proposal inspection.
 
 ## Verification contract
 
-The shipped slice always has a data-free synthetic path. A local run file is
-rendered only when it passes `planmargin.debugger.v1` validation: positive fixed timestep, finite
-geometry and metrics, unique proposal identifiers, aligned trajectory and
-metric lengths, deterministic/support flags, and a timeline matching the
-declared step. Local files are capped at 5 MB. View exports contain selection
-and timestep metadata, not trajectory arrays or private provenance fields.
+Before merge:
 
-Real records are accepted only from the authenticated fixed-origin service and
-must pass the dedicated closed-response parsers. Nullable longitudinal TTC is
-rendered as “Not closing” and as a chart gap rather than imputed. Browser
-storage, URL tokens, arbitrary paths, arbitrary queries, and real-data exports
-are prohibited.
-
-Before merge, the implementation must pass:
-
-- strict TypeScript compilation, Vitest unit tests, and the Angular production
-  build under the pinned Node 24 runtime;
-- a dependency audit at moderate severity or higher;
-- desktop browser checks for selection, playback, synchronized evidence and
-  metrics, and export feedback;
-- mobile browser checks at 390 × 844 for Scene, Evidence, and Metrics view
-  switching, playback, and timeline scrubbing; and
-- a console review with no warnings or errors.
-
-The concept images were generated for this repository as visual references.
-They are documentation artifacts and are never loaded by the runtime.
+- strict TypeScript compilation, Vitest, Angular production build, Python API
+  contract tests, Ruff, and the repository test suite must pass;
+- the production build must retain the 8 kB hard per-component style limit;
+- desktop browser testing must cover overview comprehension, local connection,
+  scenario playback, campaign opening, all five assistant questions, Gaussian
+  loading/orbit/reset, and an error-console review;
+- mobile testing at 390 × 844 must verify navigation, Scenario/Evidence/Metrics
+  switching, readable assistant output, and a usable Gaussian fallback layout;
+- screenshots of the generated visual concept and implementation must be
+  compared for hierarchy, navigation, palette, workspace composition, and
+  evidence-boundary clarity.

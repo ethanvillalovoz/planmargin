@@ -36,6 +36,27 @@ describe('LocalEvidenceService', () => {
       if (url.endsWith('/cells/cell_opaque/proposals')) {
         return Promise.resolve(response(API_PROPOSALS));
       }
+      if (url.endsWith('/assistant/status')) {
+        return Promise.resolve(response({
+          provider_id: 'offline_deterministic',
+          model: null,
+          source_mode: 'real_local_redacted',
+          gemini_configured: false,
+          explanation_only: true,
+        }));
+      }
+      if (url.endsWith('/assistant/questions')) {
+        return Promise.resolve(response([{ query_id: 'method_comparison', label: 'method comparison', question: 'How did the methods compare?' }]));
+      }
+      if (url.endsWith('/assistant/method_comparison')) {
+        return Promise.resolve(response({ question: { query_id: 'method_comparison' }, privacy: { private_data_sent_to_provider: false } }));
+      }
+      if (url.endsWith('/gaussian-field/field.ply')) {
+        return Promise.resolve(new Response(new Uint8Array([112, 108, 121])));
+      }
+      if (url.endsWith('/gaussian-field')) {
+        return Promise.resolve(response({ primitive_count: 75000, decision: 'no_go' }));
+      }
       return Promise.resolve(response({ detail: 'not found' }, 404));
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -84,5 +105,25 @@ describe('LocalEvidenceService', () => {
     expect(service.state()).toBe('error');
     expect(service.error()).toContain('127.0.0.1:8765');
     await expect(service.loadRun('run_opaque')).rejects.toThrow('not connected');
+  });
+
+  it('loads bounded assistant answers and Gaussian bytes through authenticated routes', async () => {
+    await service.connect('0123456789abcdef');
+
+    const catalog = await service.assistantCatalog();
+    const answer = await service.askAssistant('method_comparison');
+    const gaussian = await service.gaussianField();
+
+    expect(catalog.status.provider_id).toBe('offline_deterministic');
+    expect(catalog.questions[0].query_id).toBe('method_comparison');
+    expect(answer.question.query_id).toBe('method_comparison');
+    expect(gaussian.summary.primitive_count).toBe(75_000);
+    expect(Array.from(new Uint8Array(gaussian.bytes))).toEqual([112, 108, 121]);
+    for (const [url, options] of fetchMock.mock.calls.slice(-5) as [string, RequestInit][]) {
+      expect(url).toMatch(/assistant|gaussian-field/);
+      expect((options.headers as Record<string, string>)['X-PlanMargin-Token']).toBe(
+        '0123456789abcdef',
+      );
+    }
   });
 });

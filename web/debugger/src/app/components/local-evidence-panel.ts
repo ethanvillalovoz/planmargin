@@ -196,8 +196,8 @@ import { LocalEvidenceService } from '../local-evidence.service';
     .error {
       padding: 0.6rem 0.7rem;
       border-left: 2px solid var(--failure);
-      background: #211113;
-      color: #ff9b95;
+      background: #fff1ee;
+      color: #a93627;
     }
     .connected-error {
       margin: 0.75rem 1.4rem 0;
@@ -209,7 +209,7 @@ import { LocalEvidenceService } from '../local-evidence.service';
       min-height: 48px;
       padding: 0 1.4rem;
       border-bottom: 1px solid var(--divider);
-      background: #0c1715;
+      background: #f0f8ed;
       color: var(--success);
       font-size: 0.66rem;
     }
@@ -252,7 +252,7 @@ import { LocalEvidenceService } from '../local-evidence.service';
     }
     .source-list > button.active {
       border-color: var(--reference);
-      background: #0d1a20;
+      background: #edf9fb;
     }
     .source-list > button strong {
       font-size: 0.7rem;
@@ -270,7 +270,7 @@ import { LocalEvidenceService } from '../local-evidence.service';
     select {
       width: 100%;
       padding: 0 0.5rem;
-      background: #080d11;
+      background: #fff;
     }
     .cell-metrics {
       margin: 0.8rem 0 0;
@@ -335,7 +335,7 @@ import { LocalEvidenceService } from '../local-evidence.service';
     }
     .proposal-list button.active {
       border-color: var(--divider);
-      background: #111a20;
+      background: #eef4f8;
     }
     .proposal-list button span {
       color: var(--secondary);
@@ -351,7 +351,7 @@ import { LocalEvidenceService } from '../local-evidence.service';
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #46515a;
+      background: #98a5af;
     }
     .proposal-list i.pass {
       background: var(--success);
@@ -380,7 +380,7 @@ import { LocalEvidenceService } from '../local-evidence.service';
     }
     .proposal-detail dl div {
       padding: 0.46rem 0;
-      border-bottom: 1px solid #1f2a31;
+      border-bottom: 1px solid var(--divider-soft);
       font-size: 0.7rem;
     }
     dd.pass {
