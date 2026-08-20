@@ -58,22 +58,33 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
             Evidence
           </button>
         </nav>
-        <button
-          type="button"
-          class="connection"
-          [class.connected]="local.connected()"
-          [class.connecting]="local.state() === 'connecting'"
-          (click)="connectRequested.emit()"
-        >
-          <i></i
-          >{{
-            local.connected()
-              ? 'Local records verified'
-              : local.state() === 'connecting'
-                ? 'Verifying local records…'
-                : 'Open local workspace'
-          }}
-        </button>
+        <div class="header-actions">
+          <button
+            type="button"
+            class="assistant-launch"
+            [class.active]="simulator.assistantOpen()"
+            [disabled]="!local.connected()"
+            (click)="toggleAssistant()"
+          >
+            <ng-icon name="phosphorSparkle" size="15" />Ask analysis
+          </button>
+          <button
+            type="button"
+            class="connection"
+            [class.connected]="local.connected()"
+            [class.connecting]="local.state() === 'connecting'"
+            (click)="connectRequested.emit()"
+          >
+            <i></i
+            >{{
+              local.connected()
+                ? 'Local records verified'
+                : local.state() === 'connecting'
+                  ? 'Verifying local records…'
+                  : 'Open local workspace'
+            }}
+          </button>
+        </div>
       </header>
 
       @if (view() === 'investigate') {
@@ -530,6 +541,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       background: rgb(7 16 24 / 94%);
       backdrop-filter: blur(16px);
     }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
     .brand {
       display: flex;
       align-items: center;
@@ -573,7 +590,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       background: var(--reference);
       content: '';
     }
-    .connection {
+    .connection,
+    .assistant-launch {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -585,6 +603,22 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       background: var(--surface-subtle);
       color: var(--secondary);
       font-size: 0.63rem;
+    }
+    .assistant-launch {
+      color: var(--primary);
+      white-space: nowrap;
+    }
+    .assistant-launch ng-icon {
+      color: var(--reference);
+    }
+    .assistant-launch:hover,
+    .assistant-launch.active {
+      border-color: var(--reference);
+      background: rgb(53 197 211 / 10%);
+    }
+    .assistant-launch:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
     }
     .connection i,
     .page-status i {
@@ -1313,6 +1347,11 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         width: 7px;
         height: 7px;
       }
+      .assistant-launch {
+        width: 38px;
+        padding: 0;
+        font-size: 0;
+      }
       .investigation-workspace {
         grid-template-columns: 1fr;
       }
@@ -1352,7 +1391,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       .product-header nav button {
         flex: 1;
       }
-      .connection {
+      .header-actions {
         grid-row: 1;
         grid-column: 2;
       }
@@ -1432,7 +1471,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
 })
 export class ProductShell {
   protected readonly local = inject(LocalEvidenceService);
-  private readonly simulator = inject(SimulatorStore);
+  protected readonly simulator = inject(SimulatorStore);
   private readonly reports = inject(InvestigationReportService);
   readonly connectRequested = output<void>();
   protected readonly view = signal<ProductView>('replay');
@@ -1503,6 +1542,11 @@ export class ProductShell {
     if (view === 'replay') this.simulator.selectMode('planning');
     if (view === 'sensor') this.simulator.selectMode('camera');
     this.view.set(view);
+  }
+  protected toggleAssistant(): void {
+    const opening = this.view() !== 'replay' || !this.simulator.assistantOpen();
+    this.setView('replay');
+    this.simulator.assistantOpen.set(opening);
   }
   protected async openCampaignProposal(proposal: InvestigationProposal): Promise<void> {
     this.analysis.set(undefined);
