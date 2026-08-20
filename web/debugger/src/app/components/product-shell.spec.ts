@@ -1,18 +1,33 @@
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { LocalEvidenceService } from '../local-evidence.service';
+import { SimulatorStore } from '../simulator.store';
 import { ProductShell } from './product-shell';
 
 describe('ProductShell', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  beforeEach(() => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        disconnect(): void {}
+      },
+    );
+  });
 
-  it('opens on the investigation tool with an honest public aggregate mode', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    TestBed.resetTestingModule();
+  });
+
+  it('opens on the working scene debugger instead of a campaign presentation', () => {
     const fixture = TestBed.createComponent(ProductShell);
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Trace why a proposal did');
-    expect(text).toContain('Public aggregate mode');
-    expect(text).toContain('data-access boundary');
+    expect(text).toContain('Workbench');
+    expect(text).toContain('No local evidence loaded');
+    expect(text).not.toContain('No qualifying planner failure was found');
   });
 
   it('makes investigation first class without exposing local records while disconnected', () => {
@@ -20,12 +35,29 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Investigate'))!;
+    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
     button.click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Trace why a proposal did');
-    expect(fixture.nativeElement.textContent).toContain('Connect local evidence');
+    expect(fixture.nativeElement.textContent).toContain('Review planner regressions');
+    expect(fixture.nativeElement.textContent).toContain('Open local workspace');
+  });
+
+  it('maps task navigation to the correct planning and sensor workspaces', () => {
+    const fixture = TestBed.createComponent(ProductShell);
+    const simulator = TestBed.inject(SimulatorStore);
+    fixture.detectChanges();
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
+    );
+
+    buttons.find((candidate) => candidate.textContent?.includes('Sensors'))!.click();
+    fixture.detectChanges();
+    expect(simulator.sensorMode()).toBe('camera');
+
+    buttons.find((candidate) => candidate.textContent?.includes('Workbench'))!.click();
+    fixture.detectChanges();
+    expect(simulator.sensorMode()).toBe('planning');
   });
 
   it('renders measured proposal gates after local evidence is connected', () => {
@@ -71,13 +103,17 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Investigate'))!;
+    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
     button.click();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Tested controller did not fail');
-    expect(text).toContain('Reference controller');
+    expect(text).toContain('Tested planner still succeeds');
+    expect(text).toContain('Reference planner');
+    expect(text).toContain('Reproducible replay');
+    expect(text).toContain('Safety result');
+    expect(text).toContain('Change size');
+    expect(text).not.toContain('Criticality 0.400');
     expect(text).toContain('Proposal trajectory is not stored');
   });
 });

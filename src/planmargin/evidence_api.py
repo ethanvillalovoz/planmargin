@@ -739,6 +739,26 @@ class EvidenceRepository:
         return "qualifying_finding"
 
     @staticmethod
+    def _proximity_label(value: float) -> str:
+        if value <= 0:
+            return "minimum clearance unavailable"
+        clearance_m = max(1.0 / value - 1.0, 0.0)
+        if clearance_m < 0.005:
+            return "contact boundary reached"
+        return f"{clearance_m:.2f} m minimum clearance"
+
+    @staticmethod
+    def _change_size_label(value: float) -> str:
+        bounded_edit_percent = min(max((1.0 - value) * 100.0, 0.0), 100.0)
+        if bounded_edit_percent <= 20.0:
+            size = "small"
+        elif bounded_edit_percent <= 50.0:
+            size = "moderate"
+        else:
+            size = "large"
+        return f"{size} edit · {bounded_edit_percent:.0f}% of bounded range"
+
+    @staticmethod
     def _proposal_projection(record: dict[str, Any], number: int) -> dict[str, Any]:
         finding = record["finding"]
         support = record["support"]
@@ -880,12 +900,17 @@ class EvidenceRepository:
             "scenario_validity": "the mutated scenario failed the validity contract",
             "pipeline_reproducibility": "the deterministic pipeline contract was not met",
             "empirical_support": "the mutation fell outside empirical support",
-            "reference_controller": "the reference controller did not succeed",
-            "tested_controller_failure": "the tested controller remained successful",
+            "reference_controller": "the reference planner did not succeed",
+            "tested_controller_failure": "the tested planner remained successful",
             "finding_contract": "the complete finding contract was not met",
             "qualifying_finding": "all finding gates passed",
         }
         support = proposal["empirical_support_probability"]
+        criticality = float(proposal["objectives"][0])
+        minimality = float(proposal["objectives"][1])
+        parameters = proposal["mutation_parameters"]
+        onset = float(parameters["braking_onset_offset_s"])
+        speed = float(parameters["speed_multiplier"])
         return {
             "evidence_mode": "real_local_redacted",
             "analysis_mode": "deterministic_proposal_specific",
@@ -904,19 +929,40 @@ class EvidenceRepository:
             ),
             "facts": [
                 {"label": "method", "value": method},
-                {"label": "scenario", "value": str(selection_order)},
-                {"label": "seed", "value": str(seed)},
                 {
-                    "label": "criticality",
-                    "value": f"{proposal['objectives'][0]:.6f}",
+                    "label": "case",
+                    "value": f"scenario {selection_order}, seed {seed}",
                 },
                 {
-                    "label": "minimality",
-                    "value": f"{proposal['objectives'][1]:.6f}",
+                    "label": "scenario change",
+                    "value": f"braking onset {onset:+.1f} s, lead speed {speed:.2f}x",
                 },
                 {
-                    "label": "support",
-                    "value": "not evaluated" if support is None else f"{support:.6f}",
+                    "label": "safety result",
+                    "value": (
+                        f"{self._proximity_label(criticality)} "
+                        f"(derived from minimum signed separation; criticality {criticality:.4f})"
+                    ),
+                },
+                {
+                    "label": "change size",
+                    "value": (
+                        f"{self._change_size_label(minimality)} "
+                        f"(derived from normalized edit distance; minimality {minimality:.4f})"
+                    ),
+                },
+                {
+                    "label": "recorded precedent",
+                    "value": (
+                        "not evaluated"
+                        if support is None
+                        else (
+                            "seen in recorded behavior"
+                            if proposal["support_passes"] is True
+                            else "outside recorded behavior"
+                        )
+                        + f" (probability {support:.4f}; pass threshold 0.05)"
+                    ),
                 },
             ],
             "record_sha256": record["record_sha256"],

@@ -16,13 +16,13 @@ semantics.
 
 The service reads five fixed artifact families beneath the repository root:
 
-| Source | Verification | Exposed projection |
-| --- | --- | --- |
-| `artifacts/analytics/natural-development-v1` | sealed manifest, DuckDB hash and size, exact table allowlist, row counts | campaign, method, hypothesis, and cell aggregates |
-| `artifacts/search-comparison/natural-development-v1` | sealed campaign identity linked by the analytics manifest; sealed cell/proposal checkpoints on access | selected proposal parameters, outcomes, support decisions, findings, and cost |
-| `artifacts/stage-0/rollout-records.json` | rollout collection schema, stable identities, trajectory and scene-context hashes | local road geometry, redacted trajectories, controller outcomes, and recomputed interaction timelines |
-| `artifacts/gaussian-field/feasibility` | sealed manifest, exact gate allowlist, privacy declaration, PLY size and SHA-256 | geometry metrics, integration decision, and authenticated binary field |
-| `artifacts/sensor-scene/waymo-front` | fixed manifest paths, frame indices, byte sizes, SHA-256 digests, source-frame alignment, and PLY vertex counts | recorded FRONT JPEGs, real SHARP reconstruction, and same-frame LiDAR Gaussian field |
+| Source                                               | Verification                                                                                                    | Exposed projection                                                                                    |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `artifacts/analytics/natural-development-v1`         | sealed manifest, DuckDB hash and size, exact table allowlist, row counts                                        | campaign, method, hypothesis, and cell aggregates                                                     |
+| `artifacts/search-comparison/natural-development-v1` | sealed campaign identity linked by the analytics manifest; sealed cell/proposal checkpoints on access           | selected proposal parameters, outcomes, support decisions, findings, and cost                         |
+| `artifacts/stage-0/rollout-records.json`             | rollout collection schema, stable identities, trajectory and scene-context hashes                               | local road geometry, redacted trajectories, controller outcomes, and recomputed interaction timelines |
+| `artifacts/gaussian-field/feasibility`               | sealed manifest, exact gate allowlist, privacy declaration, PLY size and SHA-256                                | geometry metrics, integration decision, and authenticated binary field                                |
+| `artifacts/sensor-scene/waymo-front`                 | fixed manifest paths, frame indices, byte sizes, SHA-256 digests, source-frame alignment, and PLY vertex counts | recorded FRONT JPEGs, real SHARP reconstruction, and same-frame LiDAR Gaussian field                  |
 
 The sensor-scene manifest is produced by
 `uv run python scripts/prepare_perception_scene.py` from ignored local WOD
@@ -95,17 +95,21 @@ an issue, or reuse it as a hosted credential.
 
 ## Connect the debugger
 
-Start the Angular debugger separately at `http://127.0.0.1:4200`, choose
-**Connect local evidence**, paste the ephemeral token into **Local evidence**,
-and connect. The client performs a sequential verified
-handshake, then exposes the validated replay records and campaign cell/proposal
-browser, bounded assistant, and the camera/3DGS/LiDAR workspace. It sends no writes and,
-in the default offline-assistant mode, makes no outbound request beyond this
-fixed loopback API.
+Run `uv run --frozen planmargin-workbench` to start both services. The launcher opens a one-time URL
+whose fragment carries the ephemeral token. URL fragments are not sent to the
+web server; the client reads the token into memory and immediately removes the
+fragment from browser history before performing the verified handshake. The
+manual **Local evidence** form remains only as a recovery path when the browser
+was opened separately.
 
-The token is kept in a private in-memory field and the input is cleared after
-connection. It is never persisted to local/session storage, a URL, a file, or
-an export. Privacy-reduced proposal reports can be exported as self-contained
+The handshake exposes the validated replay records and campaign cell/proposal
+browser, bounded assistant, and camera/3DGS/LiDAR workspace. It sends no writes
+and, in the default offline-assistant mode, makes no outbound request beyond
+this fixed loopback API.
+
+The token is kept in a private in-memory field after bootstrap. It is never
+persisted to local/session storage, the post-bootstrap address, a file, or an
+export. Privacy-reduced proposal reports can be exported as self-contained
 HTML, but never include the token, local paths, raw trajectories, or restricted
 provenance. Disconnecting returns to
 Camera, clears local planning evidence and sensor access, and leaves the
@@ -113,28 +117,28 @@ workspace explicitly empty; no demo or synthetic run is substituted.
 
 ## Fixed endpoints
 
-| Endpoint | Responsibility |
-| --- | --- |
-| `GET /api/v1/health` | authenticated readiness and active evidence mode |
-| `GET /api/v1/campaign` | immutable experiment-v1 status, cost, privacy, and whether a held-out comparison ran |
-| `GET /api/v1/methods` | method-level aggregate comparison |
-| `GET /api/v1/hypotheses` | frozen hypothesis decisions and available comparison values |
-| `GET /api/v1/cells` | redacted cell aggregates with opaque IDs |
-| `GET /api/v1/cells/{cell_id}/proposals` | sealed proposal evidence for an opaque cell |
-| `GET /api/v1/investigation` | cached campaign-wide funnel and top proposal rankings across all 3,200 seals |
-| `GET /api/v1/cells/{cell_id}/proposals/{proposal_number}/analysis` | deterministic proposal-specific gate explanation and sealed-record citation |
-| `GET /api/v1/runs` | available validated replay evidence |
-| `GET /api/v1/runs/{run_id}` | redacted scene, trajectories, outcomes, and interaction timeline |
-| `GET /api/v1/assistant/status` | active explanation provider and input scope |
-| `GET /api/v1/assistant/questions` | five natural-language questions mapped to a closed query allowlist |
-| `GET /api/v1/assistant/{query_id}` | cited facts, bounded explanation, limitations, and privacy receipt |
-| `GET /api/v1/gaussian-field` | privacy-reduced geometry metrics and frozen integration gates |
-| `GET /api/v1/gaussian-field/field.ply` | sealed local Gaussian PLY for in-browser rendering |
-| `GET /api/v1/sensor-scene` | fixed scene provenance, frame timing, hashes, and 3D asset metadata |
-| `GET /api/v1/sensor-scene/front/{frame_index}.jpg` | one indexed recorded FRONT frame from the fixed manifest |
-| `GET /api/v1/sensor-scene/reconstruction.ply` | real Apple SHARP 3DGS generated from the declared source frame |
-| `GET /api/v1/sensor-scene/lidar.ply` | deterministic Gaussian field generated from same-frame LiDAR returns |
-| `GET /api/v1/openapi.json` | authenticated OpenAPI 3 contract generated from closed response models |
+| Endpoint                                                           | Responsibility                                                                       |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `GET /api/v1/health`                                               | authenticated readiness and active evidence mode                                     |
+| `GET /api/v1/campaign`                                             | immutable experiment-v1 status, cost, privacy, and whether a held-out comparison ran |
+| `GET /api/v1/methods`                                              | method-level aggregate comparison                                                    |
+| `GET /api/v1/hypotheses`                                           | frozen hypothesis decisions and available comparison values                          |
+| `GET /api/v1/cells`                                                | redacted cell aggregates with opaque IDs                                             |
+| `GET /api/v1/cells/{cell_id}/proposals`                            | sealed proposal evidence for an opaque cell                                          |
+| `GET /api/v1/investigation`                                        | cached campaign-wide funnel and top proposal rankings across all 3,200 seals         |
+| `GET /api/v1/cells/{cell_id}/proposals/{proposal_number}/analysis` | deterministic proposal-specific gate explanation and sealed-record citation          |
+| `GET /api/v1/runs`                                                 | available validated replay evidence                                                  |
+| `GET /api/v1/runs/{run_id}`                                        | redacted scene, trajectories, outcomes, and interaction timeline                     |
+| `GET /api/v1/assistant/status`                                     | active explanation provider and input scope                                          |
+| `GET /api/v1/assistant/questions`                                  | five natural-language questions mapped to a closed query allowlist                   |
+| `GET /api/v1/assistant/{query_id}`                                 | cited facts, bounded explanation, limitations, and privacy receipt                   |
+| `GET /api/v1/gaussian-field`                                       | privacy-reduced geometry metrics and frozen integration gates                        |
+| `GET /api/v1/gaussian-field/field.ply`                             | sealed local Gaussian PLY for in-browser rendering                                   |
+| `GET /api/v1/sensor-scene`                                         | fixed scene provenance, frame timing, hashes, and 3D asset metadata                  |
+| `GET /api/v1/sensor-scene/front/{frame_index}.jpg`                 | one indexed recorded FRONT frame from the fixed manifest                             |
+| `GET /api/v1/sensor-scene/reconstruction.ply`                      | real Apple SHARP 3DGS generated from the declared source frame                       |
+| `GET /api/v1/sensor-scene/lidar.ply`                               | deterministic Gaussian field generated from same-frame LiDAR returns                 |
+| `GET /api/v1/openapi.json`                                         | authenticated OpenAPI 3 contract generated from closed response models               |
 
 The run timeline computes oriented-box separation with the same parity-tested
 interaction-metrics implementation used by the experiment. Longitudinal TTC

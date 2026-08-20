@@ -56,7 +56,9 @@ import { SensorViewport } from './sensor-viewport';
         <div class="scene-selector" aria-label="Current dataset scene">
           <span>{{
             !local.connected()
-              ? 'No scene loaded'
+              ? local.state() === 'connecting'
+                ? 'Verifying local evidence…'
+                : 'No scene loaded'
               : simulator.sensorMode() === 'planning'
                 ? debuggerStore.run().scenarioLabel
                 : 'SF · segment 100239…'
@@ -77,6 +79,7 @@ import { SensorViewport } from './sensor-viewport';
           type="button"
           class="sync-status"
           [class.connected]="local.connected()"
+          [class.connecting]="local.state() === 'connecting'"
           (click)="connectRequested.emit()"
         >
           <i></i
@@ -85,7 +88,9 @@ import { SensorViewport } from './sensor-viewport';
               ? simulator.sensorMode() === 'planning'
                 ? 'Planning step ' + paddedTimelineIndex() + ' · local evidence'
                 : 'Camera frame ' + paddedFrame() + ' · 10 Hz'
-              : 'Connect real evidence'
+              : local.state() === 'connecting'
+                ? 'Verifying local evidence…'
+                : 'Open local workspace'
           }}</span>
         </button>
 
@@ -116,10 +121,23 @@ import { SensorViewport } from './sensor-viewport';
       </header>
 
       <main class="scene-stage">
-        @if (simulator.sensorMode() === 'planning') {
-          <app-scene-viewport />
+        @if (embedded() && local.connected() && simulator.sensorMode() === 'planning') {
+          <section class="case-banner" aria-live="polite">
+            <i [class.regression]="isCandidateRegression()"></i>
+            <div>
+              <strong>{{ workbenchDecisionTitle() }}</strong>
+              <span>{{ workbenchDecisionSummary() }}</span>
+            </div>
+          </section>
+        }
+        @if (local.connected()) {
+          @if (simulator.sensorMode() === 'planning') {
+            <app-scene-viewport />
+          } @else {
+            <app-sensor-viewport (connectRequested)="connectRequested.emit()" />
+          }
         } @else {
-          <app-sensor-viewport (connectRequested)="connectRequested.emit()" />
+          <div class="empty-stage" aria-hidden="true"></div>
         }
 
         @if (local.connected()) {
@@ -283,8 +301,16 @@ import { SensorViewport } from './sensor-viewport';
       >
         @if (!local.connected()) {
           <div class="spatial-summary">
-            <strong>No local evidence loaded</strong>
-            <span>Authenticate the loopback API to inspect recorded data.</span>
+            <strong>{{
+              local.state() === 'connecting'
+                ? 'Verifying local evidence…'
+                : 'No local evidence loaded'
+            }}</strong>
+            <span>{{
+              local.state() === 'connecting'
+                ? 'Checking seals and preparing the workbench.'
+                : 'Launch the local workspace to inspect recorded data.'
+            }}</span>
           </div>
           <div class="spatial-fact"><span>Runtime source</span><strong>Disconnected</strong></div>
           <p>PlanMargin does not substitute demo or synthetic data.</p>
@@ -484,6 +510,9 @@ import { SensorViewport } from './sensor-viewport';
       background: #35c5d3;
       box-shadow: 0 0 0 3px rgb(53 197 211 / 10%);
     }
+    .sync-status.connecting i {
+      background: #f0a33b;
+    }
     .topbar-actions {
       display: flex;
       align-items: center;
@@ -536,6 +565,53 @@ import { SensorViewport } from './sensor-viewport';
       min-width: 0;
       min-height: 0;
       overflow: hidden;
+    }
+    .empty-stage {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgb(10 24 33 / 88%), rgb(5 13 20 / 96%)),
+        radial-gradient(circle at 32% 42%, rgb(53 197 211 / 12%), transparent 34%);
+    }
+    .case-banner {
+      position: absolute;
+      z-index: 13;
+      top: 1rem;
+      left: 1rem;
+      display: grid;
+      grid-template-columns: 8px minmax(0, 1fr);
+      align-items: start;
+      width: min(520px, calc(100% - 340px));
+      gap: 0.65rem;
+      padding: 0.7rem 0.8rem;
+      border: 1px solid rgb(132 155 168 / 27%);
+      border-radius: 7px;
+      background: rgb(5 13 20 / 94%);
+      box-shadow: 0 12px 34px rgb(0 0 0 / 24%);
+      backdrop-filter: blur(18px);
+    }
+    .case-banner > i {
+      width: 8px;
+      height: 8px;
+      margin-top: 0.23rem;
+      border-radius: 50%;
+      background: #f0a33b;
+    }
+    .case-banner > i.regression {
+      background: #ff6b55;
+    }
+    .case-banner div {
+      display: grid;
+      gap: 0.2rem;
+    }
+    .case-banner strong {
+      font-size: 0.72rem;
+      letter-spacing: -0.015em;
+    }
+    .case-banner span {
+      color: #8fa0aa;
+      font-size: 0.59rem;
+      line-height: 1.45;
     }
     .scenario-controls {
       position: absolute;
@@ -976,7 +1052,7 @@ import { SensorViewport } from './sensor-viewport';
         display: block;
       }
       .scenario-controls {
-        top: 0.65rem;
+        top: 4.65rem;
         left: 0.65rem;
         width: 220px;
       }
@@ -1014,6 +1090,16 @@ import { SensorViewport } from './sensor-viewport';
       }
     }
     @media (max-width: 560px) {
+      .case-banner {
+        top: 0.65rem;
+        right: 0.65rem;
+        left: 0.65rem;
+        width: auto;
+      }
+      .scenario-controls,
+      .view-controls {
+        top: 5.4rem;
+      }
       .scene-selector span {
         max-width: 130px;
       }
@@ -1067,6 +1153,30 @@ export class SimulatorWorkspace {
       reconstruction: '3D reconstruction',
       lidar: 'LiDAR field',
     }[this.simulator.sensorMode()];
+  }
+
+  protected isCandidateRegression(): boolean {
+    const outcome = this.debuggerStore.selectedHypothesis().controllerOutcome;
+    return outcome.tested === 'fails' && outcome.reference === 'succeeds';
+  }
+
+  protected workbenchDecisionTitle(): string {
+    const outcome = this.debuggerStore.selectedHypothesis().controllerOutcome;
+    if (outcome.reference === 'fails') return 'Reference planner also fails';
+    return outcome.tested === 'fails'
+      ? 'Candidate planner regression'
+      : 'Tested planner holds margin';
+  }
+
+  protected workbenchDecisionSummary(): string {
+    const outcome = this.debuggerStore.selectedHypothesis().controllerOutcome;
+    if (outcome.reference === 'fails') {
+      return 'The control baseline fails under the same change, so this case cannot isolate the tested planner.';
+    }
+    if (outcome.tested === 'fails') {
+      return 'The tested planner fails while the reference planner succeeds under the same recorded scenario change.';
+    }
+    return 'This run is realistic and reproducible, but it is not a regression because the tested planner still succeeds.';
   }
 
   protected mutationLabel(): string {

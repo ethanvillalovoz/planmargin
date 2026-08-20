@@ -40,6 +40,7 @@ planmargin-build-gaussian-field = "planmargin.gaussian_field:main"
 planmargin-train-rl-controller = "planmargin.rl_controller:main"
 planmargin-doctor = "planmargin.workspace:doctor_main"
 planmargin-bootstrap-sensor = "planmargin.workspace:bootstrap_sensor_main"
+planmargin-workbench = "planmargin.debugger_launcher:main"
 
 [project.optional-dependencies]
 assistant = [

@@ -1,169 +1,115 @@
-# Final full-program integration audit
+# Release-readiness audit
 
-PlanMargin's recovered program is complete as of August 13, 2026. Completion
-means every original responsibility either ships with verified evidence or has
-a predeclared, reproducible `no_go`. It does not mean every experimental result
-was positive.
+**Audit date:** August 20, 2026
 
-## August 20 reproducibility and repository addendum
+**Scope:** current source tree, retained local evidence, public distribution
+boundary, and task-first engineering workbench
 
-The repository now makes the public-versus-authorized boundary executable
-instead of leaving it to prose. `planmargin-doctor` verifies the aggregate
-release, sealed campaign and replay, all 199 recorded camera frames, 8,364
-native annotations, the 1,179,648-primitive SHARP reconstruction, the
-50,241-return LiDAR field, the planning-linked Gaussian `no_go`, the final Beam
-dataflow, and the JAX controller `synthetic_no_go`. On the retained local
-workspace it reports the product and research program ready while identifying
-the optional Gemini adapter separately.
+## Decision
 
-A single authorized bootstrap now downloads only the four pinned WOD v2
-Perception components, verifies a pinned Apple SHARP source archive and model
-checkpoint by SHA-256, runs on MPS/CUDA/CPU, and seals the resulting Sensor Lab.
-The public README, reproduction runbook, contribution guide, notice, and
-aggregate release documentation now state exactly what a clean clone can do,
-what requires licensed local records, and what is intentionally never
-redistributed.
+PlanMargin is ready as a local autonomous-driving research workbench with
+bounded claims. Its public source, aggregate result, authenticated evidence
+service, retained planning replay, recorded perception views, search pipeline,
+and deterministic assistant are implemented and verified.
 
-This addendum passed 219 Python tests, 35 Angular/Vitest tests, Ruff, strict
-TypeScript checking, formatting, the Node 24.15 production build, npm's
-moderate-severity audit with zero vulnerabilities, public-bundle verification,
-and authenticated HTTP checks across health, campaign, investigation, Sensor
-Lab metadata, and recorded frame delivery. A fresh source distribution also
-built with `LICENSE` and `NOTICE` included. A fresh native wheel rebuild on this
-particular Mac remains blocked until its owner reviews and accepts the installed
-Xcode license; the readiness doctor reports that machine-level prerequisite
-without confusing it with product or research readiness.
+Two items are intentionally outside that readiness decision:
 
-## August 18 product-workbench addendum
+- this Mac cannot perform a fresh native C++ rebuild until its owner reviews
+  and accepts the installed Xcode license; and
+- the optional Gemini explanation adapter is not configured. The offline
+  deterministic assistant remains available.
 
-The research decisions below remain immutable. A later product pass changed
-how engineers inspect them: PlanMargin now opens on a usable investigation
-workspace, verifies and ranks all 3,200 campaign proposals, compares any two
-ranked candidates, opens the exact 32-proposal cell, renders the full
-qualification-gate ladder and tested/reference outcomes, produces
-proposal-specific deterministic analysis with a sealed-record citation, and
-exports SHA-256-digested local HTML reports. The campaign narrative is a
-separate **Report** section; authentic planning replay and the camera/3DGS/LiDAR
-workspace have dedicated **Replay** and **Sensor Lab** entries.
+Neither item blocks the currently verified local workbench. No paid service,
+hosted database, subscription, or purchased compute is required.
 
-The addendum does not create campaign trajectories that were not retained.
-Only the Stage-0 package contains full trajectory replay data; the 3,200
-campaign proposals retain trajectory hashes and measured outcomes. The UI
-states this boundary instead of synthesizing playback.
+## What an engineer can do
 
-That pass verified 35 Angular/Vitest tests, the production
-Angular build remains inside its configured bundle budgets, npm reports zero
-known vulnerabilities, and all 214 Python tests passed. In-app browser QA covered
-the public and authenticated
-investigation, comparison, proposal analysis, planning playback, real Camera
-playback with changing native boxes, 3DGS, desktop, and mobile layouts. It found
-and fixed the collapsed embedded-scene grid and mobile-header navigation bugs.
+1. Open an authenticated local session without copying a token.
+2. Replay the retained Stage-0 tested, reference, and recorded planner paths on
+   a shared timeline.
+3. Inspect 199 recorded WOD FRONT frames with frame-specific tracked boxes.
+4. Orbit the pinned 1,179,648-primitive Apple SHARP reconstruction and inspect
+   the 50,241-return same-frame LiDAR field.
+5. Rank all 3,200 sealed counterfactual proposals by minimum clearance, edit
+   size, or recorded precedent.
+6. Trace the first failed qualification gate and compare tested/reference
+   planner outcomes.
+7. Export a privacy-reduced, SHA-256-digested HTML investigation report.
+8. Ask bounded evidence questions through deterministic local tools.
 
-The aggregate-only Hugging Face package is staged, hashed, and downloadable as
-`dist/planmargin-public-evidence-v1.zip`. External publication remains held for
-Waymo redistribution review; no restricted artifact has been uploaded.
+The product does not invent a scenario, trajectory, camera stream, box track,
+point field, or reconstruction when licensed evidence is absent.
+
+## Claim and synchronization boundaries
+
+- The 3,200 campaign proposals retain hashes, outcomes, objectives, and costs,
+  but not full replay trajectories. The UI never presents the separate Stage-0
+  trajectory as if it belonged to a selected campaign proposal.
+- The WOD Perception segment and WOMD planning replay are separate authorized
+  records. Camera, 3DGS, and LiDAR are synchronized to one another where stated;
+  they are not claimed to be registered to the planning replay.
+- The exact-planning-scene Gaussian study remains a sealed `no_go` at 23.66%
+  trajectory linkage. The shipped SHARP reconstruction is the separate,
+  explicitly labeled Perception visualization track.
+- The JAX/Optax learned-controller study remains a sealed `synthetic_no_go`; it
+  is research evidence, not a runtime data source for the product.
+- PlanMargin does not evaluate the production Waymo Driver and supports no
+  real-world safety conclusion.
 
 ## Requirement disposition
 
-| Responsibility                       | Final disposition     | Evidence                                                                                                                                                                                                                                                                                       |
-| ------------------------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| WOMD and Waymax                      | Shipped               | Training-default access check and deterministic 80-step real WOMD replay passed. The v1 campaign retained 14,110 physical rollouts and 1,128,800 Waymax steps.                                                                                                                                 |
-| Python and JAX                       | Shipped               | Simulation, mutation, coordination, evidence services, Gaussian extraction, and deterministic DQN training.                                                                                                                                                                                    |
-| PyTorch and BoTorch                  | Shipped               | Frozen constrained qLogNEHVI proposal core and complete matched v1 campaign.                                                                                                                                                                                                                   |
-| C++20 and pybind11                   | Shipped               | Native oriented-box interaction kernel retained exact Python parity and measured 604.893× faster in the final isolated 80-state audit fixture.                                                                                                                                                 |
-| SQL, DuckDB, and Parquet             | Shipped               | Sealed experiment reconstruction, allowlisted queries, and row-level reconciliation.                                                                                                                                                                                                           |
-| Apache Beam / dataflow               | Shipped               | Fresh DirectRunner integration processed 16 sealed source shards, 7,796 records, and 265 accepted events into eight deterministic partitions in 10.1 seconds.                                                                                                                                  |
-| FastAPI                              | Shipped               | API v1.1 authenticated the loopback boundary, returned `401` without a token, used `no-store`, passed four representative route audits, and leaked none of the ten known scenario IDs.                                                                                                         |
-| Angular, TypeScript, Three.js, Spark | Shipped               | The campaign-first workbench investigates sealed proposal gates and exports privacy-reduced digested HTML; Sensor Lab renders recorded Camera, an independent sealed Planning replay, calibrated SHARP 3DGS, same-frame LiDAR, and authenticated assistance. It has no synthetic-runtime path. |
-| Gemini / agent layer                 | Conditionally shipped | Five deterministic offline evidence tools ship. The optional Gemini adapter is public-aggregate-only and free-tier-gated; no hosted request was required or made in the final audit.                                                                                                           |
-| 3D Gaussian splatting                | Split disposition     | The exact-planning-scenario LiDAR field remains `no_go` at 23.66% trajectory linkage. A separate WOD Perception visualization track now ships a real 1.18M-primitive SHARP reconstruction and 50k-return same-frame LiDAR viewer, explicitly outside the planning claim.                       |
-| Reinforcement learning               | Evaluated `no_go`     | Two final-seed JAX/Optax double-DQN trainings were byte-identical and passed compute/progress gates. A 3.125% synthetic collision rate failed the frozen 1.0% safety gate, so no Waymax deployment or v2 campaign ran.                                                                         |
-| Free execution                       | Shipped               | All mandatory work ran locally on the M4 Pro or in data-free GitHub Actions. No paid service, hosted database, GPU, or subscription is required.                                                                                                                                               |
+| Responsibility             | Disposition | Verified implementation                                                                    |
+| -------------------------- | ----------- | ------------------------------------------------------------------------------------------ |
+| WOMD and Waymax            | Shipped     | deterministic 80-step replay; 14,110 retained physical rollouts and 1,128,800 Waymax steps |
+| Counterfactual search      | Shipped     | matched random and constrained BoTorch qLogNEHVI budgets across 100 cells                  |
+| Python and JAX             | Shipped     | simulation, mutation, orchestration, evidence services, and reproducible RL qualification  |
+| C++20 and pybind11         | Shipped     | native interaction metrics with randomized Python-oracle parity                            |
+| Beam, Parquet, DuckDB, SQL | Shipped     | deterministic partitions, sealed shards, and SQL reconciliation                            |
+| FastAPI                    | Shipped     | loopback-only token authentication, closed response models, `no-store`, and `nosniff`      |
+| Angular and TypeScript     | Shipped     | task-first Workbench, Sensors, and Evidence flows with strict types                        |
+| Three.js and Spark         | Shipped     | lazy-loaded LiDAR/3DGS and planning-scene rendering                                        |
+| 3D Gaussian splatting      | Split       | real SHARP Perception reconstruction shipped; planning-linked study preserved as `no_go`   |
+| Evidence assistant         | Shipped     | deterministic local tools; Gemini is an optional allowlisted explanation adapter           |
+| Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                 |
 
-## Final verification
+## Verification performed on this revision
 
-The final local audit ran from the repository root:
-
-- Ruff: all checks passed;
-- Python: 212 tests passed; the only output was two upstream PyTorch
-  deprecation warnings;
-- Python packaging: source distribution and native arm64 wheel built;
-- Angular/Vitest: 26 tests passed across real-local parsers, the authenticated
-  sensor client, independent timeline stores, campaign evidence, and state
-  contracts;
-- Angular production build: the application and lazy Three.js/Spark sensor
-  renderer completed the optimized build budget;
-- npm audit at moderate severity: zero vulnerabilities;
-- browser E2E: a clean authenticated run verified Camera 099 → 109 seeking and
-  35 → 32 changing native boxes during playback, Planning 000 → 010 seeking,
-  minimum-margin assistant navigation, source/left/right 3DGS, LiDAR, compact
-  layout, Planning-to-spatial remounts, and safe disconnect;
-- JSON Schema: all 25 tracked schemas passed Draft 2020-12 meta-validation;
-- documentation: all 49 tracked Markdown files were checked for local-link
-  integrity after this report was added;
-- native kernel: exact parity, 17.291 microseconds native versus 10,459.5
-  microseconds Python on the final synthetic fixture;
-- real Beam dataflow: fresh build and independent audit both returned
-  `beam_pipeline_verified`;
-- real evidence boundary: the sealed v1 campaign, analytics, and rollout
-  collection opened successfully through API v1.1;
-- evidence assistant: public claim-boundary and private-local campaign queries
-  both used the deterministic offline provider and leaked no known ID;
-- Gaussian and RL private reports: both reran and validated against their
-  tracked schemas with their expected `no_go` decisions; and
-- privacy: all ten known private scenario IDs were searched across tracked Git
-  content with zero matches; no artifact, TFRecord, Parquet, DuckDB, or model
-  checkpoint is tracked; common private-key and provider-token signatures were
-  absent.
-
-The completed v1 campaign cannot be resumed into its old directory from the
-new source revision because its immutable manifest pins the original code and
-clean environment. That rejection is expected. The sealed result remains
-readable and reconstructable through the versioned evidence layer; exact
-execution belongs to its recorded Git revision.
+- Ruff: all checks passed.
+- Python: 221 tests passed. The three warnings are upstream PyTorch deprecation
+  and BoTorch's documented pure-Python fallback when Ninja is unavailable.
+- Angular/Vitest: 36 tests passed across launch authentication, local evidence,
+  parsers, stores, navigation, reports, and workbench behavior.
+- TypeScript: application and test projects passed strict type checking.
+- Frontend formatting and optimized production build: passed; the direct app
+  payload is about 301 kB raw, while Spark and Three.js viewers remain lazy.
+- Dependency audit: `npm audit --audit-level=moderate` reported zero known
+  vulnerabilities.
+- Authenticated HTTP: frontend, health, campaign, investigation, planning runs,
+  Sensor metadata, Gaussian metadata, and proposal analysis returned success.
+- Authorization and headers: unauthenticated health returned `401`; private
+  responses included `Cache-Control: no-store` and
+  `X-Content-Type-Options: nosniff`.
+- Workspace doctor: public source, campaign evidence, Sensor evidence, Beam
+  output, Gaussian research, and JAX research all verified as ready.
 
 ## Scientific outcome
 
-The defensible result is deliberately narrower than the original hope:
+The immutable v1 development campaign found no qualifying planner regression.
+Constrained Bayesian search increased the support-and-pipeline-valid proposal
+rate by 14.8125 percentage points under equal budgets. Failure-discovery
+efficiency and failure minimality remain untestable because neither method
+found a qualifying failure, and no validation-backed comparison was opened
+after the no-go.
 
-- constrained Bayesian search increased support-and-pipeline-valid proposal
-  yield by 14.8125 percentage points in the ten-scenario development campaign;
-- neither method found a qualifying failure, so comparative discovery
-  efficiency and minimality remain untestable;
-- the Gaussian reconstruction was geometrically strong but not sufficiently
-  linked to the full debugger trajectory;
-- the learned controller improved greatly over its untrained initialization
-  but did not meet its safety gate; and
-- no validation-backed comparative search campaign ran.
+That negative result is part of the product's credibility: the repository
+preserves what was measured, what failed, and what cannot be claimed.
 
-One validation record was accessed by the legacy Stage-0 compatibility smoke.
-The audit corrected every later absolute claim that the validation split was
-pristine or never opened, while preserving the accurate historical Stage-0
-report. [ADR 0007](decisions/0007-correct-validation-access-boundary.md)
-documents the correction and the new training-default guard.
+## Remaining operator actions
 
-PlanMargin does not evaluate the production Waymo Driver and provides no
-real-world safety conclusion.
-
-## Deliberate non-goals and remaining limits
-
-- GitHub Pages or another hosted real-data deployment was explicitly deferred;
-  the complete real product remains localhost-only by design.
-- Gemini availability, price, and provider terms are external and must be
-  rechecked before optional use. The deterministic assistant needs none of
-  them.
-- Flume is proprietary and is not claimed; Apache Beam owns the public dataflow
-  responsibility.
-- Both real 3D PLYs and the failed DQN checkpoint remain ignored local
-  artifacts. The Perception viewer is a product feature; the PLY contents and
-  the failed plan-linkage/RL studies are not published evidence.
-- A future learned controller, Gaussian crop, scenario family, or comparative
-  validation study requires a new protocol version. The observed gates cannot
-  be relaxed retroactively.
-
-## Final decision
-
-The original scientific program is closed as **complete with bounded negative
-research results**. The later Perception visualization adds a complete local
-product surface without changing, relaxing, or replacing any frozen research
-decision.
+- Review and accept the Xcode license before requesting a fresh native rebuild
+  on this Mac. PlanMargin will not perform that privileged acceptance step.
+- Supply a Gemini key only if optional external explanations are wanted and the
+  current free-tier/provider terms have been reviewed. It is not required.
+- Perform final visual sign-off in the authenticated local browser whenever UI
+  source changes; licensed evidence is deliberately not uploaded for remote
+  visual testing.
