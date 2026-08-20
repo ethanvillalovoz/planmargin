@@ -133,9 +133,58 @@ export const API_PROPOSALS = [
     empirical_support_probability: 0.6,
     support_passes: true,
     objective_available: true,
+    objectives: [0.4, 0.7],
+    constraints: [-0.5, -0.55, -0.5],
     policy_specific_avoidable_failure: false,
     tested_mutated_failure: false,
     reference_mutated_success: true,
     physical_rollouts: 6,
   },
 ];
+
+export const API_INVESTIGATION = {
+  evidence_mode: 'real_local_redacted',
+  integrity: 'verified',
+  cell_count: 1,
+  proposal_count: 1,
+  funnel: {
+    proposed: 1,
+    mutation_valid: 1,
+    scenario_valid: 1,
+    pipeline_valid: 1,
+    support_valid: 1,
+    reference_passes: 1,
+    tested_fails: 0,
+    qualifying_findings: 0,
+  },
+  closest_margin: [
+    {
+      ...API_PROPOSALS[0],
+      cell_id: 'cell_opaque',
+      method: 'bayesian',
+      seed: 0,
+      selection_order: 1,
+      decisive_gate: 'tested_controller_failure',
+    },
+  ],
+  smallest_mutation: [
+    {
+      ...API_PROPOSALS[0],
+      cell_id: 'cell_opaque',
+      method: 'bayesian',
+      seed: 0,
+      selection_order: 1,
+      decisive_gate: 'tested_controller_failure',
+    },
+  ],
+  highest_support: [
+    {
+      ...API_PROPOSALS[0],
+      cell_id: 'cell_opaque',
+      method: 'bayesian',
+      seed: 0,
+      selection_order: 1,
+      decisive_gate: 'tested_controller_failure',
+    },
+  ],
+};

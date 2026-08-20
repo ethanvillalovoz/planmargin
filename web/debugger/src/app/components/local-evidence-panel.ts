@@ -1,13 +1,17 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   HostListener,
   inject,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { DebuggerStore } from '../debugger.store';
 import { LocalEvidenceService } from '../local-evidence.service';
+import { SimulatorStore } from '../simulator.store';
 
 @Component({
   selector: 'app-local-evidence-panel',
@@ -15,6 +19,7 @@ import { LocalEvidenceService } from '../local-evidence.service';
   template: `
     <div class="backdrop" (click)="closeFromBackdrop($event)">
       <section
+        #panel
         class="panel"
         role="dialog"
         aria-modal="true"
@@ -28,7 +33,12 @@ import { LocalEvidenceService } from '../local-evidence.service';
               Verified records stay on this machine. The token is held in memory only.
             </p>
           </div>
-          <button type="button" aria-label="Close local evidence" (click)="close.emit()">
+          <button
+            #dialogClose
+            type="button"
+            aria-label="Close local evidence"
+            (click)="close.emit()"
+          >
             Close
           </button>
         </header>
@@ -75,7 +85,7 @@ import { LocalEvidenceService } from '../local-evidence.service';
               @for (run of local.runs(); track run.runId) {
                 <button
                   type="button"
-                  [class.active]="store.run().runId === run.runId"
+                  [class.active]="store.hasRun() && store.run().runId === run.runId"
                   (click)="loadRun(run.runId)"
                 >
                   <strong>{{ run.label }}</strong>
@@ -196,8 +206,9 @@ import { LocalEvidenceService } from '../local-evidence.service';
     .error {
       padding: 0.6rem 0.7rem;
       border-left: 2px solid var(--failure);
-      background: #fff1ee;
-      color: #a93627;
+      border: 1px solid rgb(255 107 85 / 30%);
+      background: #281716;
+      color: #ff9b8c;
     }
     .connected-error {
       margin: 0.75rem 1.4rem 0;
@@ -209,8 +220,8 @@ import { LocalEvidenceService } from '../local-evidence.service';
       min-height: 48px;
       padding: 0 1.4rem;
       border-bottom: 1px solid var(--divider);
-      background: #f0f8ed;
-      color: var(--success);
+      background: #0b201f;
+      color: #76dfa0;
       font-size: 0.66rem;
     }
     .status span {
@@ -252,7 +263,8 @@ import { LocalEvidenceService } from '../local-evidence.service';
     }
     .source-list > button.active {
       border-color: var(--reference);
-      background: #edf9fb;
+      background: #102831;
+      color: #edf3f4;
     }
     .source-list > button strong {
       font-size: 0.7rem;
@@ -270,7 +282,9 @@ import { LocalEvidenceService } from '../local-evidence.service';
     select {
       width: 100%;
       padding: 0 0.5rem;
-      background: #fff;
+      background: #071018;
+      color: #edf3f4;
+      color-scheme: dark;
     }
     .cell-metrics {
       margin: 0.8rem 0 0;
@@ -334,8 +348,9 @@ import { LocalEvidenceService } from '../local-evidence.service';
       text-align: left;
     }
     .proposal-list button.active {
-      border-color: var(--divider);
-      background: #eef4f8;
+      border-color: #35c5d3;
+      background: #102831;
+      color: #edf3f4;
     }
     .proposal-list button span {
       color: var(--secondary);
@@ -420,8 +435,18 @@ import { LocalEvidenceService } from '../local-evidence.service';
 export class LocalEvidencePanel {
   protected readonly local = inject(LocalEvidenceService);
   protected readonly store = inject(DebuggerStore);
+  protected readonly simulator = inject(SimulatorStore);
   readonly close = output<void>();
   protected readonly busy = signal(false);
+  private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
+  private readonly tokenInput = viewChild<ElementRef<HTMLInputElement>>('tokenInput');
+  private readonly dialogClose = viewChild.required<ElementRef<HTMLButtonElement>>('dialogClose');
+
+  constructor() {
+    afterNextRender(() => {
+      (this.tokenInput()?.nativeElement ?? this.dialogClose().nativeElement).focus();
+    });
+  }
 
   protected async connect(event: Event): Promise<void> {
     event.preventDefault();
@@ -431,6 +456,7 @@ export class LocalEvidencePanel {
       const evidence = await this.local.connect(input.value);
       input.value = '';
       this.store.loadRun(evidence.initialRun);
+      this.close.emit();
     } catch {
       input.value = '';
     }
@@ -457,8 +483,12 @@ export class LocalEvidencePanel {
   }
 
   protected disconnect(): void {
+    // Return to the recorded camera before removing the planning run. This
+    // prevents planning-only computed state from reading a run that no longer
+    // exists during the same change-detection turn.
+    this.simulator.selectMode('camera');
     this.local.disconnect();
-    this.store.resetToSynthetic();
+    this.store.clearRun();
   }
 
   protected probability(value: number | null): string {
@@ -469,9 +499,29 @@ export class LocalEvidencePanel {
     return value === null ? 'Not evaluated' : value ? 'Yes' : 'No';
   }
 
-  @HostListener('document:keydown.escape')
-  protected closeFromEscape(): void {
-    this.close.emit();
+  @HostListener('document:keydown', ['$event'])
+  protected handleDialogKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.close.emit();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = Array.from(
+      this.panel().nativeElement.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.getClientRects().length > 0);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   protected closeFromBackdrop(event: MouseEvent): void {

@@ -9,30 +9,12 @@ REPOSITORY_ROOT = Path(__file__).parents[1]
 
 def test_per_scenario_womd_reports_are_not_committed() -> None:
     prohibited_reports = (
-        REPOSITORY_ROOT
-        / "experiments"
-        / "stage-0"
-        / "scenario-selection.json",
-        REPOSITORY_ROOT
-        / "experiments"
-        / "stage-0"
-        / "waymax-smoke-test.json",
-        REPOSITORY_ROOT
-        / "experiments"
-        / "stage-0"
-        / "speed-mutation-smoke-test.json",
-        REPOSITORY_ROOT
-        / "experiments"
-        / "stage-0"
-        / "controller-comparison.json",
-        REPOSITORY_ROOT
-        / "experiments"
-        / "stage-0"
-        / "rollout-records.json",
-        REPOSITORY_ROOT
-        / "experiments"
-        / "stage-0"
-        / "trajectory-comparison.html",
+        REPOSITORY_ROOT / "experiments" / "stage-0" / "scenario-selection.json",
+        REPOSITORY_ROOT / "experiments" / "stage-0" / "waymax-smoke-test.json",
+        REPOSITORY_ROOT / "experiments" / "stage-0" / "speed-mutation-smoke-test.json",
+        REPOSITORY_ROOT / "experiments" / "stage-0" / "controller-comparison.json",
+        REPOSITORY_ROOT / "experiments" / "stage-0" / "rollout-records.json",
+        REPOSITORY_ROOT / "experiments" / "stage-0" / "trajectory-comparison.html",
         REPOSITORY_ROOT
         / "experiments"
         / "realism"
@@ -43,9 +25,7 @@ def test_per_scenario_womd_reports_are_not_committed() -> None:
         / "realism"
         / "lead-braking-support-v1"
         / "shards",
-        REPOSITORY_ROOT
-        / "artifacts"
-        / "search-comparison",
+        REPOSITORY_ROOT / "artifacts" / "search-comparison",
         REPOSITORY_ROOT / "artifacts" / "beam-features",
         REPOSITORY_ROOT / "artifacts" / "experiment-v2",
     )
@@ -94,7 +74,14 @@ def test_public_claims_do_not_repeat_disproven_pristine_holdout_language() -> No
     violations: list[tuple[str, str]] = []
     for relative in tracked:
         path = REPOSITORY_ROOT / relative
-        if path.suffix not in searchable or path.resolve() == Path(__file__).resolve():
+        # A working tree can legitimately contain staged or unstaged deletions.
+        # Repository-policy checks should evaluate files that still exist, not
+        # fail before Git records the deletion in the index.
+        if (
+            not path.is_file()
+            or path.suffix not in searchable
+            or path.resolve() == Path(__file__).resolve()
+        ):
             continue
         content = path.read_text(encoding="utf-8").lower()
         violations.extend(

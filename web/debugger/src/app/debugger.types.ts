@@ -1,4 +1,3 @@
-export type MobileView = 'scene' | 'evidence' | 'metrics';
 export type TrajectoryKind = 'tested' | 'reference' | 'recorded';
 
 export interface Point2d {
@@ -48,15 +47,4 @@ export interface DebuggerRun {
   readonly roadCenterlines: readonly (readonly Point2d[])[];
   readonly conflictRegion: readonly Point2d[];
   readonly hypotheses: readonly DebuggerHypothesis[];
-}
-
-export interface ExportedView {
-  readonly schemaVersion: 'planmargin.debugger-view.v1';
-  readonly exportedAt: string;
-  readonly runId: string;
-  readonly scenarioLabel: string;
-  readonly synthetic: true;
-  readonly selectedHypothesisId: string;
-  readonly timestepIndex: number;
-  readonly timeSeconds: number;
 }

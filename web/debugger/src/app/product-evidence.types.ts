@@ -95,3 +95,61 @@ export interface GaussianFieldBundle {
   readonly summary: GaussianFieldSummary;
   readonly bytes: ArrayBuffer;
 }
+
+export interface SensorAssetSummary {
+  readonly representation: string;
+  readonly source_frame_index: number;
+  readonly primitive_count: number;
+  readonly bytes: number;
+}
+
+export type CameraBoxCategory = 'vehicle' | 'pedestrian' | 'cyclist';
+
+export interface CameraBoxAnnotation {
+  readonly track_id: string;
+  readonly category: CameraBoxCategory;
+  readonly center_x: number;
+  readonly center_y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface CameraFrameAnnotations {
+  readonly index: number;
+  readonly timestamp_micros: number;
+  readonly boxes: readonly CameraBoxAnnotation[];
+}
+
+export interface CameraAnnotationBundle {
+  readonly record_type: 'planmargin.sensor_frame_annotations';
+  readonly schema_version: '1.0.0';
+  readonly source: 'Waymo Open Dataset v2 Perception camera_box';
+  readonly image_width: number;
+  readonly image_height: number;
+  readonly frames: readonly CameraFrameAnnotations[];
+}
+
+export interface SensorSceneSummary {
+  readonly schema_version: '1.0.0';
+  readonly evidence_mode: 'real_local_sensor';
+  readonly source: 'Waymo Open Dataset v2 Perception';
+  readonly segment_id: string;
+  readonly camera_name: 'FRONT';
+  readonly frame_count: number;
+  readonly frame_rate_hz: number;
+  readonly annotations: {
+    readonly representation: 'native_tracked_camera_boxes';
+    readonly frame_count: number;
+    readonly box_count: number;
+    readonly bytes: number;
+  };
+  readonly reconstruction: SensorAssetSummary;
+  readonly lidar: SensorAssetSummary;
+}
+
+export type SensorAssetName = 'reconstruction' | 'lidar';
+
+export interface SensorAssetBundle {
+  readonly summary: SensorSceneSummary;
+  readonly bytes: ArrayBuffer;
+}

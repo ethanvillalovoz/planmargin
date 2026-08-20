@@ -1,87 +1,99 @@
-# PlanMargin engineering workbench design
+# PlanMargin scenario simulator design
 
 PlanMargin is a local counterfactual stress-testing workbench. Its primary user
 question is: **what is the smallest behaviorally plausible scene change that
-causes the tested planner to fail while a reference planner succeeds?** The UI
-must make that question, the evidence path, and the claim boundary visible
-before it exposes implementation detail.
+causes the tested planner to fail while a reference planner succeeds?** The
+workspace makes the scene, mutation, evidence source, and claim boundary
+visible in one synchronized engineering surface.
 
-## Information architecture
+## Workspace contract
 
-The persistent navigation owns five surfaces:
+The simulator uses one full-bleed scene rather than separate product pages:
 
-1. **Overview** explains the product, selected planner outcomes, four-step
-   workflow, and Waymo-scenario → Beam-features → matched-search → sealed-evidence
-   pipeline.
-2. **Scenario Lab** synchronizes scene replay, run/case selection, controller
-   evidence, and interaction metrics.
-3. **Search Campaign** compares Bayesian and random search under matched
-   physical-rollout budgets and displays the frozen H1/H2/H3 decisions.
-4. **Evidence Assistant** answers five allowlisted questions over measured facts
-   and shows citations, source seals, limitations, provider scope, and privacy.
-5. **Gaussian Field** renders the authenticated local PLY and explains the
-   exact no-go gate that keeps it experimental.
+1. The **top bar** identifies the active real-local dataset, current Camera
+   frame or Planning step, assistant entry point, and primary planning-replay
+   action.
+2. **View-specific controls** expose only real actions or sealed facts: native
+   tracked boxes in Camera, read-only mutation/outcome/metric evidence in
+   Planning, and source-frame provenance in 3DGS/LiDAR.
+3. The **sensor switcher** changes among the separate Planning replay,
+   recorded Camera, real Apple SHARP 3D Gaussian reconstruction, and same-frame
+   LiDAR Gaussian field.
+4. **Evidence analysis** exposes the active provider, bounded explanations,
+   source limitations, and direct questions over sealed aggregate evidence.
+5. The **timeline** scrubs or plays all 199 recorded Camera frames or the
+   81-step Planning run as independent clocks. 3DGS and LiDAR replace playback
+   controls with a spatial-inspection footer because they are single-frame
+   assets.
 
-The interface never presents a terminal-only capability as a product feature.
-If a capability is named in the workbench, it must have a visible status,
-action, result, evidence source, and limitation.
+Every capability named in the workspace has a visible status, action, result,
+evidence source, and limitation. Camera playback, 3D
+orbit/source/novel/reset, layer toggles, one-second seeking, planning replay,
+and assistant questions are
+functional rather than decorative.
 
 ## Visual system
 
-The workbench uses a bright engineering-instrument palette rather than copying
-Waymo branding or product chrome. White and cool gray surfaces keep dense
-evidence readable. Deep blue-gray is the primary ink; coral identifies the
-tested planner or a no-go boundary; cyan identifies the reference planner;
-green identifies passed validation; violet identifies explanation; and lime
-identifies experimental geometry. Corners are restrained and shadows are used
-only for hierarchy.
+The visual system is an original dark engineering instrument inspired by
+autonomous-vehicle simulation tools, not a copy of Waymo product chrome.
+Near-black surfaces preserve focus on sensor imagery; cyan identifies selected
+controls and candidate paths; green identifies observed paths; coral identifies
+counterfactual paths or conflicts. Corners, borders, and shadows remain
+restrained so dense evidence reads as an operational tool.
 
 The PlanMargin mark is original repository artwork. No Waymo logo, proprietary
-UI, map tile, or brand asset is copied. “Waymo scenario” describes the input
-dataset family, not an affiliation or production-driver claim.
+UI, map tile, or brand asset is copied. “Waymo Open Dataset” describes the
+input source, not affiliation or production-driver access.
 
-## Evidence and safety boundary
+## Sensor and evidence boundary
 
-- Synthetic fixture mode is always data-free and exportable.
-- Real local evidence requires the authenticated loopback API. Its token remains
-  memory-only and all real-record export is disabled.
-- The assistant receives a closed tool result, never SQL. Offline explanation is
-  fully functional. Optional Gemini explanation receives only public aggregates,
-  requires explicit free-tier confirmation, and never receives raw questions or
-  private records.
-- Gaussian rendering is deterministic LiDAR Gaussian geometry, not
-  photorealistic 3DGS, learned reconstruction, planner input, or safety evidence.
-  Its 23.66% trajectory linkage fails the frozen 90% integration gate.
-- Results describe the frozen development campaign and validated local artifacts;
-  they do not establish production Waymo Driver behavior or real-world safety.
+- Camera and LiDAR come from one local Waymo Open Dataset v2 Perception
+  segment. Camera boxes come from that segment's native `camera_box` component
+  and preserve cross-frame track IDs. The SHARP 3DGS is generated from camera
+  frame 99 of that segment.
+- The planning overlay and counterfactual outcome come from a separate,
+  privacy-reduced WOMD Motion/Stage-0 evidence path. They are not geometrically
+  registered to the visual Perception segment and are labeled as separate.
+- The SHARP result is a genuine learned 3D Gaussian reconstruction and supports
+  nearby novel views. It is not planner input, production Waymo reconstruction,
+  or safety evidence.
+- The same-frame LiDAR view is a deterministic Gaussian field over genuine
+  range returns. It is distinct from the earlier exact-planning-scenario
+  feasibility field whose frozen 23.66% trajectory-linkage result remains
+  `no_go`.
+- The deterministic local assistant is fully functional. Optional Gemini is an
+  explanation-only adapter over public aggregates and is shown as active only
+  when the backend is explicitly configured for it.
+- Real sensor assets remain ignored, localhost-only, authenticated, and
+  non-exportable.
 
 ## Component ownership
 
-- `ProjectOverview`: purpose, selected outcomes, workflow, evidence pipeline.
-- `DebuggerStore`: selected case, timestep, playback, and responsive view state.
-- `RunRail`, `SceneViewport`, `EvidenceInspector`, `MetricTimeline`: synchronized
-  Scenario Lab.
-- `CampaignSummary`: frozen aggregate comparison and claim boundary.
-- `EvidenceAssistantPanel`: question catalog, provider status, facts, citations,
-  limitations, and privacy receipt.
-- `GaussianFieldPanel`: authenticated PLY lifecycle, Spark/Three.js viewer,
-  geometric metrics, and integration gates.
-- `LocalEvidenceService`: fixed authenticated reads, memory-only token, no-store
-  requests, and binary field loading.
-- `LocalEvidencePanel`: connection, campaign cell, and sealed proposal inspection.
+- `SimulatorWorkspace`: the unified scene, top bar, controls, modes, timeline,
+  and stress replay.
+- `SimulatorStore`: sensor mode, independent Camera and Planning clocks,
+  source-frame spatial lock, scene layers, and replay state.
+- `SensorViewport`: authenticated camera lifecycle, Spark/Three.js renderers,
+  calibrated SHARP camera, LiDAR view, native Camera annotations, orbit, reset,
+  and cleanup.
+- `ScenarioAssistant`: provider status, bounded questions, public-claim limits,
+  and privacy disclosure.
+- `LocalEvidenceService`: fixed authenticated reads, memory-only token,
+  `no-store` requests, and binary sensor loading.
+- `DebuggerStore`: the existing validated planning evidence and metric samples.
 
 ## Verification contract
 
 Before merge:
 
 - strict TypeScript compilation, Vitest, Angular production build, Python API
-  contract tests, Ruff, and the repository test suite must pass;
-- the production build must retain the 8 kB hard per-component style limit;
-- desktop browser testing must cover overview comprehension, local connection,
-  scenario playback, campaign opening, all five assistant questions, Gaussian
-  loading/orbit/reset, and an error-console review;
-- mobile testing at 390 × 844 must verify navigation, Scenario/Evidence/Metrics
-  switching, readable assistant output, and a usable Gaussian fallback layout;
-- screenshots of the generated visual concept and implementation must be
-  compared for hierarchy, navigation, palette, workspace composition, and
-  evidence-boundary clarity.
+  contract tests, Ruff, and the repository test suite pass;
+- desktop browser testing covers local connection, recorded-frame seeking,
+  stress replay, assistant questions, Camera playback, source-frame 3DGS/LiDAR
+  switching, 3D source/novel/reset views,
+  and a clean current console;
+- a compact viewport has no horizontal document overflow and retains access to
+  the core controls; and
+- the selected design source and implementation screenshot are normalized to
+  the same crop and dimensions for hierarchy, workspace composition, palette,
+  control legibility, and evidence-boundary clarity.

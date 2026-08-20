@@ -9,7 +9,7 @@
     "test": "ng test --watch=false",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run format:check && npm run typecheck && npm test && npm run build"
   },
   "private": true,
   "packageManager": "npm@11.8.0",
@@ -21,6 +21,8 @@
     "@angular/compiler": "22.1.1",
     "@angular/core": "22.1.1",
     "@angular/platform-browser": "22.1.1",
+    "@ng-icons/core": "^35.0.1",
+    "@ng-icons/phosphor-icons": "^35.0.1",
     "@sparkjsdev/spark": "2.1.0",
     "rxjs": "~7.8.0",
     "three": "0.180.0",

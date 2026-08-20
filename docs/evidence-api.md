@@ -14,7 +14,7 @@ semantics.
 
 ## Source and response boundary
 
-The service reads four fixed artifact families beneath the repository root:
+The service reads five fixed artifact families beneath the repository root:
 
 | Source | Verification | Exposed projection |
 | --- | --- | --- |
@@ -22,6 +22,11 @@ The service reads four fixed artifact families beneath the repository root:
 | `artifacts/search-comparison/natural-development-v1` | sealed campaign identity linked by the analytics manifest; sealed cell/proposal checkpoints on access | selected proposal parameters, outcomes, support decisions, findings, and cost |
 | `artifacts/stage-0/rollout-records.json` | rollout collection schema, stable identities, trajectory and scene-context hashes | local road geometry, redacted trajectories, controller outcomes, and recomputed interaction timelines |
 | `artifacts/gaussian-field/feasibility` | sealed manifest, exact gate allowlist, privacy declaration, PLY size and SHA-256 | geometry metrics, integration decision, and authenticated binary field |
+| `artifacts/sensor-scene/waymo-front` | fixed manifest paths, frame indices, byte sizes, SHA-256 digests, source-frame alignment, and PLY vertex counts | recorded FRONT JPEGs, real SHARP reconstruction, and same-frame LiDAR Gaussian field |
+
+The sensor-scene manifest is produced by
+`uv run python scripts/prepare_perception_scene.py` from ignored local WOD
+Perception inputs. It is a visual product surface, not campaign evidence.
 
 Campaign proposal records contain hashes but not replayable trajectories. The
 API therefore never represents proposal-level campaign evidence as trajectory
@@ -30,8 +35,10 @@ rollout collection.
 
 The response allowlist excludes scenario IDs, source-shard paths, TFRecord
 indices, mutated object indices, controller configuration details, raw
-provenance, feature vectors, record hashes, and local filesystem paths. Opaque
-run and cell IDs are derived from local identities and reveal no source ID.
+provenance, feature vectors, and local filesystem paths. The proposal-analysis
+endpoint returns only the selected proposal record's content SHA-256 as a
+tamper-evident citation. Opaque run and cell IDs are derived from local
+identities and reveal no source ID.
 
 ## Security contract
 
@@ -92,15 +99,17 @@ Start the Angular debugger separately at `http://127.0.0.1:4200`, choose
 **Connect local evidence**, paste the ephemeral token into **Local evidence**,
 and connect. The client performs a sequential verified
 handshake, then exposes the validated replay records and campaign cell/proposal
-browser, bounded assistant, and local Gaussian field. It sends no writes and,
+browser, bounded assistant, and the camera/3DGS/LiDAR workspace. It sends no writes and,
 in the default offline-assistant mode, makes no outbound request beyond this
 fixed loopback API.
 
 The token is kept in a private in-memory field and the input is cleared after
 connection. It is never persisted to local/session storage, a URL, a file, or
-an export. Real-data export is disabled in both the interface and export
-service. Disconnecting clears local evidence and restores the deterministic
-synthetic fixture.
+an export. Privacy-reduced proposal reports can be exported as self-contained
+HTML, but never include the token, local paths, raw trajectories, or restricted
+provenance. Disconnecting returns to
+Camera, clears local planning evidence and sensor access, and leaves the
+workspace explicitly empty; no demo or synthetic run is substituted.
 
 ## Fixed endpoints
 
@@ -112,6 +121,8 @@ synthetic fixture.
 | `GET /api/v1/hypotheses` | frozen hypothesis decisions and available comparison values |
 | `GET /api/v1/cells` | redacted cell aggregates with opaque IDs |
 | `GET /api/v1/cells/{cell_id}/proposals` | sealed proposal evidence for an opaque cell |
+| `GET /api/v1/investigation` | cached campaign-wide funnel and top proposal rankings across all 3,200 seals |
+| `GET /api/v1/cells/{cell_id}/proposals/{proposal_number}/analysis` | deterministic proposal-specific gate explanation and sealed-record citation |
 | `GET /api/v1/runs` | available validated replay evidence |
 | `GET /api/v1/runs/{run_id}` | redacted scene, trajectories, outcomes, and interaction timeline |
 | `GET /api/v1/assistant/status` | active explanation provider and input scope |
@@ -119,6 +130,10 @@ synthetic fixture.
 | `GET /api/v1/assistant/{query_id}` | cited facts, bounded explanation, limitations, and privacy receipt |
 | `GET /api/v1/gaussian-field` | privacy-reduced geometry metrics and frozen integration gates |
 | `GET /api/v1/gaussian-field/field.ply` | sealed local Gaussian PLY for in-browser rendering |
+| `GET /api/v1/sensor-scene` | fixed scene provenance, frame timing, hashes, and 3D asset metadata |
+| `GET /api/v1/sensor-scene/front/{frame_index}.jpg` | one indexed recorded FRONT frame from the fixed manifest |
+| `GET /api/v1/sensor-scene/reconstruction.ply` | real Apple SHARP 3DGS generated from the declared source frame |
+| `GET /api/v1/sensor-scene/lidar.ply` | deterministic Gaussian field generated from same-frame LiDAR returns |
 | `GET /api/v1/openapi.json` | authenticated OpenAPI 3 contract generated from closed response models |
 
 The run timeline computes oriented-box separation with the same parity-tested
@@ -131,7 +146,8 @@ made-up finite number for display convenience.
 `tests/test_evidence_api.py` exercises token enforcement, explicit CORS,
 trusted hosts, no-cache headers, redaction, opaque lookup behavior, database
 hashes, manifest seals, exact table allowlists, path confinement, and rejected
-tampering. It also covers assistant allowlisting/privacy and Gaussian binary
-authentication/integrity. Synthetic two-step traces exercise the real-response transformation
-without WOMD access. Existing analytics and rollout-record tests remain the
-source-contract tests below the API.
+tampering. It also covers assistant allowlisting/privacy, both Gaussian binary
+paths, sensor-frame authentication, and missing-asset behavior. Synthetic
+two-step traces exercise the real-response transformation without WOMD access.
+Existing analytics and rollout-record tests remain the source-contract tests
+below the API.

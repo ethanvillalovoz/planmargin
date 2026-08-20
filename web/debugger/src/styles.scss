@@ -1,27 +1,27 @@
 :root {
-  color-scheme: light;
-  --app-bg: #f4f7f9;
-  --surface: #ffffff;
-  --surface-subtle: #f6f8fa;
-  --rail: #fbfcfd;
-  --primary: #132433;
-  --secondary: #5f7180;
-  --tertiary: #8b9aa7;
-  --divider: #dbe3e9;
-  --divider-soft: #edf1f4;
-  --divider-strong: #c8d2da;
-  --grid: #dfe7ec;
-  --tested: #f16347;
-  --reference: #0ba8bd;
-  --recorded: #83919c;
-  --success: #4f9d3f;
-  --failure: #df4b3f;
-  --accent-coral: #f16347;
-  --accent-green: #63a93e;
-  --radius: 14px;
-  --radius-sm: 10px;
-  --shadow-sm: 0 2px 10px rgb(24 48 66 / 8%);
-  --shadow: 0 12px 34px rgb(24 48 66 / 12%);
+  color-scheme: dark;
+  --app-bg: #071018;
+  --surface: #0a141c;
+  --surface-subtle: #0d1821;
+  --rail: #08121a;
+  --primary: #edf3f4;
+  --secondary: #91a2ad;
+  --tertiary: #697c87;
+  --divider: #20303a;
+  --divider-soft: #172630;
+  --divider-strong: #31434e;
+  --grid: #213540;
+  --tested: #ff6b55;
+  --reference: #35c5d3;
+  --recorded: #54d68a;
+  --success: #54d68a;
+  --failure: #ff6b55;
+  --accent-coral: #ff6b55;
+  --accent-green: #54d68a;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 2px 12px rgb(0 0 0 / 20%);
+  --shadow: 0 18px 50px rgb(0 0 0 / 34%);
   font-family:
     Inter,
     ui-sans-serif,
@@ -63,6 +63,17 @@ input:focus-visible {
   color: #fff;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 app-local-evidence-panel {
   position: fixed;
   z-index: 110;
@@ -83,7 +94,7 @@ app-local-evidence-panel .panel {
   overflow: auto;
   border: 1px solid var(--divider);
   border-radius: var(--radius);
-  background: #fff;
+  background: #0a141c;
   box-shadow: 0 30px 90px rgb(13 31 44 / 28%);
 }
 app-local-evidence-panel header {
@@ -113,7 +124,7 @@ app-local-evidence-panel :is(button, select, input) {
   min-height: 34px;
   border: 1px solid var(--divider);
   border-radius: 2px;
-  background: #fff;
+  background: #0d1922;
   color: var(--primary);
   font: inherit;
   font-size: 0.68rem;
@@ -151,7 +162,7 @@ app-local-evidence-panel form code {
 app-local-evidence-panel form input {
   width: 100%;
   padding: 0 0.7rem;
-  background: #f7f9fb;
+  background: #071018;
 }
 app-local-evidence-panel .form-actions {
   display: flex;

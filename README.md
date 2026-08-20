@@ -5,9 +5,13 @@
 <!-- prettier-ignore -->
 [![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white) [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
-PlanMargin is a local, reproducible research workbench that searches for the
-smallest realistic change to a recorded driving scenario that exposes an
-avoidable planner failure. It combines Waymo Open Motion Dataset (WOMD)
+PlanMargin is a local, reproducible campaign-investigation workbench that
+searches for the smallest realistic change to a recorded driving scenario that
+exposes an avoidable planner failure. It opens directly in the investigation
+workspace, where an engineer can rank all 3,200 proposals campaign-wide, trace
+the 100 matched cells, compare candidates, inspect every qualification gate,
+open the available trajectory replay, and
+export a content-digested investigation report. It combines Waymo Open Motion Dataset (WOMD)
 scenarios, Waymax closed-loop simulation, constrained Bayesian optimization,
 sealed experiment records, verified analytics, a measured native kernel, an
 authenticated local evidence API, and an interactive evidence debugger.
@@ -34,16 +38,15 @@ and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
 
 > **Program status:** The recovered PlanMargin program is complete. The
 > localhost-only real-record API and
-> debugger mode, Beam-to-Parquet-to-DuckDB pipeline, and constrained evidence
-> assistant are complete. The exact-scenario LiDAR Gaussian study produced a
-> reproducible `no_go` because only 23.66% of the full debugger trajectories fit
-> its frozen crop. The JAX double-DQN study also produced a reproducible
+> campaign investigator, real Perception camera/3DGS/LiDAR Sensor Lab,
+> Beam-to-Parquet-to-DuckDB pipeline, and constrained evidence assistant are
+> complete. The separate exact-planning-scenario LiDAR Gaussian study produced
+> a reproducible `no_go` because only 23.66% of the full debugger trajectories
+> fit its frozen crop. The JAX double-DQN study also produced a reproducible
 > `no_go`: 3.125% synthetic collisions exceeded its frozen 1.0% gate. Neither
 > failed technology was forced into the product, and no held-out comparative
 > campaign ran. See the
 > [recovery decision](docs/decisions/0004-recover-original-program.md).
-
-![Aggregate-only campaign evidence surface](docs/assets/campaign-evidence.png)
 
 ## What I built
 
@@ -66,9 +69,13 @@ technology demos:
   real trajectories; no client-supplied SQL or paths.
 - **Systems work:** a C++20/pybind11 interaction-metrics kernel selected by
   profiling and protected by randomized parity tests against the Python oracle.
-- **Product engineering:** a responsive Angular/TypeScript/Three.js debugger
-  with strict synthetic-input validation, an authenticated real-record mode,
-  sealed proposal inspection, and an aggregate campaign view.
+- **Product engineering:** a responsive Angular/TypeScript investigation
+  workbench with a campaign-wide 3,200-proposal index, 100-cell matrix,
+  side-by-side candidate comparison, proposal-specific sealed analysis,
+  qualification-gate traces, SHA-256-digested HTML
+  reports, one authentic trajectory replay, 199 recorded Perception frames, an
+  interactive 1.18M-primitive SHARP reconstruction, same-frame LiDAR, and
+  native tracked camera boxes.
 - **Constrained AI:** an offline-first evidence assistant with five
   deterministic aggregate tools, sealed citations, and an optional
   public-aggregate-only Gemini structured-output adapter.
@@ -83,9 +90,12 @@ technology demos:
 1. **Inspect the result.** Read the
    [aggregate campaign report](docs/natural-development-results.md) and its
    explicit claim boundary.
-2. **Try the evidence debugger.** Follow the
-   [local debugger instructions](#run-the-evidence-debugger), select
-   `Proposal 02`, and open **Campaign results**.
+2. **Inspect the evidence workbench.** Review the
+   [implemented debugger design](docs/debugger-design.md) and
+   [final design QA](design-qa.md). If you have authorized WOD inputs, follow
+   the [local debugger instructions](#run-the-evidence-workbench) to reproduce
+   the complete interactive Camera, Planning, 3DGS, LiDAR, and local-evidence
+   workspace.
 3. **Trace the system.** Review the
    [implemented architecture](docs/architecture.md) and
    [sealed campaign coordinator](docs/matched-search-campaign.md).
@@ -130,24 +140,27 @@ flowchart LR
     E --> J["FastAPI · authenticated local real evidence"]
     A --> K["Apache Beam · bounded feature dataflow"]
     K --> F
+    N["WOD Perception · FRONT camera + LiDAR"] --> O["Local sensor-scene preparation"]
+    O --> I
     G --> L["Deterministic evidence tools"]
     L --> M["Offline or optional Gemini explanation"]
-    H["Synthetic debugger fixture"] --> I["Angular · TypeScript · Three.js"]
-    J -->|"authenticated loopback only"| I
+    J -->|"authenticated loopback only"| I["Angular · TypeScript · Three.js · Spark"]
     G --> I
 ```
 
 Raw WOMD data, scenario identities, trajectories, feature vectors, support
 scores, cell reports, and proposal records remain local and ignored. Only
-schemas, code, synthetic fixtures, methodology, and permitted campaign-level
+schemas, code, test fixtures, methodology, and permitted campaign-level
 aggregates enter Git. The [architecture document](docs/architecture.md)
 describes each responsibility and public/private boundary.
 
 The implemented stack is Python, JAX/Waymax, PyTorch/BoTorch,
 C++20/pybind11, Apache Beam, DuckDB, Parquet, FastAPI, Angular, TypeScript,
-Three.js, an optional Gemini adapter, and GitHub Actions. The Gaussian and
-learned-controller studies are complete as audited negative engineering
-results. Hosted infrastructure is not required.
+Three.js, Spark, Apple SHARP, an optional Gemini adapter, and GitHub Actions.
+The plan-linked Gaussian and learned-controller studies remain complete as
+audited negative engineering results. The separate Perception visualization
+track is shipped and explicitly excluded from the planning claim. Hosted
+infrastructure is not required.
 
 ## Ask the evidence assistant
 
@@ -192,10 +205,11 @@ uv run --frozen planmargin-serve-evidence
 It binds only to `127.0.0.1:8765`, verifies the campaign, analytical database,
 and rollout collection before serving, and prints an ephemeral local token.
 See the [real-record API contract](docs/evidence-api.md) for its fixed endpoints
-and privacy boundary. The debugger intentionally starts in synthetic mode.
-Choose **Connect local evidence**, paste the ephemeral terminal token, and
-connect to switch the workbench to ignored, verified local records. This also
-enables the bounded Evidence Assistant and authenticated Gaussian Field.
+and privacy boundary. The debugger intentionally starts disconnected and
+renders no planning or sensor data until the local API authenticates. Choose
+**Connect local evidence**, paste the ephemeral terminal token, and connect to
+load ignored, verified local records. This also enables the bounded Evidence
+Assistant and authenticated sensor assets.
 
 Offline assistant explanations are the default and require no account. To use
 the optional Gemini explanation adapter, set `GEMINI_API_KEY` and explicitly
@@ -210,10 +224,29 @@ uv run --frozen planmargin-serve-evidence \
 Gemini receives only the allowlisted public aggregate packet; it never receives
 the raw question or ignored local evidence.
 
-## Run the evidence debugger
+## Run the evidence workbench
 
-The debugger boots with a bundled synthetic fixture and never uploads WOMD
-records. With Node.js 24.15.0 or a compatible Node 24 release:
+After the Python and Node environments have been installed, launch both local
+services with one supervised command:
+
+```bash
+.venv/bin/python scripts/launch_debugger.py
+```
+
+The launcher verifies the real ignored evidence, starts the loopback API and
+Angular development server, opens the workbench, prints one ephemeral token,
+and stops both processes together on `Ctrl-C`. It does not require a hosted
+service, subscription, or paid compute.
+
+The manual two-terminal path remains available for debugging. First prepare
+the ignored local Perception scene from authorized inputs:
+
+```bash
+uv run python scripts/prepare_perception_scene.py
+```
+
+Then start the local API as described above. With Node.js 24.15.0 or a
+compatible Node 24 release:
 
 ```bash
 cd web/debugger
@@ -221,15 +254,45 @@ npm ci
 npm start
 ```
 
-Open `http://127.0.0.1:4200`. Use `?evidence=1` to open the campaign view
-directly. The overview explains the evidence path; Scenario Lab supports
-proposal selection, playback, timeline scrubbing, responsive
-Scene/Evidence/Metrics views, validated synthetic JSON imports, and compact
-synthetic-view export. When the local evidence API is running, the workbench
-also exposes a campaign-cell browser, sealed proposal details, redacted real
-trajectories, five bounded assistant questions with citations, and an
-interactive local 75,000-primitive Gaussian field with its frozen integration
-gate. Real-record and Gaussian export remain disabled.
+Open `http://127.0.0.1:4200`. The public aggregate investigation surface works
+immediately. Connect the ephemeral API token to unlock the verified local
+campaign-wide ranking, 100 matched cells, and 3,200 sealed proposal records.
+The workbench can rank the whole campaign or a selected cell by criticality,
+minimality, support, or original sequence; it renders the exact gate at which a
+proposal stopped and exports a self-contained HTML report with a SHA-256
+evidence digest. **Sensor Lab** supports 199-frame Camera playback with native
+per-frame WOD tracked boxes, scrubbing, source-frame 3DGS/LiDAR spatial
+inspection, 3D orbit/reset,
+perception overlays, independent planning replay, and assistant questions over
+sealed evidence. Campaign proposal records contain trajectory hashes rather
+than full trajectories, so the UI never labels those summaries as replays. The
+one available sealed Stage-0 trajectory package is presented separately. The visual WOD
+Perception segment is separate from the privacy-reduced WOMD planning evidence;
+the UI labels that boundary and makes no geometric-registration or safety
+claim. Real-record and sensor export remain disabled.
+
+> **Public reproduction boundary:** The interactive sensor workspace requires
+> ignored, locally prepared WOD/SHARP assets because the repository does not
+> redistribute restricted source data or derived scene artifacts. A public
+> clone can run every data-free test and inspect the architecture, schemas,
+> design studies, and aggregate evidence; reproducing the live
+> Camera/3DGS/LiDAR scene requires authorized inputs. The application does not
+> replace missing real evidence with synthetic runtime data.
+
+### Downloadable public evidence
+
+The reviewed Hugging Face dataset staging directory is
+[`release/huggingface/planmargin-public-evidence`](release/huggingface/planmargin-public-evidence).
+It contains six aggregate-only JSONL records, a dataset card, and a SHA-256
+verifier—no per-scenario Waymo data. Build a deterministic download archive:
+
+```bash
+.venv/bin/python scripts/build_public_evidence_bundle.py
+```
+
+This creates `dist/planmargin-public-evidence-v1.zip`. Publication is held until
+the Waymo redistribution review is complete; see
+[`docs/distribution.md`](docs/distribution.md) for the exact boundary.
 
 Validate the frontend independently with:
 
@@ -256,15 +319,15 @@ following the [credential-safe setup guide](docs/setup.md).
 
 ## Repository map
 
-| Path                               | Responsibility                                                        |
-| ---------------------------------- | --------------------------------------------------------------------- |
-| [`src/planmargin`](src/planmargin) | Simulation, search, dataflow, evidence API, assistant, and analytics   |
-| [`cpp`](cpp)                       | Measured C++20 interaction-metrics kernel                             |
-| [`schemas`](schemas)               | Versioned experiment and analytics contracts                          |
-| [`tests`](tests)                   | Data-free scientific, parity, reconstruction, and privacy checks      |
-| [`web/debugger`](web/debugger)     | Angular/TypeScript/Three.js evidence debugger                         |
-| [`docs`](docs)                     | Frozen protocols, decisions, results, and engineering evidence        |
-| [`experiments`](experiments)       | Privacy-safe stage reports and implementation checkpoints             |
+| Path                               | Responsibility                                                       |
+| ---------------------------------- | -------------------------------------------------------------------- |
+| [`src/planmargin`](src/planmargin) | Simulation, search, dataflow, evidence API, assistant, and analytics |
+| [`cpp`](cpp)                       | Measured C++20 interaction-metrics kernel                            |
+| [`schemas`](schemas)               | Versioned experiment and analytics contracts                         |
+| [`tests`](tests)                   | Data-free scientific, parity, reconstruction, and privacy checks     |
+| [`web/debugger`](web/debugger)     | Angular/TypeScript/Three.js/Spark scenario simulator                 |
+| [`docs`](docs)                     | Frozen protocols, decisions, results, and engineering evidence       |
+| [`experiments`](experiments)       | Privacy-safe stage reports and implementation checkpoints            |
 
 ## Design decisions
 
@@ -284,17 +347,17 @@ following the [credential-safe setup guide](docs/setup.md).
 
 ## Documentation
 
-| Area                     | Start here                                                                                                                                                                         |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Product and architecture | [Project specification](docs/project-spec.md) · [Implemented architecture](docs/architecture.md) · [Version-one checkpoint](docs/decisions/0002-version-one-product-checkpoint.md) |
-| Experiment contract      | [Behavioral realism and matched search](docs/behavioral-realism-and-matched-search.md) · [Campaign protocol](docs/matched-search-campaign.md)                                      |
-| Final evidence           | [Aggregate result](docs/natural-development-results.md) · [Held-out decision](docs/decisions/0003-version-one-heldout-no-go.md)                                                    |
-| Data and systems         | [Analytics](docs/analytics.md) · [Native geometry](docs/native-geometry.md) · [Rollout records](docs/rollout-record.md)                                                            |
-| Dataflow                 | [Beam feature pipeline](docs/beam-feature-pipeline.md)                                                                                                                           |
-| Evidence assistant       | [Constrained offline and Gemini contract](docs/evidence-assistant.md)                                                                                                            |
-| Product interface        | [Local evidence API](docs/evidence-api.md) · [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md)                               |
-| Reproduction             | [Local setup](docs/setup.md) · [Data boundary](data/README.md)                                                                                                                     |
-| Program audit            | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Final integration audit](docs/final-program-audit.md)                                   |
+| Area                     | Start here                                                                                                                                                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Product and architecture | [Project specification](docs/project-spec.md) · [Implemented architecture](docs/architecture.md) · [Version-one checkpoint](docs/decisions/0002-version-one-product-checkpoint.md)                                                    |
+| Experiment contract      | [Behavioral realism and matched search](docs/behavioral-realism-and-matched-search.md) · [Campaign protocol](docs/matched-search-campaign.md)                                                                                         |
+| Final evidence           | [Aggregate result](docs/natural-development-results.md) · [Held-out decision](docs/decisions/0003-version-one-heldout-no-go.md)                                                                                                       |
+| Data and systems         | [Analytics](docs/analytics.md) · [Native geometry](docs/native-geometry.md) · [Rollout records](docs/rollout-record.md)                                                                                                               |
+| Dataflow                 | [Beam feature pipeline](docs/beam-feature-pipeline.md)                                                                                                                                                                                |
+| Evidence assistant       | [Constrained offline and Gemini contract](docs/evidence-assistant.md)                                                                                                                                                                 |
+| Product interface        | [Campaign investigation workbench](docs/campaign-investigation-workbench.md) · [Local evidence API](docs/evidence-api.md) · [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md) |
+| Reproduction             | [Local setup](docs/setup.md) · [Data boundary](data/README.md)                                                                                                                                                                        |
+| Program audit            | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Final integration audit](docs/final-program-audit.md)                                                                                                 |
 
 ## Data, licensing, and affiliation
 

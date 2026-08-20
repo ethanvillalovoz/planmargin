@@ -26,16 +26,18 @@ flowchart TB
         R --> J
         H --> O["Authenticated localhost FastAPI"]
         J --> O
+        V["WOD Perception camera + LiDAR"] --> W["Ignored sensor-scene manifest"]
+        X["Apple SHARP reconstruction"] --> W
+        W --> O
     end
 
     subgraph U["Public data-free boundary"]
-        K["Versioned schemas and synthetic fixtures"]
+        K["Versioned schemas and data-free test fixtures"]
         L["Aggregate-only campaign report"]
-        M["Angular / Three.js evidence debugger"]
+        M["Angular / Three.js / Spark simulator"]
         N["Python and native parity tests"]
         S["Deterministic aggregate evidence tools"]
         T["Offline / optional Gemini explanation"]
-        K --> M
         L --> M
         K --> N
         L --> S
@@ -59,8 +61,9 @@ flowchart TB
 | Coordination    | Python, JSON Schema              | Preserve every attempted proposal, account for physical rollout cost, seal checkpoints, and resume without changing decisions.                      |
 | Analytics       | DuckDB, Parquet, SQL             | Normalize sealed campaign summaries privately and independently reconcile published aggregates.                                                     |
 | Feature dataflow | Apache Beam, PyArrow, Parquet    | Mine or ingest bounded training shards, extract the shared behavior features, checkpoint by source, key/group into stable partitions, and reconcile in DuckDB. |
-| Local API       | FastAPI, read-only DuckDB        | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced projections on loopback only.                                     |
-| Evidence UI     | Angular, TypeScript, Three.js    | Boot safely from a synthetic fixture; optionally inspect authenticated, redacted local trajectories and sealed proposal evidence without exporting it. |
+| Sensor preparation | Python, DuckDB, SciPy, SHARP | Extract recorded camera frames, fit the same-frame LiDAR Gaussian field, and seal fixed ignored asset metadata without downloading or publishing data. |
+| Local API       | FastAPI, read-only DuckDB        | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced evidence plus fixed sensor assets on loopback only.                |
+| Evidence UI     | Angular, TypeScript, Three.js, Spark | Keep Camera and Planning on independent clocks; render calibrated SHARP 3DGS, same-frame LiDAR, sealed planning metrics, and bounded assistance without export. |
 | Evidence assistant | Python, optional Gemini SDK   | Route questions to one closed aggregate tool, cite sealed deterministic facts, and optionally explain public aggregates without sharing the raw question or private records. |
 | Automation      | uv, npm, GitHub Actions          | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                     |
 
@@ -128,7 +131,8 @@ See the [analytics contract](analytics.md).
 | Synthetic fixtures and parity cases            | Scenario and object identifiers           |
 | Frozen protocols and decision records          | Original and mutated trajectories         |
 | Campaign-level aggregate results               | Proposal and cell records                 |
-| Screenshots of aggregate or synthetic evidence | Feature vectors and support scores        |
+| Privacy-reviewed product screenshots           | Feature vectors and support scores        |
+| UI code and data-free renderer tests            | Camera frames, SHARP PLY, and LiDAR PLY   |
 | Data-free CI configuration                     | DuckDB, Parquet, and checkpoint artifacts |
 
 Repository policy tests and `.gitignore` enforce this separation. The debugger
@@ -156,10 +160,11 @@ dependencies:
   tools, a deterministic offline default, sealed citations, and an optional
   public-only Gemini structured-output adapter; never metric generation,
   finding certification, or vehicle control.
-- **3D Gaussian splatting:** the frozen exact-scenario LiDAR feasibility study
-  completed `no_go` on trajectory coverage; its private field is not served and
-  no renderer was added. Decoder/fitter code and aggregate audit results remain
-  for reproducibility.
+- **3D Gaussian splatting:** the frozen exact-planning-scenario LiDAR study
+  remains `no_go` on trajectory coverage. Separately, a real WOD Perception
+  frame is reconstructed with Apple SHARP and rendered beside same-frame LiDAR
+  in the authenticated local simulator. The UI states that this visual segment
+  is not registered to or evidence for the planning experiment.
 - **Learned or RL planner:** the experiment-v2 JAX double-DQN candidate passed
   determinism, compute, and progress gates but failed its predeclared synthetic
   collision gate. It was not deployed into Waymax and no v2 validation read ran.

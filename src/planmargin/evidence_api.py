@@ -38,6 +38,7 @@ DEFAULT_ANALYTICS = Path("artifacts/analytics/natural-development-v1")
 DEFAULT_CAMPAIGN = Path("artifacts/search-comparison/natural-development-v1")
 DEFAULT_ROLLOUTS = Path("artifacts/stage-0/rollout-records.json")
 DEFAULT_GAUSSIAN = Path("artifacts/gaussian-field/feasibility")
+DEFAULT_SENSOR_SCENE = Path("artifacts/sensor-scene/waymo-front")
 DEFAULT_ORIGINS = ("http://127.0.0.1:4200", "http://localhost:4200")
 MAX_JSON_BYTES = 128 * 1024 * 1024
 GAUSSIAN_LINKAGE_GATE = 0.90
@@ -136,6 +137,54 @@ class ProposalEvidence(EvidenceModel):
     tested_mutated_failure: bool | None
     reference_mutated_success: bool | None
     physical_rollouts: int
+
+
+class InvestigationProposalEvidence(ProposalEvidence):
+    cell_id: str
+    method: Literal["random", "bayesian"]
+    seed: int
+    selection_order: int
+    decisive_gate: str
+
+
+class InvestigationFunnelEvidence(EvidenceModel):
+    proposed: int
+    mutation_valid: int
+    scenario_valid: int
+    pipeline_valid: int
+    support_valid: int
+    reference_passes: int
+    tested_fails: int
+    qualifying_findings: int
+
+
+class CampaignInvestigationEvidence(EvidenceModel):
+    evidence_mode: Literal["real_local_redacted"]
+    integrity: Literal["verified"]
+    cell_count: int
+    proposal_count: int
+    funnel: InvestigationFunnelEvidence
+    closest_margin: list[InvestigationProposalEvidence]
+    smallest_mutation: list[InvestigationProposalEvidence]
+    highest_support: list[InvestigationProposalEvidence]
+
+
+class ProposalAnalysisFactEvidence(EvidenceModel):
+    label: str
+    value: str
+
+
+class ProposalAnalysisEvidence(EvidenceModel):
+    evidence_mode: Literal["real_local_redacted"]
+    analysis_mode: Literal["deterministic_proposal_specific"]
+    cell_id: str
+    proposal_number: int
+    decision: str
+    decisive_gate: str
+    explanation: str
+    facts: list[ProposalAnalysisFactEvidence]
+    record_sha256: str
+    trajectory_available: Literal[False]
 
 
 class RunSummaryEvidence(EvidenceModel):
@@ -307,6 +356,33 @@ class GaussianFieldEvidence(EvidenceModel):
     unrestricted_export: Literal[False]
 
 
+class SensorAssetEvidence(EvidenceModel):
+    representation: str
+    source_frame_index: int
+    primitive_count: int
+    bytes: int
+
+
+class SensorAnnotationEvidence(EvidenceModel):
+    representation: Literal["native_tracked_camera_boxes"]
+    frame_count: int
+    box_count: int
+    bytes: int
+
+
+class SensorSceneEvidence(EvidenceModel):
+    schema_version: Literal["1.0.0"]
+    evidence_mode: Literal["real_local_sensor"]
+    source: Literal["Waymo Open Dataset v2 Perception"]
+    segment_id: str
+    camera_name: Literal["FRONT"]
+    frame_count: int
+    frame_rate_hz: int
+    annotations: SensorAnnotationEvidence
+    reconstruction: SensorAssetEvidence
+    lidar: SensorAssetEvidence
+
+
 @dataclass(frozen=True)
 class EvidencePaths:
     """Fixed artifact locations beneath one repository root."""
@@ -365,6 +441,7 @@ class EvidenceRepository:
         self.collection: dict[str, Any] | None = None
         self._cell_by_id: dict[str, tuple[str, int, int]] = {}
         self._run_id: str | None = None
+        self._investigation_cache: dict[str, Any] | None = None
 
     def open(self) -> None:
         """Verify every source before accepting requests."""
@@ -639,53 +716,212 @@ class EvidenceRepository:
                 cell=cell,
                 proposal_index=index,
             )
-            finding = record["finding"]
-            support = record["support"]
-            result.append(
-                {
-                    "proposal_number": index + 1,
-                    "attempt_status": record["attempt"]["status"],
-                    "normalized_mutation_distance": record["proposal"][
-                        "normalized_mutation_distance"
-                    ],
-                    "mutation_parameters": record["proposal"]["parameters"],
-                    "duplicate_of_proposal_numbers": [
-                        prior + 1
-                        for prior in record["proposal"]["duplicate_of_proposal_indices"]
-                    ],
-                    "empirical_support_probability": (
-                        support["p_support"] if support is not None else None
-                    ),
-                    "support_passes": (
-                        support["passes"] if support is not None else None
-                    ),
-                    "objective_available": record["outcome"]["objective_available"],
-                    "objectives": record["outcome"]["objectives"],
-                    "constraints": record["outcome"]["constraints"],
-                    "pipeline_reproducible": (
-                        finding["pipeline_reproducible"]
-                        if finding is not None
-                        else None
-                    ),
-                    "policy_specific_avoidable_failure": (
-                        finding["policy_specific_avoidable_failure"]
-                        if finding is not None
-                        else None
-                    ),
-                    "tested_mutated_failure": (
-                        finding["tested_mutated_failure"]
-                        if finding is not None
-                        else None
-                    ),
-                    "reference_mutated_success": (
-                        finding["reference_mutated_success"]
-                        if finding is not None
-                        else None
-                    ),
-                    "physical_rollouts": record["cost"]["total_physical_rollouts"],
-                }
-            )
+            result.append(self._proposal_projection(record, index + 1))
         return result
+
+    @staticmethod
+    def _decisive_gate(proposal: dict[str, Any]) -> str:
+        status = proposal["attempt_status"]
+        if status == "mutation_rejected":
+            return "mutation_geometry"
+        if status == "scenario_rejected":
+            return "scenario_validity"
+        if proposal["pipeline_reproducible"] is not True:
+            return "pipeline_reproducibility"
+        if proposal["support_passes"] is not True:
+            return "empirical_support"
+        if proposal["reference_mutated_success"] is not True:
+            return "reference_controller"
+        if proposal["tested_mutated_failure"] is not True:
+            return "tested_controller_failure"
+        if proposal["policy_specific_avoidable_failure"] is not True:
+            return "finding_contract"
+        return "qualifying_finding"
+
+    @staticmethod
+    def _proposal_projection(record: dict[str, Any], number: int) -> dict[str, Any]:
+        finding = record["finding"]
+        support = record["support"]
+        return {
+            "proposal_number": number,
+            "attempt_status": record["attempt"]["status"],
+            "normalized_mutation_distance": record["proposal"][
+                "normalized_mutation_distance"
+            ],
+            "mutation_parameters": record["proposal"]["parameters"],
+            "duplicate_of_proposal_numbers": [
+                prior + 1
+                for prior in record["proposal"]["duplicate_of_proposal_indices"]
+            ],
+            "empirical_support_probability": (
+                support["p_support"] if support is not None else None
+            ),
+            "support_passes": support["passes"] if support is not None else None,
+            "objective_available": record["outcome"]["objective_available"],
+            "objectives": record["outcome"]["objectives"],
+            "constraints": record["outcome"]["constraints"],
+            "pipeline_reproducible": (
+                finding["pipeline_reproducible"] if finding is not None else None
+            ),
+            "policy_specific_avoidable_failure": (
+                finding["policy_specific_avoidable_failure"]
+                if finding is not None
+                else None
+            ),
+            "tested_mutated_failure": (
+                finding["tested_mutated_failure"] if finding is not None else None
+            ),
+            "reference_mutated_success": (
+                finding["reference_mutated_success"] if finding is not None else None
+            ),
+            "physical_rollouts": record["cost"]["total_physical_rollouts"],
+        }
+
+    def investigation(self) -> dict[str, Any]:
+        """Build and cache a verified campaign-wide proposal index."""
+        if self._investigation_cache is not None:
+            return self._investigation_cache
+        rows: list[dict[str, Any]] = []
+        for cell_id, (method, seed, selection_order) in self._cell_by_id.items():
+            for proposal in self.proposals(cell_id):
+                enriched = {
+                    **proposal,
+                    "cell_id": cell_id,
+                    "method": method,
+                    "seed": seed,
+                    "selection_order": selection_order,
+                }
+                enriched["decisive_gate"] = self._decisive_gate(enriched)
+                rows.append(enriched)
+
+        objective_rows = [row for row in rows if row["objective_available"]]
+        support_rows = [
+            row for row in rows if row["empirical_support_probability"] is not None
+        ]
+        result = {
+            "evidence_mode": "real_local_redacted",
+            "integrity": "verified",
+            "cell_count": len(self._cell_by_id),
+            "proposal_count": len(rows),
+            "funnel": {
+                "proposed": len(rows),
+                "mutation_valid": sum(
+                    row["attempt_status"] != "mutation_rejected" for row in rows
+                ),
+                "scenario_valid": sum(
+                    row["attempt_status"] == "accepted" for row in rows
+                ),
+                "pipeline_valid": sum(
+                    row["pipeline_reproducible"] is True for row in rows
+                ),
+                "support_valid": sum(row["support_passes"] is True for row in rows),
+                "reference_passes": sum(
+                    row["pipeline_reproducible"] is True
+                    and row["support_passes"] is True
+                    and row["reference_mutated_success"] is True
+                    for row in rows
+                ),
+                "tested_fails": sum(
+                    row["pipeline_reproducible"] is True
+                    and row["support_passes"] is True
+                    and row["reference_mutated_success"] is True
+                    and row["tested_mutated_failure"] is True
+                    for row in rows
+                ),
+                "qualifying_findings": sum(
+                    row["policy_specific_avoidable_failure"] is True for row in rows
+                ),
+            },
+            "closest_margin": sorted(
+                objective_rows,
+                key=lambda row: (
+                    -row["objectives"][0],
+                    -row["objectives"][1],
+                    row["cell_id"],
+                    row["proposal_number"],
+                ),
+            )[:20],
+            "smallest_mutation": sorted(
+                objective_rows,
+                key=lambda row: (
+                    -row["objectives"][1],
+                    -row["objectives"][0],
+                    row["cell_id"],
+                    row["proposal_number"],
+                ),
+            )[:20],
+            "highest_support": sorted(
+                support_rows,
+                key=lambda row: (
+                    -row["empirical_support_probability"],
+                    -row["objectives"][0],
+                    row["cell_id"],
+                    row["proposal_number"],
+                ),
+            )[:20],
+        }
+        self._investigation_cache = result
+        return result
+
+    def proposal_analysis(self, cell_id: str, proposal_number: int) -> dict[str, Any]:
+        if not 1 <= proposal_number <= matched_search.PROPOSAL_BUDGET:
+            raise KeyError(proposal_number)
+        proposal = self.proposals(cell_id)[proposal_number - 1]
+        identity = self._cell_by_id[cell_id]
+        method, seed, selection_order = identity
+        cell = matched_coordinator.CellConfig(method, "natural", seed, selection_order)
+        directory = matched_campaign.cell_output_dir(self.paths.campaign, cell)
+        record = _json_object(
+            directory / "proposals" / f"proposal-{proposal_number - 1:04d}.json"
+        )
+        gate = self._decisive_gate(proposal)
+        labels = {
+            "mutation_geometry": "the bounded mutation geometry was rejected",
+            "scenario_validity": "the mutated scenario failed the validity contract",
+            "pipeline_reproducibility": "the deterministic pipeline contract was not met",
+            "empirical_support": "the mutation fell outside empirical support",
+            "reference_controller": "the reference controller did not succeed",
+            "tested_controller_failure": "the tested controller remained successful",
+            "finding_contract": "the complete finding contract was not met",
+            "qualifying_finding": "all finding gates passed",
+        }
+        support = proposal["empirical_support_probability"]
+        return {
+            "evidence_mode": "real_local_redacted",
+            "analysis_mode": "deterministic_proposal_specific",
+            "cell_id": cell_id,
+            "proposal_number": proposal_number,
+            "decision": (
+                "qualified"
+                if proposal["policy_specific_avoidable_failure"] is True
+                else "not_qualified"
+            ),
+            "decisive_gate": gate,
+            "explanation": (
+                f"Proposal {proposal_number} did not qualify because {labels[gate]}."
+                if gate != "qualifying_finding"
+                else f"Proposal {proposal_number} satisfied every frozen finding gate."
+            ),
+            "facts": [
+                {"label": "method", "value": method},
+                {"label": "scenario", "value": str(selection_order)},
+                {"label": "seed", "value": str(seed)},
+                {
+                    "label": "criticality",
+                    "value": f"{proposal['objectives'][0]:.6f}",
+                },
+                {
+                    "label": "minimality",
+                    "value": f"{proposal['objectives'][1]:.6f}",
+                },
+                {
+                    "label": "support",
+                    "value": "not evaluated" if support is None else f"{support:.6f}",
+                },
+            ],
+            "record_sha256": record["record_sha256"],
+            "trajectory_available": False,
+        }
 
     def runs(self) -> list[dict[str, Any]]:
         collection = self._require(self.collection)
@@ -795,9 +1031,7 @@ class EvidenceRepository:
             raise ValueError("Gaussian manifest record type is invalid")
         if manifest.get("schema_version") != "1.0.0":
             raise ValueError("Gaussian manifest schema version is invalid")
-        random_search._validate_seal(
-            manifest, "manifest_sha256", path=manifest_path
-        )
+        random_search._validate_seal(manifest, "manifest_sha256", path=manifest_path)
         observed = manifest.get("observed")
         privacy = manifest.get("privacy")
         gates = manifest.get("gates")
@@ -834,17 +1068,13 @@ class EvidenceRepository:
             "primitive_count": observed["primitive_count"],
             "field_bytes": observed["field_bytes"],
             "runtime_seconds": observed["runtime_seconds"],
-            "trajectory_linkage_fraction": observed[
-                "trajectory_linkage_fraction"
-            ],
+            "trajectory_linkage_fraction": observed["trajectory_linkage_fraction"],
             "trajectory_linkage_gate": GAUSSIAN_LINKAGE_GATE,
             "geometry": {
                 "median_nearest_mean_distance_m": geometric[
                     "median_nearest_mean_distance_m"
                 ],
-                "p90_nearest_mean_distance_m": geometric[
-                    "p90_nearest_mean_distance_m"
-                ],
+                "p90_nearest_mean_distance_m": geometric["p90_nearest_mean_distance_m"],
                 "coverage_within_0_50_m": geometric["coverage_within_0_50_m"],
             },
             "gates": gates,
@@ -852,6 +1082,126 @@ class EvidenceRepository:
             "unrestricted_export": False,
         }
         return summary, field_path
+
+    def sensor_scene(self) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Validate and project the ignored, same-frame local sensor bundle."""
+        manifest_path = self.paths.root / DEFAULT_SENSOR_SCENE / "manifest.json"
+        if manifest_path.is_symlink() or not manifest_path.is_file():
+            raise FileNotFoundError("Prepared local sensor scene is unavailable")
+        manifest = _json_object(manifest_path)
+        expected = {
+            "record_type": "planmargin.sensor_scene_manifest",
+            "schema_version": "1.0.0",
+            "source": "Waymo Open Dataset v2 Perception",
+            "camera_name": "FRONT",
+        }
+        if any(manifest.get(key) != value for key, value in expected.items()):
+            raise ValueError("Sensor scene manifest contract is invalid")
+        frames = manifest.get("frames")
+        annotations = manifest.get("annotations")
+        reconstruction = manifest.get("reconstruction")
+        lidar = manifest.get("lidar")
+        if (
+            not isinstance(frames, list)
+            or not frames
+            or not isinstance(annotations, dict)
+            or not isinstance(reconstruction, dict)
+            or not isinstance(lidar, dict)
+        ):
+            raise ValueError("Sensor scene manifest is incomplete")
+        if manifest.get("frame_count") != len(frames):
+            raise ValueError("Sensor scene frame count does not match its manifest")
+        for index, frame in enumerate(frames):
+            if not isinstance(frame, dict) or frame.get("index") != index:
+                raise ValueError("Sensor scene frame ordering is invalid")
+        annotations_path = (self.paths.root / annotations.get("file", "")).resolve()
+        if (
+            not annotations_path.is_relative_to(self.paths.root)
+            or annotations_path.is_symlink()
+            or not annotations_path.is_file()
+            or annotations_path.stat().st_size != annotations.get("bytes")
+            or random_search._file_sha256(annotations_path) != annotations.get("sha256")
+            or annotations.get("frame_count") != len(frames)
+        ):
+            raise ValueError("Sensor frame annotations failed local validation")
+        for asset in (reconstruction, lidar):
+            relative = asset.get("file")
+            if not isinstance(relative, str):
+                raise ValueError("Sensor scene asset path is invalid")
+            path = (self.paths.root / relative).resolve()
+            if (
+                not path.is_relative_to(self.paths.root)
+                or path.is_symlink()
+                or not path.is_file()
+                or path.stat().st_size != asset.get("bytes")
+            ):
+                raise ValueError("Sensor scene asset failed local validation")
+        summary = {
+            "schema_version": "1.0.0",
+            "evidence_mode": "real_local_sensor",
+            "source": manifest["source"],
+            "segment_id": manifest["segment_id"],
+            "camera_name": manifest["camera_name"],
+            "frame_count": manifest["frame_count"],
+            "frame_rate_hz": manifest["frame_rate_hz"],
+            "annotations": {
+                key: annotations[key]
+                for key in ("representation", "frame_count", "box_count", "bytes")
+            },
+            "reconstruction": {
+                key: reconstruction[key]
+                for key in (
+                    "representation",
+                    "source_frame_index",
+                    "primitive_count",
+                    "bytes",
+                )
+            },
+            "lidar": {
+                key: lidar[key]
+                for key in (
+                    "representation",
+                    "source_frame_index",
+                    "primitive_count",
+                    "bytes",
+                )
+            },
+        }
+        return summary, manifest
+
+    def sensor_frame(self, frame_index: int) -> Path:
+        """Return one validated FRONT camera frame from the prepared bundle."""
+        _, manifest = self.sensor_scene()
+        frames = manifest["frames"]
+        if frame_index < 0 or frame_index >= len(frames):
+            raise IndexError(frame_index)
+        frame = frames[frame_index]
+        directory = (self.paths.root / manifest["frames_directory"]).resolve()
+        path = (directory / frame["file"]).resolve()
+        if (
+            not path.is_relative_to(directory)
+            or path.is_symlink()
+            or not path.is_file()
+            or path.stat().st_size != frame["bytes"]
+            or random_search._file_sha256(path) != frame["sha256"]
+        ):
+            raise ValueError("Sensor frame failed local validation")
+        return path
+
+    def sensor_asset(self, name: Literal["reconstruction", "lidar"]) -> Path:
+        """Return one validated binary sensor representation."""
+        _, manifest = self.sensor_scene()
+        asset = manifest[name]
+        path = (self.paths.root / asset["file"]).resolve(strict=True)
+        if random_search._file_sha256(path) != asset["sha256"]:
+            raise ValueError("Sensor asset failed integrity validation")
+        return path
+
+    def sensor_annotations(self) -> Path:
+        """Return the validated native per-frame FRONT camera boxes."""
+        _, manifest = self.sensor_scene()
+        annotation = manifest["annotations"]
+        return (self.paths.root / annotation["file"]).resolve(strict=True)
 
     @staticmethod
     def _require(value: Any) -> Any:
@@ -1081,6 +1431,25 @@ def create_app(
             raise HTTPException(status_code=404, detail="Cell not found") from error
 
     @app.get(
+        "/api/v1/investigation",
+        dependencies=[auth],
+        response_model=CampaignInvestigationEvidence,
+    )
+    def investigation() -> dict[str, Any]:
+        return repository.investigation()
+
+    @app.get(
+        "/api/v1/cells/{cell_id}/proposals/{proposal_number}/analysis",
+        dependencies=[auth],
+        response_model=ProposalAnalysisEvidence,
+    )
+    def proposal_analysis(cell_id: str, proposal_number: int) -> dict[str, Any]:
+        try:
+            return repository.proposal_analysis(cell_id, proposal_number)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail="Proposal not found") from error
+
+    @app.get(
         "/api/v1/runs",
         dependencies=[auth],
         response_model=list[RunSummaryEvidence],
@@ -1159,6 +1528,74 @@ def create_app(
             path,
             media_type="application/octet-stream",
             filename="planmargin-local-field.ply",
+            content_disposition_type="inline",
+        )
+
+    @app.get(
+        "/api/v1/sensor-scene",
+        dependencies=[auth],
+        response_model=SensorSceneEvidence,
+    )
+    def sensor_scene() -> dict[str, Any]:
+        try:
+            summary, _ = repository.sensor_scene()
+            return summary
+        except FileNotFoundError as error:
+            raise HTTPException(
+                status_code=404, detail="Sensor scene not prepared"
+            ) from error
+
+    @app.get(
+        "/api/v1/sensor-scene/front/annotations.json",
+        dependencies=[auth],
+        response_class=FileResponse,
+        responses={200: {"content": {"application/json": {}}}},
+    )
+    def sensor_annotations() -> FileResponse:
+        try:
+            path = repository.sensor_annotations()
+        except FileNotFoundError as error:
+            raise HTTPException(
+                status_code=404, detail="Sensor annotations not found"
+            ) from error
+        return FileResponse(
+            path, media_type="application/json", content_disposition_type="inline"
+        )
+
+    @app.get(
+        "/api/v1/sensor-scene/front/{frame_index}.jpg",
+        dependencies=[auth],
+        response_class=FileResponse,
+        responses={200: {"content": {"image/jpeg": {}}}},
+    )
+    def sensor_frame(frame_index: int) -> FileResponse:
+        try:
+            path = repository.sensor_frame(frame_index)
+        except (FileNotFoundError, IndexError) as error:
+            raise HTTPException(
+                status_code=404, detail="Sensor frame not found"
+            ) from error
+        return FileResponse(
+            path, media_type="image/jpeg", content_disposition_type="inline"
+        )
+
+    @app.get(
+        "/api/v1/sensor-scene/{asset}.ply",
+        dependencies=[auth],
+        response_class=FileResponse,
+        responses={200: {"content": {"application/octet-stream": {}}}},
+    )
+    def sensor_asset(asset: Literal["reconstruction", "lidar"]) -> FileResponse:
+        try:
+            path = repository.sensor_asset(asset)
+        except FileNotFoundError as error:
+            raise HTTPException(
+                status_code=404, detail="Sensor asset not found"
+            ) from error
+        return FileResponse(
+            path,
+            media_type="application/octet-stream",
+            filename=f"planmargin-{asset}.ply",
             content_disposition_type="inline",
         )
 

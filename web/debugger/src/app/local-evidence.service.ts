@@ -2,26 +2,34 @@ import { Injectable, computed, signal } from '@angular/core';
 import { CAMPAIGN_EVIDENCE } from './campaign-evidence';
 import { DebuggerRun } from './debugger.types';
 import {
+  parseCampaignInvestigation,
   parseCampaign,
   parseLocalRun,
+  parseProposalAnalysis,
   parseProposals,
   parseRunSummaries,
   snapshot,
 } from './local-evidence.parsers';
 import {
+  CampaignInvestigation,
   LocalCell,
   LocalConnectionState,
   LocalEvidenceSnapshot,
   LocalProposal,
   LocalRunSummary,
+  ProposalAnalysis,
 } from './local-evidence.types';
 import {
   AssistantAnswer,
   AssistantQueryId,
   AssistantQuestion,
   AssistantStatus,
+  CameraAnnotationBundle,
   GaussianFieldBundle,
   GaussianFieldSummary,
+  SensorAssetBundle,
+  SensorAssetName,
+  SensorSceneSummary,
 } from './product-evidence.types';
 
 const API_ROOT = 'http://127.0.0.1:8765/api/v1';
@@ -36,6 +44,7 @@ export class LocalEvidenceService {
   readonly cells = signal<readonly LocalCell[]>([]);
   readonly runs = signal<readonly LocalRunSummary[]>([]);
   readonly proposals = signal<readonly LocalProposal[]>([]);
+  readonly investigation = signal<CampaignInvestigation | undefined>(undefined);
   readonly selectedCellId = signal<string | undefined>(undefined);
   readonly selectedProposalNumber = signal<number | undefined>(undefined);
   readonly loadingProposals = signal(false);
@@ -67,14 +76,18 @@ export class LocalEvidenceService {
       const runsValue = await this.get('/runs', token);
       const campaign = parseCampaign(campaignValue, methodsValue, hypothesesValue, cellsValue);
       const runs = parseRunSummaries(runsValue);
-      const initialRun = parseLocalRun(
-        await this.get(`/runs/${encodeURIComponent(runs[0].runId)}`, token),
-      );
+      const [initialRunValue, investigationValue] = await Promise.all([
+        this.get(`/runs/${encodeURIComponent(runs[0].runId)}`, token),
+        this.get('/investigation', token),
+      ]);
+      const initialRun = parseLocalRun(initialRunValue);
+      const investigation = parseCampaignInvestigation(investigationValue);
       if (generation !== this.requestGeneration) throw new Error('Connection was superseded');
       this.token = token;
       this.campaign.set(campaign.campaign);
       this.cells.set(campaign.cells);
       this.runs.set(runs);
+      this.investigation.set(investigation);
       this.state.set('connected');
       await this.selectCell(campaign.cells[0].cellId);
       return snapshot(campaign.campaign, campaign.cells, runs, initialRun);
@@ -129,6 +142,19 @@ export class LocalEvidenceService {
     this.selectedProposalNumber.set(proposalNumber);
   }
 
+  async selectInvestigationProposal(cellId: string, proposalNumber: number): Promise<void> {
+    await this.selectCell(cellId);
+    this.selectProposal(proposalNumber);
+  }
+
+  async proposalAnalysis(cellId: string, proposalNumber: number): Promise<ProposalAnalysis> {
+    return parseProposalAnalysis(
+      await this.authorizedGet(
+        `/cells/${encodeURIComponent(cellId)}/proposals/${proposalNumber}/analysis`,
+      ),
+    );
+  }
+
   async assistantCatalog(): Promise<{
     readonly status: AssistantStatus;
     readonly questions: readonly AssistantQuestion[];
@@ -138,6 +164,10 @@ export class LocalEvidenceService {
       this.authorizedGet('/assistant/questions') as Promise<readonly AssistantQuestion[]>,
     ]);
     return { status, questions };
+  }
+
+  async assistantStatus(): Promise<AssistantStatus> {
+    return this.authorizedGet('/assistant/status') as Promise<AssistantStatus>;
   }
 
   async askAssistant(queryId: AssistantQueryId): Promise<AssistantAnswer> {
@@ -154,6 +184,29 @@ export class LocalEvidenceService {
     return { summary, bytes };
   }
 
+  async sensorScene(): Promise<SensorSceneSummary> {
+    return this.authorizedGet('/sensor-scene') as Promise<SensorSceneSummary>;
+  }
+
+  async sensorFrame(frameIndex: number, signal?: AbortSignal): Promise<Blob> {
+    const response = await this.authorizedFetch(`/sensor-scene/front/${frameIndex}.jpg`, signal);
+    return response.blob();
+  }
+
+  async sensorAnnotations(): Promise<CameraAnnotationBundle> {
+    return this.authorizedGet(
+      '/sensor-scene/front/annotations.json',
+    ) as Promise<CameraAnnotationBundle>;
+  }
+
+  async sensorAsset(name: SensorAssetName): Promise<SensorAssetBundle> {
+    const [summary, bytes] = await Promise.all([
+      this.sensorScene(),
+      this.authorizedBytes(`/sensor-scene/${name}.ply`),
+    ]);
+    return { summary, bytes };
+  }
+
   disconnect(): void {
     this.requestGeneration++;
     this.token = undefined;
@@ -163,6 +216,7 @@ export class LocalEvidenceService {
     this.cells.set([]);
     this.runs.set([]);
     this.proposals.set([]);
+    this.investigation.set(undefined);
     this.selectedCellId.set(undefined);
     this.selectedProposalNumber.set(undefined);
     this.loadingProposals.set(false);
@@ -185,14 +239,18 @@ export class LocalEvidenceService {
     return response.json() as Promise<unknown>;
   }
 
-  private authorizedFetch(path: string): Promise<Response> {
+  private authorizedFetch(path: string, signal?: AbortSignal): Promise<Response> {
     if (this.token === undefined || this.state() !== 'connected') {
       return Promise.reject(new Error('Local evidence is not connected'));
     }
-    return this.fetchWithToken(path, this.token);
+    return this.fetchWithToken(path, this.token, signal);
   }
 
-  private async fetchWithToken(path: string, token: string): Promise<Response> {
+  private async fetchWithToken(
+    path: string,
+    token: string,
+    signal?: AbortSignal,
+  ): Promise<Response> {
     const response = await fetch(`${API_ROOT}${path}`, {
       method: 'GET',
       headers: { 'X-PlanMargin-Token': token },
@@ -200,6 +258,7 @@ export class LocalEvidenceService {
       credentials: 'omit',
       mode: 'cors',
       referrerPolicy: 'no-referrer',
+      signal,
     });
     if (!response.ok) {
       if (response.status === 401) throw new Error('The local evidence token was rejected');
