@@ -6,7 +6,6 @@ import {
   HostListener,
   inject,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import { DebuggerStore } from '../debugger.store';
@@ -45,8 +44,11 @@ import { SimulatorStore } from '../simulator.store';
 
         @if (!local.connected()) {
           <form (submit)="connect($event)">
-            <label for="local-token">Ephemeral API token</label>
-            <p>Start <code>planmargin-serve-evidence</code>, then paste its terminal token.</p>
+            <label for="local-token">Manual session recovery</label>
+            <p>
+              <code>uv run --frozen planmargin-workbench</code> normally connects automatically.
+              Paste the launcher's one-time token here only if this browser was opened separately.
+            </p>
             <input
               id="local-token"
               #tokenInput
@@ -79,125 +81,39 @@ import { SimulatorStore } from '../simulator.store';
             <p class="error connected-error" role="alert">{{ local.error() }}</p>
           }
 
-          <div class="workspace">
-            <section class="source-list" aria-labelledby="runs-title">
-              <h2 id="runs-title">Replay evidence</h2>
-              @for (run of local.runs(); track run.runId) {
-                <button
-                  type="button"
-                  [class.active]="store.hasRun() && store.run().runId === run.runId"
-                  (click)="loadRun(run.runId)"
-                >
-                  <strong>{{ run.label }}</strong>
-                  <span>{{ run.recordCount }} sealed rollout records</span>
-                </button>
-              }
-              <h2>Campaign cells</h2>
-              <label class="cell-select">
-                <span>Method · scenario order · seed</span>
-                <select [value]="local.selectedCellId()" (change)="selectCell($event)">
-                  @for (cell of local.cells(); track cell.cellId) {
-                    <option [value]="cell.cellId">
-                      {{ cell.method }} · {{ cell.selectionOrder }} · {{ cell.seed }}
-                    </option>
-                  }
-                </select>
-              </label>
-              @if (local.selectedCell(); as cell) {
-                <dl class="cell-metrics">
-                  <div>
-                    <dt>Eligible</dt>
-                    <dd>{{ cell.supportAndPipelineValidCount }} / {{ cell.proposalCount }}</dd>
-                  </div>
-                  <div>
-                    <dt>Valid rate</dt>
-                    <dd>{{ cell.validRatePercent.toFixed(2) }}%</dd>
-                  </div>
-                  <div>
-                    <dt>Findings</dt>
-                    <dd>{{ cell.qualifyingFailureCount }}</dd>
-                  </div>
-                </dl>
-              }
-            </section>
-
-            <section class="proposal-browser" aria-labelledby="proposals-title">
-              <div class="browser-heading">
-                <div>
-                  <h2 id="proposals-title">Sealed proposals</h2>
-                  <p>Redacted parameters, support, outcomes, and physical cost.</p>
-                </div>
-                <span>{{ local.proposals().length }} records</span>
+          <section class="session-summary" aria-labelledby="session-ready-title">
+            <div>
+              <p>Authenticated loopback session</p>
+              <h2 id="session-ready-title">The engineering workspace is ready.</h2>
+              <span>
+                Use Workbench for the retained planning replay, Sensors for recorded perception, and
+                Evidence for the sealed counterfactual campaign.
+              </span>
+            </div>
+            <dl>
+              <div>
+                <dt>Campaign evidence</dt>
+                <dd>{{ local.campaign().proposals }} proposals</dd>
               </div>
-              @if (local.loadingProposals()) {
-                <p class="loading" role="status">Verifying proposal seals…</p>
-              } @else {
-                <div class="proposal-layout">
-                  <div class="proposal-list" aria-label="Proposal records">
-                    @for (proposal of local.proposals(); track proposal.proposalNumber) {
-                      <button
-                        type="button"
-                        [class.active]="local.selectedProposalNumber() === proposal.proposalNumber"
-                        (click)="local.selectProposal(proposal.proposalNumber)"
-                      >
-                        <span>#{{ proposal.proposalNumber.toString().padStart(2, '0') }}</span>
-                        <strong>{{ proposal.attemptStatus }}</strong>
-                        <i [class.pass]="proposal.supportPasses === true"></i>
-                      </button>
-                    }
-                  </div>
-                  @if (local.selectedProposal(); as proposal) {
-                    <article class="proposal-detail">
-                      <div class="detail-title">
-                        <span>PROPOSAL {{ proposal.proposalNumber }}</span>
-                        <strong>{{ proposal.attemptStatus }}</strong>
-                      </div>
-                      <dl>
-                        <div>
-                          <dt>Onset offset</dt>
-                          <dd>{{ proposal.brakingOnsetOffsetSeconds.toFixed(1) }} s</dd>
-                        </div>
-                        <div>
-                          <dt>Speed multiplier</dt>
-                          <dd>{{ proposal.speedMultiplier.toFixed(4) }}</dd>
-                        </div>
-                        <div>
-                          <dt>Mutation distance</dt>
-                          <dd>{{ proposal.normalizedMutationDistance.toFixed(4) }}</dd>
-                        </div>
-                        <div>
-                          <dt>Support probability</dt>
-                          <dd>{{ probability(proposal.empiricalSupportProbability) }}</dd>
-                        </div>
-                        <div>
-                          <dt>Support gate</dt>
-                          <dd [class.pass]="proposal.supportPasses === true">
-                            {{ decision(proposal.supportPasses) }}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Tested failed</dt>
-                          <dd>{{ decision(proposal.testedMutatedFailure) }}</dd>
-                        </div>
-                        <div>
-                          <dt>Reference succeeded</dt>
-                          <dd>{{ decision(proposal.referenceMutatedSuccess) }}</dd>
-                        </div>
-                        <div>
-                          <dt>Qualifying finding</dt>
-                          <dd>{{ decision(proposal.policySpecificAvoidableFailure) }}</dd>
-                        </div>
-                        <div>
-                          <dt>Physical rollouts</dt>
-                          <dd>{{ proposal.physicalRollouts }}</dd>
-                        </div>
-                      </dl>
-                    </article>
-                  }
-                </div>
-              }
-            </section>
-          </div>
+              <div>
+                <dt>Matched experiment cells</dt>
+                <dd>{{ local.cells().length }} verified</dd>
+              </div>
+              <div>
+                <dt>Planning replay</dt>
+                <dd>{{ local.runs().length }} available</dd>
+              </div>
+              <div>
+                <dt>Data handling</dt>
+                <dd>Local only · no uploads</dd>
+              </div>
+            </dl>
+            <div class="session-actions">
+              <button class="primary" type="button" (click)="close.emit()">
+                Continue to workbench
+              </button>
+            </div>
+          </section>
         }
       </section>
     </div>
@@ -236,198 +152,75 @@ import { SimulatorStore } from '../simulator.store';
       background: var(--success);
       box-shadow: 0 0 0 3px rgb(115 209 47 / 12%);
     }
-    .workspace {
+    .session-summary {
       display: grid;
-      grid-template-columns: 270px minmax(0, 1fr);
-      min-height: 570px;
+      width: min(720px, 100%);
+      gap: 1.5rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
     }
-    .source-list {
-      padding: 1.1rem;
-      border-right: 1px solid var(--divider);
+    .session-summary > div:first-child {
+      display: grid;
+      gap: 0.45rem;
     }
-    h2 {
-      color: var(--secondary);
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 0.11em;
+    .session-summary p {
+      color: var(--reference);
+      font-size: 0.58rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
     }
-    .source-list > button {
-      display: grid;
-      width: 100%;
-      height: auto;
-      gap: 0.25rem;
-      margin: 0.65rem 0 1.4rem;
-      padding: 0.7rem;
-      text-align: left;
+    .session-summary h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: -0.03em;
     }
-    .source-list > button.active {
-      border-color: var(--reference);
-      background: #102831;
-      color: #edf3f4;
-    }
-    .source-list > button strong {
+    .session-summary > div > span {
+      color: var(--secondary);
       font-size: 0.7rem;
+      line-height: 1.6;
     }
-    .source-list > button span,
-    .cell-select > span {
+    .session-summary dl {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin: 0;
+      border: 1px solid var(--divider);
+    }
+    .session-summary dl div {
+      display: grid;
+      gap: 0.25rem;
+      padding: 1rem;
+      border-right: 1px solid var(--divider);
+      border-bottom: 1px solid var(--divider);
+    }
+    .session-summary dl div:nth-child(2n) {
+      border-right: 0;
+    }
+    .session-summary dl div:nth-last-child(-n + 2) {
+      border-bottom: 0;
+    }
+    .session-summary dt {
       color: var(--secondary);
       font-size: 0.6rem;
     }
-    .cell-select {
-      display: grid;
-      gap: 0.4rem;
-      margin-top: 0.65rem;
-    }
-    select {
-      width: 100%;
-      padding: 0 0.5rem;
-      background: #071018;
-      color: #edf3f4;
-      color-scheme: dark;
-    }
-    .cell-metrics {
-      margin: 0.8rem 0 0;
-    }
-    .cell-metrics div,
-    .proposal-detail dl div {
-      display: flex;
-      justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.3rem 0;
-      font-size: 0.66rem;
-    }
-    dt {
-      color: var(--secondary);
-    }
-    dd {
+    .session-summary dd {
       margin: 0;
-      font-variant-numeric: tabular-nums;
-    }
-    .proposal-browser {
-      min-width: 0;
-      padding: 1.1rem 1.25rem;
-    }
-    .browser-heading {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
-      padding-bottom: 0.85rem;
-      border-bottom: 1px solid var(--divider);
-    }
-    .browser-heading > span {
-      color: var(--secondary);
-      font-size: 0.62rem;
-    }
-    .browser-heading p {
-      margin-top: 0.35rem;
-      color: var(--secondary);
-      font-size: 0.66rem;
-      line-height: 1.5;
-    }
-    .proposal-layout {
-      display: grid;
-      grid-template-columns: 190px minmax(0, 1fr);
-      min-height: 455px;
-    }
-    .proposal-list {
-      max-height: 455px;
-      overflow: auto;
-      padding: 0.7rem 0.7rem 0.7rem 0;
-      border-right: 1px solid var(--divider);
-    }
-    .proposal-list button {
-      display: grid;
-      grid-template-columns: 30px minmax(0, 1fr) 8px;
-      align-items: center;
-      width: 100%;
-      gap: 0.45rem;
-      padding: 0 0.5rem;
-      border-color: transparent;
-      text-align: left;
-    }
-    .proposal-list button.active {
-      border-color: #35c5d3;
-      background: #102831;
-      color: #edf3f4;
-    }
-    .proposal-list button span {
-      color: var(--secondary);
-      font-variant-numeric: tabular-nums;
-    }
-    .proposal-list button strong {
-      overflow: hidden;
-      font-size: 0.61rem;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .proposal-list i {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #98a5af;
-    }
-    .proposal-list i.pass {
-      background: var(--success);
-    }
-    .proposal-detail {
-      padding: 1rem 0 1rem 1.2rem;
-    }
-    .detail-title {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 0.7rem;
-    }
-    .detail-title span {
-      color: var(--tested);
-      font-size: 0.58rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-    }
-    .detail-title strong {
       font-size: 0.76rem;
+      font-weight: 650;
     }
-    .proposal-detail dl {
-      margin: 0;
-    }
-    .proposal-detail dl div {
-      padding: 0.46rem 0;
-      border-bottom: 1px solid var(--divider-soft);
-      font-size: 0.7rem;
-    }
-    dd.pass {
-      color: var(--success);
-    }
-    .loading {
-      padding: 2rem 0;
-      color: var(--secondary);
-      font-size: 0.7rem;
+    .session-actions {
+      display: flex;
+      justify-content: flex-end;
     }
     @media (max-width: 760px) {
-      .workspace,
-      .proposal-layout {
+      .session-summary dl {
         grid-template-columns: 1fr;
       }
-      .source-list,
-      .proposal-list {
+      .session-summary dl div {
         border-right: 0;
+      }
+      .session-summary dl div:nth-last-child(2) {
         border-bottom: 1px solid var(--divider);
-      }
-      .proposal-list {
-        display: flex;
-        max-height: none;
-        gap: 0.3rem;
-        padding-right: 0;
-        overflow: auto;
-      }
-      .proposal-list button {
-        min-width: 142px;
-      }
-      .proposal-detail {
-        padding-left: 0;
       }
     }
   `,
@@ -437,7 +230,6 @@ export class LocalEvidencePanel {
   protected readonly store = inject(DebuggerStore);
   protected readonly simulator = inject(SimulatorStore);
   readonly close = output<void>();
-  protected readonly busy = signal(false);
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   private readonly tokenInput = viewChild<ElementRef<HTMLInputElement>>('tokenInput');
   private readonly dialogClose = viewChild.required<ElementRef<HTMLButtonElement>>('dialogClose');
@@ -462,26 +254,6 @@ export class LocalEvidencePanel {
     }
   }
 
-  protected async loadRun(runId: string): Promise<void> {
-    if (this.busy()) return;
-    this.busy.set(true);
-    try {
-      this.store.loadRun(await this.local.loadRun(runId));
-    } catch {
-      // The service exposes a redacted user-facing error in the panel.
-    } finally {
-      this.busy.set(false);
-    }
-  }
-
-  protected async selectCell(event: Event): Promise<void> {
-    try {
-      await this.local.selectCell((event.target as HTMLSelectElement).value);
-    } catch {
-      // The service exposes a redacted user-facing error in the panel.
-    }
-  }
-
   protected disconnect(): void {
     // Return to the recorded camera before removing the planning run. This
     // prevents planning-only computed state from reading a run that no longer
@@ -489,14 +261,6 @@ export class LocalEvidencePanel {
     this.simulator.selectMode('camera');
     this.local.disconnect();
     this.store.clearRun();
-  }
-
-  protected probability(value: number | null): string {
-    return value === null ? 'Unavailable' : value.toFixed(4);
-  }
-
-  protected decision(value: boolean | null): string {
-    return value === null ? 'Not evaluated' : value ? 'Yes' : 'No';
   }
 
   @HostListener('document:keydown', ['$event'])

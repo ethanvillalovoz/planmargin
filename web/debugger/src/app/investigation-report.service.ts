@@ -18,15 +18,34 @@ function escapeHtml(value: string): string {
 }
 
 function gateReason(proposal: LocalProposal): string {
-  if (proposal.attemptStatus === 'mutation_rejected') return 'Mutation geometry gate rejected';
-  if (proposal.attemptStatus === 'scenario_rejected') return 'Scenario validity gate rejected';
-  if (!proposal.pipelinePasses) return 'Deterministic pipeline gate rejected';
-  if (proposal.supportPasses !== true) return 'Empirical-support gate rejected';
-  if (!proposal.referencePasses) return 'Reference-controller gate rejected';
-  if (proposal.testedMutatedFailure !== true) return 'Tested controller did not fail';
+  if (proposal.attemptStatus === 'mutation_rejected') return 'Scenario edit was invalid';
+  if (proposal.attemptStatus === 'scenario_rejected') return 'Closed-loop replay became invalid';
+  if (!proposal.pipelinePasses) return 'Replay was not reproducible';
+  if (proposal.supportPasses !== true) return 'Change was outside recorded behavior';
+  if (!proposal.referencePasses) return 'Reference planner failed';
+  if (proposal.testedMutatedFailure !== true) return 'Tested planner still succeeds';
   return proposal.policySpecificAvoidableFailure
-    ? 'Qualifying finding'
-    : 'Finding contract not met';
+    ? 'Candidate planner regression'
+    : 'Regression contract not met';
+}
+
+function proximityLabel(value: number): string {
+  if (value <= 0) return 'Minimum clearance unavailable';
+  const clearanceMeters = Math.max(1 / value - 1, 0);
+  if (clearanceMeters < 0.005) return 'Contact boundary reached';
+  return `${clearanceMeters.toFixed(2)} m minimum clearance`;
+}
+
+function changeSizeLabel(value: number): string {
+  const boundedEditPercent = Math.min(Math.max((1 - value) * 100, 0), 100);
+  const size = boundedEditPercent <= 20 ? 'Small' : boundedEditPercent <= 50 ? 'Moderate' : 'Large';
+  return `${size} edit · ${boundedEditPercent.toFixed(0)}% of bounded range`;
+}
+
+function outcomeLabel(value: boolean | null, failureQuestion: boolean): string {
+  if (value === null) return 'Not evaluated';
+  if (failureQuestion) return value ? 'Failed' : 'Succeeded';
+  return value ? 'Succeeded' : 'Failed';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -51,19 +70,23 @@ export class InvestigationReportService {
 <title>PlanMargin investigation report</title><style>
 body{max-width:780px;margin:48px auto;padding:0 24px;color:#102632;font:15px/1.55 Inter,system-ui,sans-serif}
 h1{font-size:30px;letter-spacing:-.04em}h2{margin-top:32px;font-size:17px}dl{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-div{padding:12px;border-bottom:1px solid #dbe5e9}dt{color:#607683;font-size:12px}dd{margin:4px 0 0;font-weight:650}
+div{padding:12px;border-bottom:1px solid #dbe5e9}dt{color:#607683;font-size:12px}dd{margin:4px 0 0;font-weight:650}small{display:block;margin-top:3px;color:#718793;font-size:11px;font-weight:450}
 .decision{padding:18px;border-left:4px solid #ff6b55;background:#f5f9fa}code{word-break:break-all;font-size:11px;color:#526872}
 </style></head><body>
 <h1>PlanMargin investigation report</h1>
 <p>Privacy-reduced evidence from the immutable v1 development campaign. This report does not evaluate the production Waymo Driver.</p>
 <section class="decision"><strong>${escapeHtml(reason)}</strong><br>Proposal ${input.proposal.proposalNumber} in ${escapeHtml(input.cell.method)} cell ${input.cell.selectionOrder}, seed ${input.cell.seed}.</section>
-<h2>Selected evidence</h2><dl>
-<div><dt>Mutation distance</dt><dd>${input.proposal.normalizedMutationDistance.toFixed(4)}</dd></div>
-<div><dt>Criticality</dt><dd>${input.proposal.criticality.toFixed(4)}</dd></div>
-<div><dt>Minimality</dt><dd>${input.proposal.minimality.toFixed(4)}</dd></div>
-<div><dt>Support probability</dt><dd>${input.proposal.empiricalSupportProbability?.toFixed(4) ?? 'not evaluated'}</dd></div>
-<div><dt>Onset offset</dt><dd>${input.proposal.brakingOnsetOffsetSeconds.toFixed(1)} s</dd></div>
-<div><dt>Speed multiplier</dt><dd>${input.proposal.speedMultiplier.toFixed(4)}</dd></div>
+<h2>Scenario change</h2><dl>
+<div><dt>Lead braking onset shift</dt><dd>${input.proposal.brakingOnsetOffsetSeconds >= 0 ? '+' : '−'}${Math.abs(input.proposal.brakingOnsetOffsetSeconds).toFixed(1)} s</dd></div>
+<div><dt>Lead speed scale</dt><dd>${input.proposal.speedMultiplier.toFixed(2)}×</dd></div>
+</dl>
+<h2>Planner decision</h2><dl>
+<div><dt>Tested planner</dt><dd>${outcomeLabel(input.proposal.testedMutatedFailure, true)}</dd></div>
+<div><dt>Reference planner</dt><dd>${outcomeLabel(input.proposal.referenceMutatedSuccess, false)}</dd></div>
+<div><dt>Safety result</dt><dd>${proximityLabel(input.proposal.criticality)}<small>derived from the measured minimum signed separation; criticality ${input.proposal.criticality.toFixed(4)}</small></dd></div>
+<div><dt>Change size</dt><dd>${changeSizeLabel(input.proposal.minimality)}<small>derived from the normalized distance to the recorded scenario; minimality ${input.proposal.minimality.toFixed(4)}</small></dd></div>
+<div><dt>Recorded precedent</dt><dd>${input.proposal.supportPasses === true ? 'Seen in recorded behavior' : input.proposal.empiricalSupportProbability === null ? 'Not evaluated' : 'Outside recorded behavior'}<small>support probability ${input.proposal.empiricalSupportProbability?.toFixed(4) ?? 'not evaluated'}; pass threshold 0.05</small></dd></div>
+<div><dt>Normalized edit distance</dt><dd>${input.proposal.normalizedMutationDistance.toFixed(4)}<small>distance from the unchanged scenario</small></dd></div>
 </dl>
 <h2>Campaign boundary</h2><p>${input.campaign.proposals.toLocaleString()} proposals and ${input.campaign.physicalRollouts.toLocaleString()} physical rollouts produced zero qualifying findings. Bayesian search increased eligible-proposal yield by ${(input.campaign.methods.bayesian.validRatePercent - input.campaign.methods.random.validRatePercent).toFixed(4)} percentage points. H1 and H2 remained untestable; H3 was supported.</p>
 <h2>Integrity</h2><p>SHA-256 over the canonical local report payload:</p><code>${digest}</code>

@@ -11,6 +11,7 @@ import threading
 import time
 import webbrowser
 from pathlib import Path
+from urllib.parse import urlencode
 
 import uvicorn
 
@@ -28,6 +29,11 @@ def _port_available(host: str, port: int) -> bool:
         except OSError:
             return False
     return True
+
+
+def _workbench_url(token: str) -> str:
+    """Return a loopback URL whose fragment bootstraps an in-memory session."""
+    return f"http://127.0.0.1:{WEB_PORT}/#{urlencode({'token': token})}"
 
 
 def _parse_args() -> argparse.Namespace:
@@ -77,13 +83,11 @@ def main() -> None:
         str(WEB_PORT),
     ]
     web = subprocess.Popen(command, cwd=debugger)
-    url = f"http://127.0.0.1:{WEB_PORT}/"
+    url = _workbench_url(token)
     print("\nPlanMargin workbench")
-    print(f"URL: {url}")
-    print(f"Ephemeral local token: {token}")
-    print(
-        "Paste the token into Connect real evidence. Press Ctrl-C to stop both services.\n"
-    )
+    print(f"Open: {url}")
+    print("The browser verifies the local session and removes the token from the address bar.")
+    print("Press Ctrl-C to stop both services.\n")
     opener: threading.Timer | None = None
     if not args.no_browser:
         opener = threading.Timer(2.0, webbrowser.open, args=(url,))

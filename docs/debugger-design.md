@@ -1,4 +1,4 @@
-# PlanMargin scenario simulator design
+# PlanMargin workbench design
 
 PlanMargin is a local counterfactual stress-testing workbench. Its primary user
 question is: **what is the smallest behaviorally plausible scene change that
@@ -6,13 +6,19 @@ causes the tested planner to fail while a reference planner succeeds?** The
 workspace makes the scene, mutation, evidence source, and claim boundary
 visible in one synchronized engineering surface.
 
+![PlanMargin workbench design target](assets/debugger/workbench-v3-concept.png)
+
+This design target replaces the earlier synthetic-demo concepts. It leads with
+the engineer's decision, keeps the scene and timeline dominant, translates raw
+scores into operational language, and moves experiment reporting behind the
+Evidence task.
+
 ## Workspace contract
 
 The simulator uses one full-bleed scene rather than separate product pages:
 
-1. The **top bar** identifies the active real-local dataset, current Camera
-   frame or Planning step, assistant entry point, and primary planning-replay
-   action.
+1. The **product bar** switches among Workbench, Sensors, and Evidence and
+   shows the authenticated local-record state without a setup wizard.
 2. **View-specific controls** expose only real actions or sealed facts: native
    tracked boxes in Camera, read-only mutation/outcome/metric evidence in
    Planning, and source-frame provenance in 3DGS/LiDAR.
@@ -71,6 +77,7 @@ input source, not affiliation or production-driver access.
 
 - `SimulatorWorkspace`: the unified scene, top bar, controls, modes, timeline,
   and stress replay.
+- `ProductShell`: task navigation and the candidate-evidence review surface.
 - `SimulatorStore`: sensor mode, independent Camera and Planning clocks,
   source-frame spatial lock, scene layers, and replay state.
 - `SensorViewport`: authenticated camera lifecycle, Spark/Three.js renderers,

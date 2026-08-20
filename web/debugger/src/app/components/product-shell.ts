@@ -8,10 +8,7 @@ import {
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  phosphorArrowRight,
-  phosphorCheck,
   phosphorDownloadSimple,
-  phosphorFlask,
   phosphorPlay,
   phosphorSparkle,
   phosphorStack,
@@ -22,7 +19,7 @@ import { InvestigationProposal, LocalProposal, ProposalAnalysis } from '../local
 import { SimulatorStore } from '../simulator.store';
 import { SimulatorWorkspace } from './simulator-workspace';
 
-type ProductView = 'result' | 'investigate' | 'replay' | 'sensor';
+type ProductView = 'investigate' | 'replay' | 'sensor';
 type ProposalSort = 'criticality' | 'minimality' | 'support' | 'sequence';
 type ProposalFilter = 'all' | 'eligible' | 'support-rejected' | 'pipeline-rejected';
 type InvestigationRank = 'closest' | 'minimal' | 'support';
@@ -32,10 +29,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
   imports: [NgIcon, SimulatorWorkspace],
   providers: [
     provideIcons({
-      phosphorArrowRight,
-      phosphorCheck,
       phosphorDownloadSimple,
-      phosphorFlask,
       phosphorPlay,
       phosphorSparkle,
       phosphorStack,
@@ -45,168 +39,53 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
   template: `
     <div class="product-shell" [class.sensor-active]="view() === 'sensor' || view() === 'replay'">
       <header class="product-header">
-        <button class="brand" type="button" (click)="setView('investigate')">
+        <button class="brand" type="button" (click)="setView('replay')">
           <ng-icon name="phosphorStack" size="23" aria-hidden="true" />
           <strong>PlanMargin</strong>
         </button>
         <nav aria-label="Product sections">
+          <button type="button" [class.active]="view() === 'replay'" (click)="setView('replay')">
+            Workbench
+          </button>
+          <button type="button" [class.active]="view() === 'sensor'" (click)="setView('sensor')">
+            Sensors
+          </button>
           <button
             type="button"
             [class.active]="view() === 'investigate'"
             (click)="setView('investigate')"
           >
-            Investigate
-          </button>
-          <button type="button" [class.active]="view() === 'replay'" (click)="setView('replay')">
-            Replay
-          </button>
-          <button type="button" [class.active]="view() === 'sensor'" (click)="setView('sensor')">
-            Sensor Lab
-          </button>
-          <button type="button" [class.active]="view() === 'result'" (click)="setView('result')">
-            Report
+            Evidence
           </button>
         </nav>
         <button
           type="button"
           class="connection"
           [class.connected]="local.connected()"
+          [class.connecting]="local.state() === 'connecting'"
           (click)="connectRequested.emit()"
         >
-          <i></i>{{ local.connected() ? 'Local evidence verified' : 'Connect real evidence' }}
+          <i></i
+          >{{
+            local.connected()
+              ? 'Local records verified'
+              : local.state() === 'connecting'
+                ? 'Verifying local records…'
+                : 'Open local workspace'
+          }}
         </button>
       </header>
 
-      @if (view() === 'result') {
-        <main class="result-page">
-          <section class="result-hero" aria-labelledby="result-title">
-            <div>
-              <p class="result-context">Immutable v1 development campaign</p>
-              <h1 id="result-title">No qualifying planner failure was found.</h1>
-              <p class="result-summary">
-                That is the result—not an empty state. Bayesian search produced more realistic,
-                reproducible proposals, but the frozen experiment cannot claim better failure
-                discovery or mutation minimality.
-              </p>
-              <div class="hero-actions">
-                <button class="primary" type="button" (click)="setView('investigate')">
-                  Investigate the evidence <ng-icon name="phosphorArrowRight" size="16" />
-                </button>
-                <button type="button" (click)="setView('sensor')">Open Sensor Lab</button>
-              </div>
-            </div>
-            <div class="result-mark" aria-label="Campaign conclusion">
-              <span>0</span>
-              <strong>qualifying findings</strong>
-              <small>from 3,200 tested proposals</small>
-            </div>
-          </section>
-
-          <section class="scale-rail" aria-label="Campaign scale">
-            <div><strong>100</strong><span>matched cells</span></div>
-            <div><strong>14,110</strong><span>physical rollouts</span></div>
-            <div><strong>1,128,800</strong><span>Waymax steps</span></div>
-            <div><strong>+14.8125 pp</strong><span>Bayesian valid-yield lift</span></div>
-          </section>
-
-          <section class="result-analysis">
-            <div class="method-story">
-              <div class="section-heading">
-                <div>
-                  <p>Method comparison</p>
-                  <h2>Bayesian search preserved validity.</h2>
-                </div>
-                <strong>H3 supported</strong>
-              </div>
-              <div class="method-row">
-                <span>Random</span>
-                <div><i style="width:54.5625%"></i></div>
-                <strong>54.5625%</strong>
-              </div>
-              <div class="method-row bayesian">
-                <span>Bayesian</span>
-                <div><i style="width:69.375%"></i></div>
-                <strong>69.3750%</strong>
-              </div>
-              <p>Support-and-pipeline-valid proposals under equal 1,600-proposal budgets.</p>
-            </div>
-
-            <div class="decision-story">
-              <div>
-                <span>H1 · Efficiency</span><strong>Untestable</strong>
-                <p>No finding from either method.</p>
-              </div>
-              <div>
-                <span>H2 · Minimality</span><strong>Untestable</strong>
-                <p>No paired failure mutations.</p>
-              </div>
-              <div>
-                <span>H3 · Validity</span><strong class="positive">Supported</strong>
-                <p>Frozen noninferiority rule passed.</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="program-boundary">
-            <div>
-              <p>What the system established</p>
-              <h2>A complete negative result with a preserved audit trail.</h2>
-              <ul>
-                <li>
-                  <ng-icon name="phosphorCheck" size="16" />All 100 cells reconciled from sealed
-                  records
-                </li>
-                <li>
-                  <ng-icon name="phosphorCheck" size="16" />Random and Bayesian budgets remained
-                  matched
-                </li>
-                <li>
-                  <ng-icon name="phosphorCheck" size="16" />No validation comparison was opened
-                  after the no-go
-                </li>
-              </ul>
-            </div>
-            <div class="research-status">
-              <article>
-                <span>v1 campaign</span><strong>Complete</strong
-                ><small>Development no-go preserved</small>
-              </article>
-              <article>
-                <span>v2 learned controller</span><strong>No-go</strong
-                ><small>3.125% synthetic collision rate</small>
-              </article>
-              <article>
-                <span>Planning-scene Gaussian</span><strong>No-go</strong
-                ><small>23.66% trajectory linkage</small>
-              </article>
-              <article>
-                <span>Perception Sensor Lab</span><strong>Available</strong
-                ><small>Real WOD camera, 3DGS, and LiDAR</small>
-              </article>
-            </div>
-          </section>
-
-          <aside class="claim-boundary">
-            <strong>Claim boundary</strong>
-            <p>
-              Ten training scenarios, five seeds, and no qualifying failures. This bounded simulator
-              study does not evaluate the production Waymo Driver. The visual WOD Perception segment
-              is not geometrically registered to the WOMD planning evidence.
-            </p>
-          </aside>
-        </main>
-      } @else if (view() === 'investigate') {
+      @if (view() === 'investigate') {
         <main class="investigation-page">
           <header class="page-heading">
             <div>
-              <p>Campaign investigation</p>
-              <h1>Trace why a proposal did—or did not—qualify.</h1>
+              <p>Candidate review</p>
+              <h1>Review planner regressions by the reason they stopped.</h1>
             </div>
             <div class="page-status">
               <i></i
-              >{{
-                local.connected() ? '3,200 sealed proposals available' : 'Local records required'
-              }}
+              >{{ local.connected() ? 'Sealed local records verified' : 'Local records required' }}
             </div>
           </header>
 
@@ -214,42 +93,22 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
             <section class="public-workbench">
               <div class="public-result">
                 <div>
-                  <span>Public aggregate mode</span>
-                  <h2>Completed campaign · 0 qualifying findings</h2>
+                  <span>Licensed evidence boundary</span>
+                  <h2>Open the local workspace to review candidate cases.</h2>
                   <p>
-                    The aggregate result works from a clean clone. Connect the authorized local
-                    evidence store to inspect all 3,200 proposal records, exact gates, and replays.
+                    Per-scenario records remain on the engineer's machine. PlanMargin does not fill
+                    this workspace with invented examples when those records are unavailable.
                   </p>
                 </div>
                 <button class="primary" type="button" (click)="connectRequested.emit()">
-                  Connect local evidence
+                  Open local workspace
                 </button>
               </div>
-              <div class="public-methods">
-                <article>
-                  <span>Random search</span><strong>54.5625%</strong
-                  ><small>support + pipeline valid</small>
-                  <i><b style="width:54.5625%"></b></i>
-                </article>
-                <article>
-                  <span>Bayesian search</span><strong>69.3750%</strong
-                  ><small>support + pipeline valid</small>
-                  <i><b style="width:69.375%"></b></i>
-                </article>
-                <article>
-                  <span>Experiment scale</span><strong>3,200</strong
-                  ><small>sealed proposals · 100 cells</small>
-                </article>
-                <article>
-                  <span>Hypothesis decision</span><strong>H3 supported</strong
-                  ><small>H1 and H2 untestable</small>
-                </article>
-              </div>
               <div class="public-boundary">
-                <strong>Why proposal rows are locked</strong>
+                <strong>What opens locally</strong>
                 <p>
-                  Waymo-derived per-scenario records remain local under the dataset terms. This is a
-                  data-access boundary, not synthetic sample data or an unfinished screen.
+                  Ranked candidate cases, gate-by-gate decisions, sealed replay evidence, camera
+                  annotations, LiDAR, and 3D reconstruction—without uploading source records.
                 </p>
               </div>
             </section>
@@ -259,9 +118,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                 <header>
                   <div>
                     <p>Verified campaign index</p>
-                    <h2 id="campaign-index-title">
-                      Rank all {{ campaign.proposalCount }} proposals
-                    </h2>
+                    <h2 id="campaign-index-title">Review queue</h2>
                   </div>
                   <div class="rank-tabs" aria-label="Campaign ranking">
                     <button
@@ -269,21 +126,21 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                       [class.active]="rank() === 'closest'"
                       (click)="rank.set('closest')"
                     >
-                      Closest margin
+                      Closest to failure
                     </button>
                     <button
                       type="button"
                       [class.active]="rank() === 'minimal'"
                       (click)="rank.set('minimal')"
                     >
-                      Smallest mutation
+                      Smallest change
                     </button>
                     <button
                       type="button"
                       [class.active]="rank() === 'support'"
                       (click)="rank.set('support')"
                     >
-                      Highest support
+                      Strongest precedent
                     </button>
                   </div>
                 </header>
@@ -319,9 +176,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                 </div>
                 <div class="campaign-table" role="table" aria-label="Campaign-ranked proposals">
                   <div class="campaign-row campaign-head" role="row">
-                    <span>Rank</span><span>Cell</span><span>Proposal</span><span>Criticality</span
-                    ><span>Minimality</span><span>Support</span><span>Decisive gate</span
-                    ><span></span>
+                    <span>Rank</span><span>Case</span><span>Change</span><span>Safety result</span
+                    ><span>Recorded precedent</span><span>Why it stopped</span><span></span>
                   </div>
                   @for (
                     proposal of campaignRanking();
@@ -333,10 +189,11 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                       <span class="method" [class.bayesian]="proposal.method === 'bayesian'">
                         {{ proposal.method }} · S{{ proposal.selectionOrder }} · {{ proposal.seed }}
                       </span>
-                      <span>#{{ proposal.proposalNumber.toString().padStart(2, '0') }}</span>
-                      <span>{{ proposal.criticality.toFixed(4) }}</span>
-                      <span>{{ proposal.minimality.toFixed(4) }}</span>
-                      <span>{{ proposal.empiricalSupportProbability?.toFixed(4) ?? '—' }}</span>
+                      <span>{{ mutationNarrative(proposal) }}</span>
+                      <span>{{ proximityLabel(proposal.criticality) }}</span>
+                      <span>{{
+                        supportLabel(proposal.empiricalSupportProbability, proposal.supportPasses)
+                      }}</span>
                       <span>{{ formatGate(proposal.decisiveGate) }}</span>
                       <span class="row-actions">
                         <button type="button" (click)="openCampaignProposal(proposal)">
@@ -368,19 +225,26 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                           <h3>Proposal {{ proposal.proposalNumber }}</h3>
                           <dl>
                             <div>
-                              <dt>Criticality</dt>
-                              <dd>{{ proposal.criticality.toFixed(4) }}</dd>
+                              <dt>Safety result</dt>
+                              <dd>{{ proximityLabel(proposal.criticality) }}</dd>
                             </div>
                             <div>
-                              <dt>Minimality</dt>
-                              <dd>{{ proposal.minimality.toFixed(4) }}</dd>
+                              <dt>Change size</dt>
+                              <dd>{{ changeSizeLabel(proposal.minimality) }}</dd>
                             </div>
                             <div>
-                              <dt>Support</dt>
-                              <dd>{{ proposal.empiricalSupportProbability?.toFixed(4) ?? '—' }}</dd>
+                              <dt>Recorded precedent</dt>
+                              <dd>
+                                {{
+                                  supportLabel(
+                                    proposal.empiricalSupportProbability,
+                                    proposal.supportPasses
+                                  )
+                                }}
+                              </dd>
                             </div>
                             <div>
-                              <dt>Gate</dt>
+                              <dt>Why it stopped</dt>
                               <dd>{{ formatGate(proposal.decisiveGate) }}</dd>
                             </div>
                           </dl>
@@ -441,8 +305,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                       <dd>{{ cell.supportAndPipelineValidCount }} / 32</dd>
                     </div>
                     <div>
-                      <dt>Hypervolume</dt>
-                      <dd>{{ cell.finalFeasibleHypervolume.toFixed(4) }}</dd>
+                      <dt>Past realism gates</dt>
+                      <dd>{{ cell.supportAndPipelineValidCount }} / {{ cell.proposalCount }}</dd>
                     </div>
                   </dl>
                 }
@@ -520,25 +384,25 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                       </header>
                       <div class="parameter-strip">
                         <div>
-                          <span>Onset offset</span
-                          ><strong>{{ proposal.brakingOnsetOffsetSeconds.toFixed(1) }} s</strong>
+                          <span>Braking onset shift</span
+                          ><strong>{{ signedSeconds(proposal.brakingOnsetOffsetSeconds) }}</strong>
                         </div>
                         <div>
-                          <span>Speed multiplier</span
+                          <span>Lead speed scale</span
                           ><strong>{{ proposal.speedMultiplier.toFixed(4) }}</strong>
                         </div>
                         <div>
-                          <span>Criticality</span
-                          ><strong>{{ proposal.criticality.toFixed(4) }}</strong>
+                          <span>Safety result</span
+                          ><strong>{{ proximityLabel(proposal.criticality) }}</strong>
                         </div>
                         <div>
-                          <span>Minimality</span
-                          ><strong>{{ proposal.minimality.toFixed(4) }}</strong>
+                          <span>Change size</span
+                          ><strong>{{ changeSizeLabel(proposal.minimality) }}</strong>
                         </div>
                       </div>
-                      <div class="controller-comparison" aria-label="Controller outcomes">
+                      <div class="controller-comparison" aria-label="Planner outcomes">
                         <div>
-                          <span>Tested controller</span>
+                          <span>Tested planner</span>
                           <strong [class.failure]="proposal.testedMutatedFailure === true">{{
                             proposal.testedMutatedFailure === true
                               ? 'Failed'
@@ -548,7 +412,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                           }}</strong>
                         </div>
                         <div>
-                          <span>Reference controller</span>
+                          <span>Reference planner</span>
                           <strong [class.success]="proposal.referenceMutatedSuccess === true">{{
                             proposal.referenceMutatedSuccess === true
                               ? 'Succeeded'
@@ -736,21 +600,15 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .page-status i {
       background: var(--success);
     }
-    .result-page {
-      width: min(1240px, 100%);
-      margin: 0 auto;
-      padding: clamp(2rem, 5vw, 4.75rem) clamp(1.2rem, 4vw, 3rem) 4rem;
+    .connection.connecting i {
+      background: #f0a33b;
+      animation: connection-pulse 1s ease-in-out infinite alternate;
     }
-    .result-hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 310px;
-      align-items: center;
-      gap: clamp(2rem, 7vw, 7rem);
-      min-height: 320px;
+    @keyframes connection-pulse {
+      to {
+        opacity: 0.35;
+      }
     }
-    .result-context,
-    .section-heading p,
-    .program-boundary > div > p,
     .page-heading p,
     .proposal-detail header p {
       margin: 0 0 0.75rem;
@@ -760,7 +618,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       letter-spacing: 0.12em;
       text-transform: uppercase;
     }
-    .result-hero h1,
     .page-heading h1 {
       max-width: 760px;
       margin: 0;
@@ -769,19 +626,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       line-height: 0.98;
       letter-spacing: -0.06em;
     }
-    .result-summary {
-      max-width: 690px;
-      margin: 1.4rem 0 0;
-      color: #a8b7bf;
-      font-size: clamp(0.87rem, 1.3vw, 1.02rem);
-      line-height: 1.65;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 0.65rem;
-      margin-top: 1.8rem;
-    }
-    .hero-actions button,
     .primary,
     .detail-actions button,
     .replay-boundary button {
@@ -798,201 +642,10 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       font-size: 0.69rem;
       font-weight: 650;
     }
-    .hero-actions button.primary,
     .primary {
       border-color: var(--tested);
       background: var(--tested);
       color: #fff;
-    }
-    .result-mark {
-      display: grid;
-      place-items: center;
-      min-height: 250px;
-      border: 1px solid var(--divider);
-      border-radius: 50%;
-      background: radial-gradient(circle, #102831 0, #08141d 68%);
-      text-align: center;
-    }
-    .result-mark span {
-      margin-top: 1.5rem;
-      color: var(--tested);
-      font-size: 6.6rem;
-      font-weight: 500;
-      line-height: 0.7;
-      letter-spacing: -0.08em;
-    }
-    .result-mark strong {
-      font-size: 0.83rem;
-    }
-    .result-mark small {
-      margin-top: -1.3rem;
-      color: var(--tertiary);
-      font-size: 0.63rem;
-    }
-    .scale-rail {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      margin-top: 3rem;
-      border-top: 1px solid var(--divider);
-      border-bottom: 1px solid var(--divider);
-    }
-    .scale-rail div {
-      display: grid;
-      gap: 0.3rem;
-      padding: 1.35rem 1.1rem;
-      border-right: 1px solid var(--divider);
-    }
-    .scale-rail div:last-child {
-      border: 0;
-    }
-    .scale-rail strong {
-      font-size: 1.35rem;
-      font-weight: 560;
-      font-variant-numeric: tabular-nums;
-    }
-    .scale-rail span {
-      color: var(--secondary);
-      font-size: 0.62rem;
-    }
-    .result-analysis {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 4rem;
-      padding: 4rem 0;
-      border-bottom: 1px solid var(--divider);
-    }
-    .section-heading {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-    .section-heading h2,
-    .program-boundary h2 {
-      margin: 0;
-      font-size: clamp(1.35rem, 2.4vw, 2.1rem);
-      font-weight: 540;
-      letter-spacing: -0.04em;
-    }
-    .section-heading > strong {
-      color: var(--success);
-      font-size: 0.72rem;
-    }
-    .method-row {
-      display: grid;
-      grid-template-columns: 74px minmax(0, 1fr) 84px;
-      align-items: center;
-      gap: 0.8rem;
-      margin-top: 1.3rem;
-      color: var(--secondary);
-      font-size: 0.68rem;
-    }
-    .method-row > div {
-      height: 7px;
-      background: var(--divider-soft);
-    }
-    .method-row i {
-      display: block;
-      height: 100%;
-      background: var(--tertiary);
-    }
-    .method-row.bayesian i {
-      background: var(--reference);
-    }
-    .method-row strong {
-      text-align: right;
-      color: var(--primary);
-      font-variant-numeric: tabular-nums;
-    }
-    .method-story > p {
-      margin: 1rem 0 0;
-      color: var(--tertiary);
-      font-size: 0.61rem;
-    }
-    .decision-story {
-      border-left: 1px solid var(--divider);
-    }
-    .decision-story div {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.35rem 1rem;
-      padding: 1rem 0 1rem 1.5rem;
-      border-bottom: 1px solid var(--divider-soft);
-    }
-    .decision-story span {
-      color: var(--secondary);
-      font-size: 0.64rem;
-    }
-    .decision-story strong {
-      font-size: 0.7rem;
-    }
-    .decision-story strong.positive {
-      color: var(--success);
-    }
-    .decision-story p {
-      grid-column: 1/-1;
-      margin: 0;
-      color: var(--tertiary);
-      font-size: 0.62rem;
-    }
-    .program-boundary {
-      display: grid;
-      grid-template-columns: 1fr 1.15fr;
-      gap: 5rem;
-      padding: 4rem 0;
-    }
-    .program-boundary ul {
-      display: grid;
-      gap: 0.7rem;
-      margin: 1.7rem 0 0;
-      padding: 0;
-      list-style: none;
-    }
-    .program-boundary li {
-      display: flex;
-      align-items: center;
-      gap: 0.55rem;
-      color: #b9c6cc;
-      font-size: 0.72rem;
-    }
-    .program-boundary li ng-icon {
-      color: var(--success);
-    }
-    .research-status {
-      border-top: 1px solid var(--divider);
-    }
-    .research-status article {
-      display: grid;
-      grid-template-columns: 1.2fr 0.6fr 1.6fr;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem 0;
-      border-bottom: 1px solid var(--divider);
-      font-size: 0.66rem;
-    }
-    .research-status span,
-    .research-status small {
-      color: var(--secondary);
-    }
-    .research-status strong {
-      font-size: 0.68rem;
-    }
-    .claim-boundary {
-      display: grid;
-      grid-template-columns: 180px 1fr;
-      gap: 1rem;
-      padding: 1.2rem 1.4rem;
-      border-left: 3px solid var(--tested);
-      background: #111d25;
-    }
-    .claim-boundary strong {
-      font-size: 0.72rem;
-    }
-    .claim-boundary p {
-      margin: 0;
-      color: #9babb4;
-      font-size: 0.68rem;
-      line-height: 1.6;
     }
     .investigation-page {
       min-height: calc(100dvh - 64px);
@@ -1052,38 +705,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       color: var(--secondary);
       font-size: 0.7rem;
       line-height: 1.6;
-    }
-    .public-methods {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-    }
-    .public-methods article {
-      display: grid;
-      gap: 0.45rem;
-      padding: 1.4rem;
-      border-right: 1px solid var(--divider);
-    }
-    .public-methods article:last-child {
-      border-right: 0;
-    }
-    .public-methods span,
-    .public-methods small {
-      color: var(--secondary);
-      font-size: 0.58rem;
-    }
-    .public-methods strong {
-      font-size: 1.15rem;
-    }
-    .public-methods i {
-      display: block;
-      height: 3px;
-      overflow: hidden;
-      background: var(--divider);
-    }
-    .public-methods b {
-      display: block;
-      height: 100%;
-      background: var(--reference);
     }
     .public-boundary {
       display: grid;
@@ -1167,8 +788,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .campaign-row {
       display: grid;
       grid-template-columns:
-        42px 150px 70px repeat(3, minmax(86px, 0.75fr)) minmax(150px, 1fr)
-        130px;
+        42px 150px minmax(180px, 1.25fr) minmax(132px, 0.9fr)
+        minmax(148px, 1fr) minmax(170px, 1.1fr) 130px;
       align-items: center;
       min-width: 920px;
       padding: 0.55rem 0.8rem;
@@ -1692,25 +1313,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         width: 7px;
         height: 7px;
       }
-      .result-hero {
-        grid-template-columns: 1fr;
-      }
-      .result-mark {
-        display: none;
-      }
-      .result-analysis,
-      .program-boundary {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-      }
       .investigation-workspace {
         grid-template-columns: 1fr;
-      }
-      .public-methods {
-        grid-template-columns: 1fr 1fr;
-      }
-      .public-methods article:nth-child(2) {
-        border-right: 0;
       }
       .campaign-index > header {
         align-items: flex-start;
@@ -1752,7 +1356,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         grid-row: 1;
         grid-column: 2;
       }
-      .result-page,
       .investigation-page {
         padding: 1.25rem 1rem 4.5rem;
       }
@@ -1765,12 +1368,9 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         align-items: flex-start;
         flex-direction: column;
       }
-      .public-methods,
       .comparison-dock > div {
         grid-template-columns: 1fr;
       }
-      .public-methods article,
-      .public-methods article:nth-child(2),
       .comparison-dock article {
         border-right: 0;
         border-bottom: 1px solid var(--divider);
@@ -1787,37 +1387,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       }
       .campaign-funnel {
         grid-template-columns: 1fr 1fr;
-      }
-      .result-hero {
-        min-height: auto;
-      }
-      .result-hero h1 {
-        font-size: 2.45rem;
-      }
-      .hero-actions {
-        align-items: stretch;
-        flex-direction: column;
-      }
-      .scale-rail {
-        grid-template-columns: 1fr 1fr;
-      }
-      .scale-rail div:nth-child(2) {
-        border-right: 0;
-      }
-      .scale-rail div:nth-child(-n + 2) {
-        border-bottom: 1px solid var(--divider);
-      }
-      .decision-story {
-        border-left: 0;
-      }
-      .research-status article {
-        grid-template-columns: 1fr auto;
-      }
-      .research-status small {
-        grid-column: 1/-1;
-      }
-      .claim-boundary {
-        grid-template-columns: 1fr;
       }
       .page-heading {
         align-items: flex-start;
@@ -1866,7 +1435,7 @@ export class ProductShell {
   private readonly simulator = inject(SimulatorStore);
   private readonly reports = inject(InvestigationReportService);
   readonly connectRequested = output<void>();
-  protected readonly view = signal<ProductView>('investigate');
+  protected readonly view = signal<ProductView>('replay');
   protected readonly sort = signal<ProposalSort>('criticality');
   protected readonly filter = signal<ProposalFilter>('all');
   protected readonly rank = signal<InvestigationRank>('closest');
@@ -1932,6 +1501,7 @@ export class ProductShell {
 
   protected setView(view: ProductView): void {
     if (view === 'replay') this.simulator.selectMode('planning');
+    if (view === 'sensor') this.simulator.selectMode('camera');
     this.view.set(view);
   }
   protected async openCampaignProposal(proposal: InvestigationProposal): Promise<void> {
@@ -1960,7 +1530,43 @@ export class ProductShell {
     );
   }
   protected formatGate(gate: string): string {
-    return gate.replaceAll('_', ' ');
+    return (
+      {
+        mutation_geometry: 'Scenario edit was invalid',
+        scenario_validity: 'Replay became invalid',
+        pipeline_reproducibility: 'Replay was not reproducible',
+        empirical_support: 'Outside recorded behavior',
+        reference_controller: 'Reference planner failed',
+        tested_controller_failure: 'Tested planner still succeeds',
+        finding_contract: 'Regression contract not met',
+        qualifying_finding: 'Candidate regression',
+      }[gate] ?? gate.replaceAll('_', ' ')
+    );
+  }
+  protected mutationNarrative(proposal: {
+    readonly brakingOnsetOffsetSeconds: number;
+    readonly speedMultiplier: number;
+  }): string {
+    return `${this.signedSeconds(proposal.brakingOnsetOffsetSeconds)} onset · ${proposal.speedMultiplier.toFixed(2)}× speed`;
+  }
+  protected signedSeconds(value: number): string {
+    return `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)} s`;
+  }
+  protected proximityLabel(value: number): string {
+    if (value <= 0) return 'Minimum clearance unavailable';
+    const clearanceMeters = Math.max(1 / value - 1, 0);
+    if (clearanceMeters < 0.005) return 'Contact boundary reached';
+    return `${clearanceMeters.toFixed(2)} m minimum clearance`;
+  }
+  protected changeSizeLabel(value: number): string {
+    const boundedEditPercent = Math.min(Math.max((1 - value) * 100, 0), 100);
+    const size =
+      boundedEditPercent <= 20 ? 'Small' : boundedEditPercent <= 50 ? 'Moderate' : 'Large';
+    return `${size} edit · ${boundedEditPercent.toFixed(0)}% of bounded range`;
+  }
+  protected supportLabel(value: number | null, passes: boolean | null): string {
+    if (value === null) return 'Not evaluated';
+    return passes === true ? 'Seen in recorded behavior' : 'Outside recorded behavior';
   }
   protected async selectCell(cellId: string): Promise<void> {
     this.analysis.set(undefined);
@@ -1980,22 +1586,24 @@ export class ProductShell {
   }
   protected proposalTitle(proposal: LocalProposal): string {
     return proposal.objectiveAvailable
-      ? `Criticality ${proposal.criticality.toFixed(3)}`
+      ? this.mutationNarrative(proposal)
       : proposal.attemptStatus.replaceAll('_', ' ');
   }
   protected rankValue(proposal: LocalProposal): string {
     if (this.sort() === 'sequence') return `#${proposal.proposalNumber}`;
-    if (this.sort() === 'minimality') return proposal.minimality.toFixed(3);
-    if (this.sort() === 'support') return proposal.empiricalSupportProbability?.toFixed(3) ?? '—';
-    return proposal.criticality.toFixed(3);
+    if (this.sort() === 'minimality') return this.changeSizeLabel(proposal.minimality);
+    if (this.sort() === 'support') {
+      return this.supportLabel(proposal.empiricalSupportProbability, proposal.supportPasses);
+    }
+    return this.proximityLabel(proposal.criticality);
   }
   protected gateReason(proposal: LocalProposal): string {
     if (proposal.attemptStatus === 'mutation_rejected') return 'Mutation gate rejected';
     if (proposal.attemptStatus === 'scenario_rejected') return 'Scenario gate rejected';
     if (!proposal.pipelinePasses) return 'Pipeline validity rejected';
     if (proposal.supportPasses !== true) return 'Empirical support rejected';
-    if (!proposal.referencePasses) return 'Reference controller failed';
-    if (proposal.testedMutatedFailure !== true) return 'Tested controller did not fail';
+    if (!proposal.referencePasses) return 'Reference planner failed';
+    if (proposal.testedMutatedFailure !== true) return 'Tested planner still succeeds';
     return proposal.policySpecificAvoidableFailure
       ? 'Qualifying finding'
       : 'Finding contract not met';
@@ -2005,7 +1613,8 @@ export class ProductShell {
   ): readonly { label: string; detail: string; pass: boolean; stop: boolean }[] {
     const mutation = proposal.attemptStatus !== 'mutation_rejected';
     const scenario = mutation && proposal.attemptStatus !== 'scenario_rejected';
-    const support = scenario && proposal.supportPasses === true;
+    const pipeline = scenario && proposal.pipelinePasses;
+    const support = pipeline && proposal.supportPasses === true;
     const reference = support && proposal.referencePasses;
     const tested = reference && proposal.testedMutatedFailure === true;
     const gates = [
@@ -2022,31 +1631,37 @@ export class ProductShell {
         pass: scenario,
       },
       {
+        label: 'Reproducible replay',
+        detail: pipeline
+          ? 'Repeated execution produced the same sealed evidence'
+          : 'Replay was not reproducible or was not evaluated',
+        pass: pipeline,
+      },
+      {
         label: 'Empirical support',
         detail:
           proposal.empiricalSupportProbability === null
             ? 'Not evaluated'
-            : `p = ${proposal.empiricalSupportProbability.toFixed(4)} · threshold 0.05`,
+            : proposal.supportPasses === true
+              ? `Seen in recorded behavior · ${(proposal.empiricalSupportProbability * 100).toFixed(1)}% support`
+              : `Outside recorded behavior · ${(proposal.empiricalSupportProbability * 100).toFixed(1)}% support`,
         pass: support,
       },
       {
-        label: 'Reference controller',
+        label: 'Reference planner',
         detail: reference
           ? 'Reference succeeded under the same mutation'
           : 'Not passed or not evaluated',
         pass: reference,
       },
       {
-        label: 'Tested-controller failure',
-        detail: tested ? 'Tested controller failed' : 'Tested controller remained successful',
+        label: 'Tested planner fails',
+        detail: tested ? 'Tested planner failed' : 'Tested planner remained successful',
         pass: tested,
       },
     ];
     const firstFailure = gates.findIndex((gate) => !gate.pass);
     return gates.map((gate, index) => ({ ...gate, stop: index === firstFailure }));
-  }
-  protected contextualSummary(proposal: LocalProposal): string {
-    return `For proposal ${proposal.proposalNumber}, the decisive gate was: ${this.gateReason(proposal).toLowerCase()}. Criticality ${proposal.criticality.toFixed(4)}, minimality ${proposal.minimality.toFixed(4)}, and support ${proposal.empiricalSupportProbability?.toFixed(4) ?? 'not evaluated'} are measured local evidence.`;
   }
   protected openReplay(): void {
     this.simulator.selectMode('planning');

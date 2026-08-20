@@ -17,6 +17,21 @@ from planmargin import evidence_assistant
 from planmargin import evidence_api
 from planmargin import random_search
 
+
+def test_engineer_facing_metric_labels_preserve_direction() -> None:
+    assert evidence_api.EvidenceRepository._proximity_label(1.0) == "contact boundary reached"
+    assert evidence_api.EvidenceRepository._proximity_label(0.5) == "1.00 m minimum clearance"
+    assert evidence_api.EvidenceRepository._proximity_label(0.2) == "4.00 m minimum clearance"
+    assert evidence_api.EvidenceRepository._change_size_label(0.9) == (
+        "small edit · 10% of bounded range"
+    )
+    assert evidence_api.EvidenceRepository._change_size_label(0.6) == (
+        "moderate edit · 40% of bounded range"
+    )
+    assert evidence_api.EvidenceRepository._change_size_label(0.2) == (
+        "large edit · 80% of bounded range"
+    )
+
 TOKEN = "data-free-test-token-000000000"
 CELL_ID = evidence_api._opaque_id("cell", "bayesian", 0, 1)
 
