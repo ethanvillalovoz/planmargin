@@ -87,12 +87,20 @@ products. For those reasons hosted mode requires all of the following:
 4. pass the explicit confirmation flag.
 
 ```bash
-uv sync --extra assistant
+uv sync --frozen --extra assistant
 export GEMINI_API_KEY="..."
-uv run --extra assistant planmargin-ask-evidence \
+uv run --frozen --extra assistant planmargin-ask-evidence \
   --provider gemini \
   --confirm-free-tier \
   --question "What is the defensible claim?"
+```
+
+To use the same provider in the graphical workbench:
+
+```bash
+uv run --frozen --extra assistant planmargin-workbench \
+  --assistant-provider gemini \
+  --confirm-gemini-free-tier
 ```
 
 The default pinned model is `gemini-3.1-flash-lite`; it can be changed with

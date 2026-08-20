@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 
 import uvicorn
 
+from planmargin import evidence_assistant
 from planmargin.evidence_api import create_app
 
 API_PORT = 8765
@@ -36,11 +37,24 @@ def _workbench_url(token: str) -> str:
     return f"http://127.0.0.1:{WEB_PORT}/#{urlencode({'token': token})}"
 
 
-def _parse_args() -> argparse.Namespace:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--no-browser", action="store_true")
-    return parser.parse_args()
+    parser.add_argument(
+        "--assistant-provider", choices=("offline", "gemini"), default="offline"
+    )
+    parser.add_argument(
+        "--confirm-gemini-free-tier",
+        action="store_true",
+        help="Confirm that the configured Gemini project is still on the free tier.",
+    )
+    parser.add_argument(
+        "--gemini-model",
+        default=evidence_assistant.DEFAULT_MODEL,
+        help="Gemini model used for public-aggregate explanations.",
+    )
+    return parser.parse_args(argv)
 
 
 def main() -> None:
@@ -61,7 +75,13 @@ def main() -> None:
         )
 
     token = secrets.token_urlsafe(32)
-    app = create_app(root=root, token=token)
+    app = create_app(
+        root=root,
+        token=token,
+        assistant_provider=args.assistant_provider,
+        confirm_gemini_free_tier=args.confirm_gemini_free_tier,
+        gemini_model=args.gemini_model,
+    )
     server = uvicorn.Server(
         uvicorn.Config(app, host="127.0.0.1", port=API_PORT, log_level="warning")
     )
@@ -86,6 +106,9 @@ def main() -> None:
     url = _workbench_url(token)
     print("\nPlanMargin workbench")
     print(f"Open: {url}")
+    print(f"Evidence assistant: {args.assistant_provider}")
+    if args.assistant_provider == "gemini":
+        print(f"Gemini model: {args.gemini_model} (public aggregates only)")
     print("The browser verifies the local session and removes the token from the address bar.")
     print("Press Ctrl-C to stop both services.\n")
     opener: threading.Timer | None = None

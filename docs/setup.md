@@ -137,7 +137,7 @@ uv run --frozen planmargin-ask-evidence \
 
 Only if you have independently verified that a Google AI Studio project is on
 the current free tier, install the pinned optional SDK with
-`uv sync --extra assistant`. Keep `GEMINI_API_KEY` in the environment and use
+`uv sync --frozen --extra assistant`. Keep `GEMINI_API_KEY` in the environment and use
 `--provider gemini --confirm-free-tier`. Hosted mode receives public aggregates
 only and cannot be combined with local evidence. See the complete
 [assistant privacy and provider contract](evidence-assistant.md) before use.

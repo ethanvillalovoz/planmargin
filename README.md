@@ -62,6 +62,22 @@ authenticated ephemeral URL, consumes the token into browser memory, and removes
 it from the address bar. There is no token-copy step. Private responses use
 `Cache-Control: no-store`, and source identifiers never enter the UI.
 
+To enable Gemini explanations in that same workbench while keeping the Google
+project on its free tier:
+
+```bash
+uv sync --frozen --extra assistant
+export GEMINI_API_KEY="..."
+uv run --frozen --extra assistant planmargin-workbench \
+  --assistant-provider gemini \
+  --confirm-gemini-free-tier
+```
+
+Do not attach billing to the AI Studio project if a hard zero-cost boundary is
+required. The adapter makes one hosted request only after an explicit question,
+does not retry automatically, and sends public aggregate facts rather than local
+scenario records. See the [provider contract](docs/evidence-assistant.md).
+
 If the doctor reports missing licensed artifacts, use the
 [workspace reproduction runbook](docs/reproducing-the-workspace.md). For the
 camera, LiDAR, and 3DGS track, an authorized Waymo Open Dataset account can run:
