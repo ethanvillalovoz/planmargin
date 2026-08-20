@@ -60,6 +60,26 @@ describe('ProductShell', () => {
     expect(simulator.sensorMode()).toBe('planning');
   });
 
+  it('exposes the evidence assistant from the primary product header', () => {
+    const fixture = TestBed.createComponent(ProductShell);
+    const local = TestBed.inject(LocalEvidenceService);
+    const simulator = TestBed.inject(SimulatorStore);
+    local.state.set('connected');
+    fixture.detectChanges();
+
+    const button = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.product-header button',
+      ) as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.includes('Ask analysis'))!;
+    expect(button.disabled).toBe(false);
+
+    button.click();
+
+    expect(simulator.assistantOpen()).toBe(true);
+    expect(simulator.sensorMode()).toBe('planning');
+  });
+
   it('renders measured proposal gates after local evidence is connected', () => {
     const fixture = TestBed.createComponent(ProductShell);
     const local = TestBed.inject(LocalEvidenceService);
