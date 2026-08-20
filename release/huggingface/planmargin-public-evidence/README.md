@@ -40,22 +40,24 @@ because neither method found a qualifying failure.
 ## Use
 
 ```bash
-hf download YOUR_HF_USERNAME/planmargin-public-evidence \
+hf download ethanvillalovoz/planmargin-public-evidence \
   --repo-type dataset \
   --local-dir planmargin-public-evidence
 python verify.py
 ```
 
-Replace `YOUR_HF_USERNAME` after publication. This staging directory
-can be uploaded only after the author has completed the Waymo distribution review.
+This staging directory can be uploaded only after the author has completed the
+Waymo distribution review.
 
 ## Source and attribution
 
 PlanMargin is an independent research project and is not affiliated with or
-endorsed by Waymo. The experiment used the Waymo Open Motion Dataset through
-Waymax. Review the [Waymo Open Dataset terms](https://waymo.com/open/terms/) before
-using any underlying Waymo data. This package contains only aggregate research
-outputs, not a copy of the Waymo Open Dataset.
+endorsed by Waymo. This dataset package was made using the Waymo Open Dataset,
+provided by Waymo LLC under the Waymo Dataset License Agreement for
+Non-Commercial Use, available at
+[waymo.com/open/terms](https://waymo.com/open/terms/), and access and use of this
+work are governed by the terms and conditions therein. This package contains
+only aggregate research outputs, not a copy of the Waymo Open Dataset.
 
 ## Claim boundary
 

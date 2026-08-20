@@ -13,10 +13,10 @@ The staged package is intentionally aggregate-only. Before publishing:
 5. Create and upload the dataset repository:
 
    ```bash
-   hf repos create YOUR_HF_USERNAME/planmargin-public-evidence \
+   hf repos create ethanvillalovoz/planmargin-public-evidence \
      --type dataset \
      --exist-ok
-   hf upload YOUR_HF_USERNAME/planmargin-public-evidence \
+   hf upload ethanvillalovoz/planmargin-public-evidence \
      release/huggingface/planmargin-public-evidence \
      . \
      --type dataset \
@@ -26,7 +26,7 @@ The staged package is intentionally aggregate-only. Before publishing:
 6. Verify the published viewer and download in a clean directory:
 
    ```bash
-   hf download YOUR_HF_USERNAME/planmargin-public-evidence \
+   hf download ethanvillalovoz/planmargin-public-evidence \
      --repo-type dataset \
      --local-dir /tmp/planmargin-public-evidence
    python /tmp/planmargin-public-evidence/verify.py
