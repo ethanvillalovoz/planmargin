@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import math
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -283,7 +284,14 @@ def _prepare_camera_annotations(
     return {"frame_count": len(frames), "box_count": sum(map(len, frames))}
 
 
-def prepare(root: Path) -> Path:
+def prepare(
+    root: Path,
+    *,
+    generate_sharp: bool = False,
+    sharp_command: Path | None = None,
+    sharp_checkpoint: Path | None = None,
+    device: str = "default",
+) -> Path:
     root = root.resolve(strict=True)
     data_directory = root / "data" / "raw" / "perception" / SEGMENT_ID
     camera_parquet = data_directory / "camera_image.parquet"
@@ -296,15 +304,9 @@ def prepare(root: Path) -> Path:
         camera_box_parquet,
         data_directory / "lidar.parquet",
         data_directory / "lidar_calibration.parquet",
-        gaussian_path,
     ):
         if source.is_symlink() or not source.is_file():
             raise ValueError(f"Required local scene input is missing: {source}")
-    if _vertex_count(gaussian_path) != EXPECTED_GAUSSIANS:
-        raise ValueError(
-            "The SHARP reconstruction does not have the expected Gaussian count"
-        )
-
     frames_directory = data_directory / "front_frames"
     frames_directory.mkdir(parents=True, exist_ok=True)
     connection = duckdb.connect()
@@ -340,6 +342,37 @@ def prepare(root: Path) -> Path:
                 "bytes": len(payload),
                 "sha256": hashlib.sha256(payload).hexdigest(),
             }
+        )
+
+    if not gaussian_path.is_file() and generate_sharp:
+        if sharp_command is None or not sharp_command.is_file():
+            raise ValueError("The Apple SHARP command is unavailable")
+        gaussian_path.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                str(sharp_command),
+                "predict",
+                "--input-path",
+                str(frames_directory / frames[SOURCE_FRAME_INDEX]["file"]),
+                "--output-path",
+                str(gaussian_path.parent),
+                "--device",
+                device,
+                *(
+                    ["--checkpoint-path", str(sharp_checkpoint)]
+                    if sharp_checkpoint is not None
+                    else []
+                ),
+            ],
+            check=True,
+        )
+    if gaussian_path.is_symlink() or not gaussian_path.is_file():
+        raise ValueError(
+            "Required SHARP reconstruction is missing; rerun with --generate-sharp"
+        )
+    if _vertex_count(gaussian_path) != EXPECTED_GAUSSIANS:
+        raise ValueError(
+            "The SHARP reconstruction does not have the expected Gaussian count"
         )
 
     output_directory = root / "artifacts" / "sensor-scene" / "waymo-front"
@@ -395,8 +428,20 @@ def prepare(root: Path) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path.cwd())
+    parser.add_argument("--generate-sharp", action="store_true")
+    parser.add_argument("--sharp-command", type=Path)
+    parser.add_argument("--sharp-checkpoint", type=Path)
+    parser.add_argument(
+        "--device", choices=("default", "cpu", "mps", "cuda"), default="default"
+    )
     args = parser.parse_args()
-    manifest = prepare(args.root)
+    manifest = prepare(
+        args.root,
+        generate_sharp=args.generate_sharp,
+        sharp_command=args.sharp_command,
+        sharp_checkpoint=args.sharp_checkpoint,
+        device=args.device,
+    )
     print(manifest)
 
 

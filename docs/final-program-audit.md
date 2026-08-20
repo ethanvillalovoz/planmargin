@@ -5,6 +5,35 @@ means every original responsibility either ships with verified evidence or has
 a predeclared, reproducible `no_go`. It does not mean every experimental result
 was positive.
 
+## August 20 reproducibility and repository addendum
+
+The repository now makes the public-versus-authorized boundary executable
+instead of leaving it to prose. `planmargin-doctor` verifies the aggregate
+release, sealed campaign and replay, all 199 recorded camera frames, 8,364
+native annotations, the 1,179,648-primitive SHARP reconstruction, the
+50,241-return LiDAR field, the planning-linked Gaussian `no_go`, the final Beam
+dataflow, and the JAX controller `synthetic_no_go`. On the retained local
+workspace it reports the product and research program ready while identifying
+the optional Gemini adapter separately.
+
+A single authorized bootstrap now downloads only the four pinned WOD v2
+Perception components, verifies a pinned Apple SHARP source archive and model
+checkpoint by SHA-256, runs on MPS/CUDA/CPU, and seals the resulting Sensor Lab.
+The public README, reproduction runbook, contribution guide, notice, and
+aggregate release documentation now state exactly what a clean clone can do,
+what requires licensed local records, and what is intentionally never
+redistributed.
+
+This addendum passed 219 Python tests, 35 Angular/Vitest tests, Ruff, strict
+TypeScript checking, formatting, the Node 24.15 production build, npm's
+moderate-severity audit with zero vulnerabilities, public-bundle verification,
+and authenticated HTTP checks across health, campaign, investigation, Sensor
+Lab metadata, and recorded frame delivery. A fresh source distribution also
+built with `LICENSE` and `NOTICE` included. A fresh native wheel rebuild on this
+particular Mac remains blocked until its owner reviews and accepts the installed
+Xcode license; the readiness doctor reports that machine-level prerequisite
+without confusing it with product or research readiness.
+
 ## August 18 product-workbench addendum
 
 The research decisions below remain immutable. A later product pass changed
@@ -22,9 +51,9 @@ Only the Stage-0 package contains full trajectory replay data; the 3,200
 campaign proposals retain trajectory hashes and measured outcomes. The UI
 states this boundary instead of synthesizing playback.
 
-Current addendum verification: 35 Angular/Vitest tests pass, the production
+That pass verified 35 Angular/Vitest tests, the production
 Angular build remains inside its configured bundle budgets, npm reports zero
-known vulnerabilities, and all 214 Python tests pass. In-app browser QA covered
+known vulnerabilities, and all 214 Python tests passed. In-app browser QA covered
 the public and authenticated
 investigation, comparison, proposal analysis, planning playback, real Camera
 playback with changing native boxes, 3DGS, desktop, and mobile layouts. It found

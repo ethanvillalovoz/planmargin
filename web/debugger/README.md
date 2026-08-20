@@ -19,16 +19,16 @@ evidence, and PlanMargin does not inspect the production Waymo Driver.
 
 ## Prepare the ignored local sensor scene
 
-The preparation step reads only already-downloaded local inputs and writes only
-ignored `data/` and `artifacts/` outputs:
+From the repository root, the authorized bootstrap downloads the four pinned
+WOD components, installs the pinned SHARP tool, generates the source-frame
+3DGS, and writes only ignored `data/` and `artifacts/` outputs:
 
 ```bash
-uv run python scripts/prepare_perception_scene.py
+uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms
 ```
 
-It expects the local Perception Parquet files—including `camera_box.parquet`—
-and SHARP PLY described by the script's validation errors. It extracts the 199
-camera JPEGs and tracked boxes, deterministically fits the same-frame LiDAR
+For already-downloaded inputs, pass `--skip-download`. The preparation extracts
+199 camera JPEGs and tracked boxes, deterministically fits the same-frame LiDAR
 Gaussian field, hashes every asset, and writes
 `artifacts/sensor-scene/waymo-front/manifest.json`.
 
