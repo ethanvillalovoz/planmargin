@@ -5,7 +5,7 @@ description = "Counterfactual stress testing for autonomous-driving planners"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
 dependencies = [
   "apache-beam==2.74.0",
   "botorch==0.18.1",
@@ -38,6 +38,8 @@ planmargin-serve-evidence = "planmargin.evidence_api:main"
 planmargin-ask-evidence = "planmargin.evidence_assistant:main"
 planmargin-build-gaussian-field = "planmargin.gaussian_field:main"
 planmargin-train-rl-controller = "planmargin.rl_controller:main"
+planmargin-doctor = "planmargin.workspace:doctor_main"
+planmargin-bootstrap-sensor = "planmargin.workspace:bootstrap_sensor_main"
 
 [project.optional-dependencies]
 assistant = [

@@ -1,0 +1,22 @@
+PlanMargin
+Copyright 2026 Ethan Villalovoz
+
+Original PlanMargin source code is provided under the Apache License 2.0 in
+LICENSE. That license does not grant rights to third-party datasets, model
+weights, trademarks, or software.
+
+This software was made using the Waymo Open Dataset, provided by Waymo LLC
+under the Waymo Dataset License Agreement for Non-Commercial Use, available at
+https://waymo.com/open/terms/, and access and use of this work are governed by
+the terms and conditions therein.
+
+Waymo Open Dataset source files and restricted scenario-level derivatives are
+not distributed in this repository. PlanMargin is not affiliated with,
+endorsed by, or representative of Waymo LLC and does not evaluate the
+production Waymo Driver.
+
+The optional 3D reconstruction workflow uses Apple ml-sharp source and model
+weights under their respective upstream licenses:
+https://github.com/apple/ml-sharp
+
+Waymax and all other dependencies retain their upstream licenses and notices.

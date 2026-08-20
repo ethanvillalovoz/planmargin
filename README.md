@@ -3,377 +3,213 @@
 **Counterfactual stress testing for autonomous-driving planners.**
 
 <!-- prettier-ignore -->
-[![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white) [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![Node 24](https://img.shields.io/badge/Node-24-5FA04E?logo=nodedotjs&logoColor=white) ![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white) [![License](https://img.shields.io/badge/Code-Apache--2.0-blue.svg)](LICENSE)
 
-PlanMargin is a local, reproducible campaign-investigation workbench that
-searches for the smallest realistic change to a recorded driving scenario that
-exposes an avoidable planner failure. It opens directly in the investigation
-workspace, where an engineer can rank all 3,200 proposals campaign-wide, trace
-the 100 matched cells, compare candidates, inspect every qualification gate,
-open the available trajectory replay, and
-export a content-digested investigation report. It combines Waymo Open Motion Dataset (WOMD)
-scenarios, Waymax closed-loop simulation, constrained Bayesian optimization,
-sealed experiment records, verified analytics, a measured native kernel, an
-authenticated local evidence API, and an interactive evidence debugger.
+PlanMargin searches for the smallest realistic change to a recorded driving
+scenario that makes a tested planner fail while a conservative reference still
+succeeds. It is a reproducible research system and an interactive engineering
+workbench—not a Waymo Driver evaluation.
 
-## Version-one evidence
+The completed v1 experiment ran **3,200 matched proposals**, **14,110 physical
+rollouts**, and **1,128,800 Waymax steps**. Neither search method found a
+qualifying failure. Constrained Bayesian search did increase the
+support-and-pipeline-valid proposal rate from **54.5625% to 69.3750%**. The
+negative result and its limits are preserved instead of being converted into a
+post-hoc win.
 
-| Evidence                  |                                              Result |
-| ------------------------- | --------------------------------------------------: |
-| Matched experiment        |                         100 cells · 3,200 proposals |
-| Simulation cost           |   14,110 physical rollouts · 1,128,800 Waymax steps |
-| Qualifying findings       |                               0 random · 0 Bayesian |
-| Eligible-proposal yield   |                 54.5625% random · 69.3750% Bayesian |
-| Hypothesis decisions      |                     H1/H2 untestable · H3 supported |
-| Native interaction kernel | 585–619× faster than the Python oracle in isolation |
+![PlanMargin campaign evidence workspace](docs/assets/campaign-evidence.png)
 
-The result is intentionally narrow. Constrained Bayesian search increased the
-support-and-pipeline-valid rate by **14.8125 percentage points**, but neither
-method found a qualifying failure under the frozen budget. The experiment does
-not establish better failure discovery or mutation minimality. No held-out
-comparative campaign ran; one validation record had already been accessed by a
-legacy compatibility smoke test. PlanMargin does not evaluate the production
-Waymo Driver. See the [aggregate-only result](docs/natural-development-results.md)
-and [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md).
+## Product at a glance
 
-> **Program status:** The recovered PlanMargin program is complete. The
-> localhost-only real-record API and
-> campaign investigator, real Perception camera/3DGS/LiDAR Sensor Lab,
-> Beam-to-Parquet-to-DuckDB pipeline, and constrained evidence assistant are
-> complete. The separate exact-planning-scenario LiDAR Gaussian study produced
-> a reproducible `no_go` because only 23.66% of the full debugger trajectories
-> fit its frozen crop. The JAX double-DQN study also produced a reproducible
-> `no_go`: 3.125% synthetic collisions exceeded its frozen 1.0% gate. Neither
-> failed technology was forced into the product, and no held-out comparative
-> campaign ran. See the
-> [recovery decision](docs/decisions/0004-recover-original-program.md).
+The local workbench gives an engineer four connected surfaces:
 
-## What I built
-
-PlanMargin is one end-to-end system rather than a collection of disconnected
-technology demos:
-
-- **Research design:** predeclared hypotheses, equal method budgets, immutable
-  decision gates, and an explicit negative-result policy.
-- **Simulation and evaluation:** deterministic WOMD/Waymax replay, bounded
-  lead-braking mutations, tested/reference controller comparison, and a
-  reproducible qualifying-finding contract.
-- **Optimization:** a stateless uniform-random control and constrained
-  multi-objective qLogNEHVI search in PyTorch/BoTorch.
-- **Data engineering:** content-sealed checkpoints, atomic resumability,
-  Apache Beam keyed transforms, deterministic partitioned Parquet,
-  privacy-preserving DuckDB tables, and SQL reconciliation against the
-  published aggregates and feature rows.
-- **Local evidence service:** a token-authenticated, loopback-only FastAPI
-  boundary over verified DuckDB/Parquet, sealed proposal records, and redacted
-  real trajectories; no client-supplied SQL or paths.
-- **Systems work:** a C++20/pybind11 interaction-metrics kernel selected by
-  profiling and protected by randomized parity tests against the Python oracle.
-- **Product engineering:** a responsive Angular/TypeScript investigation
-  workbench with a campaign-wide 3,200-proposal index, 100-cell matrix,
-  side-by-side candidate comparison, proposal-specific sealed analysis,
-  qualification-gate traces, SHA-256-digested HTML
-  reports, one authentic trajectory replay, 199 recorded Perception frames, an
-  interactive 1.18M-primitive SHARP reconstruction, same-frame LiDAR, and
-  native tracked camera boxes.
-- **Constrained AI:** an offline-first evidence assistant with five
-  deterministic aggregate tools, sealed citations, and an optional
-  public-aggregate-only Gemini structured-output adapter.
-- **Learned control research:** a deterministic JAX/Optax double-DQN training,
-  evaluation, and tamper-evident checkpoint pipeline whose failed safety gate
-  correctly prevented Waymax deployment and a held-out campaign.
-- **Reliability:** locked Python and Node environments, versioned JSON Schemas,
-  data-free CI, deterministic reconstruction, and repository privacy tests.
-
-## Five-minute technical review
-
-1. **Inspect the result.** Read the
-   [aggregate campaign report](docs/natural-development-results.md) and its
-   explicit claim boundary.
-2. **Inspect the evidence workbench.** Review the
-   [implemented debugger design](docs/debugger-design.md) and
-   [final design QA](design-qa.md). If you have authorized WOD inputs, follow
-   the [local debugger instructions](#run-the-evidence-workbench) to reproduce
-   the complete interactive Camera, Planning, 3DGS, LiDAR, and local-evidence
-   workspace.
-3. **Trace the system.** Review the
-   [implemented architecture](docs/architecture.md) and
-   [sealed campaign coordinator](docs/matched-search-campaign.md).
-4. **Check the engineering depth.** Review the
-   [DuckDB/Parquet reconciliation](docs/analytics.md), the
-   [constrained evidence assistant](docs/evidence-assistant.md), the
-   [C++20 benchmark](docs/native-geometry.md), and the
-   [v1 held-out `no_go`](docs/decisions/0003-version-one-heldout-no-go.md),
-   [Gaussian feasibility result](docs/decisions/0005-gaussian-visualization-feasibility.md),
-   and [v2 RL gate](docs/decisions/0006-experiment-v2-protocol.md).
-
-## Research question
-
-> Can realism-constrained Bayesian search find avoidable, policy-specific
-> failures in recorded driving scenarios using fewer simulations than uniform
-> random search?
-
-A mutation counts as a finding only when the original tested controller
-passes, the mutation clears physical, map, and empirical-behavior gates, the
-tested controller fails or crosses the frozen risk threshold, the conservative
-technical reference succeeds under the same mutation, and deterministic reruns
-agree. This prevents the optimizer from “winning” with an impossible or
-inevitable event.
-
-Version one tested a two-dimensional lead-vehicle-braking family: braking-onset
-offset and speed multiplier. Both methods received the same 1,600-proposal
-budget across ten training scenarios and five seeds. The frozen
-headway-regression alternative failed its predeclared eligibility gate, so it
-was not substituted after the natural experiment produced no failures.
-
-## Implemented architecture
+- **Investigate:** rank all 3,200 sealed proposals, compare candidates, and
+  trace the exact qualification gate where each proposal stopped.
+- **Replay:** inspect the authentic retained planning trajectory on its own
+  timeline. Campaign proposals without retained trajectories are never
+  presented as playable replays.
+- **Sensor Lab:** play 199 recorded WOD FRONT frames with 8,364 native tracked
+  boxes, orbit a 1,179,648-primitive Apple SHARP 3D Gaussian reconstruction,
+  and inspect a 50,241-primitive same-frame LiDAR field.
+- **Evidence assistant:** ask bounded questions through deterministic local
+  tools, with an optional Gemini explanation adapter that only receives
+  already-public aggregates.
 
 ```mermaid
 flowchart LR
-    A["WOMD scenarios"] --> B["Python · JAX · Waymax"]
-    B --> C["Random and constrained Bayesian search"]
-    B --> D["C++20 interaction metrics"]
-    C --> E["Content-sealed experiment records"]
-    D --> E
-    E --> F["DuckDB · Parquet · SQL verification"]
-    E --> G["Aggregate-only public report"]
-    E --> J["FastAPI · authenticated local real evidence"]
-    A --> K["Apache Beam · bounded feature dataflow"]
-    K --> F
-    N["WOD Perception · FRONT camera + LiDAR"] --> O["Local sensor-scene preparation"]
-    O --> I
-    G --> L["Deterministic evidence tools"]
-    L --> M["Offline or optional Gemini explanation"]
-    J -->|"authenticated loopback only"| I["Angular · TypeScript · Three.js · Spark"]
-    G --> I
+    W["WOMD scenarios"] --> X["Waymax closed-loop simulation"]
+    X --> S["Random + constrained Bayesian search"]
+    X --> C["C++20 interaction metrics"]
+    S --> E["Content-sealed evidence"]
+    C --> E
+    E --> D["Beam · Parquet · DuckDB"]
+    E --> A["Authenticated local FastAPI"]
+    D --> A
+    P["WOD Perception"] --> V["Camera · SHARP 3DGS · LiDAR"]
+    A --> U["Angular investigation workbench"]
+    V --> U
 ```
 
-Raw WOMD data, scenario identities, trajectories, feature vectors, support
-scores, cell reports, and proposal records remain local and ignored. Only
-schemas, code, test fixtures, methodology, and permitted campaign-level
-aggregates enter Git. The [architecture document](docs/architecture.md)
-describes each responsibility and public/private boundary.
+## What is ready
 
-The implemented stack is Python, JAX/Waymax, PyTorch/BoTorch,
-C++20/pybind11, Apache Beam, DuckDB, Parquet, FastAPI, Angular, TypeScript,
-Three.js, Spark, Apple SHARP, an optional Gemini adapter, and GitHub Actions.
-The plan-linked Gaussian and learned-controller studies remain complete as
-audited negative engineering results. The separate Perception visualization
-track is shipped and explicitly excluded from the planning claim. Hosted
-infrastructure is not required.
-
-## Ask the evidence assistant
-
-The default path is deterministic and offline:
+PlanMargin deliberately distinguishes public code from licensed local data.
+Run the doctor instead of guessing:
 
 ```bash
-uv run --frozen planmargin-ask-evidence \
-  --question "How did Bayesian compare with random search?"
+uv run --frozen planmargin-doctor
 ```
 
-It maps the question to one closed aggregate query, emits cited facts, and
-keeps explanation separate from measurement. An optional Gemini adapter can
-explain only already-public aggregates; it never receives the raw question or
-private records and requires explicit free-tier confirmation. See the
-[assistant contract](docs/evidence-assistant.md).
+| Surface                                | Clean public clone | Authorized local workspace                                       |
+| -------------------------------------- | ------------------ | ---------------------------------------------------------------- |
+| Source, schemas, tests, architecture   | Ready              | Ready                                                            |
+| Aggregate campaign result              | Ready              | Ready                                                            |
+| 3,200 proposal records and exact gates | Not redistributed  | Verified locally                                                 |
+| Planning replay                        | Not redistributed  | Verified locally                                                 |
+| Camera, tracked boxes, 3DGS, and LiDAR | Not redistributed  | Verified locally                                                 |
+| Deterministic evidence assistant       | Aggregate mode     | Full local evidence                                              |
+| Gemini explanation                     | Optional           | Requires a user-supplied key and explicit free-tier confirmation |
 
-## Run the Beam feature pipeline
+This is a licensing boundary, not a synthetic-data fallback. The production
+application bundles no fake scenario or fake sensor stream.
 
-Transform the validated private v1 feature checkpoints into deterministic
-partitioned Parquet and a reconciled DuckDB database without rereading WOMD:
+## Quick start
 
-```bash
-uv run --frozen planmargin-build-beam-features \
-  --source-mode sealed-support \
-  --support-dir artifacts/realism/lead-braking-support-v1 \
-  --output-dir artifacts/beam-features/lead-braking-v1
-```
+### Review the public product
 
-The pipeline resumes sealed per-source-shard checkpoints, assigns eight stable
-hash partitions with Beam `GroupByKey`, and verifies row identity and privacy
-again in DuckDB. See the [Beam feature pipeline contract](docs/beam-feature-pipeline.md).
-
-## Run the local evidence API
-
-If the ignored real experiment artifacts exist locally, start the
-token-authenticated service with:
+The aggregate workbench only needs Node 24.15:
 
 ```bash
-uv run --frozen planmargin-serve-evidence
-```
-
-It binds only to `127.0.0.1:8765`, verifies the campaign, analytical database,
-and rollout collection before serving, and prints an ephemeral local token.
-See the [real-record API contract](docs/evidence-api.md) for its fixed endpoints
-and privacy boundary. The debugger intentionally starts disconnected and
-renders no planning or sensor data until the local API authenticates. Choose
-**Connect local evidence**, paste the ephemeral terminal token, and connect to
-load ignored, verified local records. This also enables the bounded Evidence
-Assistant and authenticated sensor assets.
-
-Offline assistant explanations are the default and require no account. To use
-the optional Gemini explanation adapter, set `GEMINI_API_KEY` and explicitly
-confirm the free-tier boundary:
-
-```bash
-uv run --frozen planmargin-serve-evidence \
-  --assistant-provider gemini \
-  --confirm-gemini-free-tier
-```
-
-Gemini receives only the allowlisted public aggregate packet; it never receives
-the raw question or ignored local evidence.
-
-## Run the evidence workbench
-
-After the Python and Node environments have been installed, launch both local
-services with one supervised command:
-
-```bash
-.venv/bin/python scripts/launch_debugger.py
-```
-
-The launcher verifies the real ignored evidence, starts the loopback API and
-Angular development server, opens the workbench, prints one ephemeral token,
-and stops both processes together on `Ctrl-C`. It does not require a hosted
-service, subscription, or paid compute.
-
-The manual two-terminal path remains available for debugging. First prepare
-the ignored local Perception scene from authorized inputs:
-
-```bash
-uv run python scripts/prepare_perception_scene.py
-```
-
-Then start the local API as described above. With Node.js 24.15.0 or a
-compatible Node 24 release:
-
-```bash
+git clone https://github.com/ethanvillalovoz/planmargin.git
+cd planmargin
 cd web/debugger
 npm ci
 npm start
 ```
 
-Open `http://127.0.0.1:4200`. The public aggregate investigation surface works
-immediately. Connect the ephemeral API token to unlock the verified local
-campaign-wide ranking, 100 matched cells, and 3,200 sealed proposal records.
-The workbench can rank the whole campaign or a selected cell by criticality,
-minimality, support, or original sequence; it renders the exact gate at which a
-proposal stopped and exports a self-contained HTML report with a SHA-256
-evidence digest. **Sensor Lab** supports 199-frame Camera playback with native
-per-frame WOD tracked boxes, scrubbing, source-frame 3DGS/LiDAR spatial
-inspection, 3D orbit/reset,
-perception overlays, independent planning replay, and assistant questions over
-sealed evidence. Campaign proposal records contain trajectory hashes rather
-than full trajectories, so the UI never labels those summaries as replays. The
-one available sealed Stage-0 trajectory package is presented separately. The visual WOD
-Perception segment is separate from the privacy-reduced WOMD planning evidence;
-the UI labels that boundary and makes no geometric-registration or safety
-claim. Real-record and sensor export remain disabled.
+Open `http://127.0.0.1:4200`. The public aggregate investigation opens without
+credentials.
 
-> **Public reproduction boundary:** The interactive sensor workspace requires
-> ignored, locally prepared WOD/SHARP assets because the repository does not
-> redistribute restricted source data or derived scene artifacts. A public
-> clone can run every data-free test and inspect the architecture, schemas,
-> design studies, and aggregate evidence; reproducing the live
-> Camera/3DGS/LiDAR scene requires authorized inputs. The application does not
-> replace missing real evidence with synthetic runtime data.
-
-### Downloadable public evidence
-
-The reviewed Hugging Face dataset staging directory is
-[`release/huggingface/planmargin-public-evidence`](release/huggingface/planmargin-public-evidence).
-It contains six aggregate-only JSONL records, a dataset card, and a SHA-256
-verifier—no per-scenario Waymo data. Build a deterministic download archive:
+For the scientific and systems checks, install
+[uv](https://docs.astral.sh/uv/), Python 3.11, and a C++20 compiler. These
+exercise the scientific contracts, native-kernel parity, API boundary, privacy
+policy, and frontend:
 
 ```bash
-.venv/bin/python scripts/build_public_evidence_bundle.py
-```
-
-This creates `dist/planmargin-public-evidence-v1.zip`. Publication is held until
-the Waymo redistribution review is complete; see
-[`docs/distribution.md`](docs/distribution.md) for the exact boundary.
-
-Validate the frontend independently with:
-
-```bash
-npm run check
-npm audit --audit-level=moderate
-```
-
-## Run the data-free checks
-
-Install [uv](https://docs.astral.sh/uv/) and a C++20 compiler, then run:
-
-```bash
-uv sync --frozen
 uv run --frozen ruff check .
 uv run --frozen pytest
 uv build
+cd web/debugger && npm run check
 ```
 
-These checks compile the native extension and exercise the search, records,
-analytics, geometry parity, and privacy contracts without WOMD credentials.
-Dataset-backed reproduction requires accepting the applicable Waymo terms and
-following the [credential-safe setup guide](docs/setup.md).
+### Prepare the authorized Sensor Lab
+
+After registering for the Waymo Open Dataset, accepting its current terms, and
+authenticating the Google Cloud CLI, one command downloads only the four pinned
+Perception components, installs the pinned Apple SHARP tool, runs MPS/CUDA/CPU
+inference, and seals the Camera/3DGS/LiDAR scene:
+
+```bash
+uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms
+```
+
+The bootstrap is resumable: existing nonempty inputs, the 3DGS model output,
+and the prepared scene are reused. It does not purchase compute or require a
+hosted service. The first SHARP run downloads Apple's model checkpoint and can
+take substantial time and disk space.
+
+### Launch the complete local workbench
+
+The authenticated investigator also requires locally reproduced or retained
+campaign, analytics, and planning-replay artifacts. Check the exact state first:
+
+```bash
+uv run --frozen planmargin-doctor --require full
+.venv/bin/python scripts/launch_debugger.py
+```
+
+The launcher starts the loopback-only API and Angular application together and
+prints one ephemeral token. Paste it into **Connect real evidence**; the token
+stays in memory and every private response is marked `no-store`.
+
+For a new authorized machine, follow the
+[campaign reproduction runbook](docs/reproducing-the-workspace.md). It is a
+long-running scientific reproduction, not a sample-data download.
+
+## Scientific contract
+
+A proposal qualifies only if all of the following hold under deterministic
+reruns:
+
+1. The original scenario passes.
+2. The mutation passes physical, map, and empirical-behavior gates.
+3. The tested controller fails or crosses the frozen risk threshold.
+4. The conservative technical reference succeeds under the same mutation.
+5. The result reproduces exactly.
+
+The comparison used equal 1,600-proposal budgets for uniform random search and
+constrained multi-objective qLogNEHVI. The completed development campaign found
+zero qualifying failures, making discovery efficiency (H1) and failure
+minimality (H2) untestable. The predeclared validity hypothesis (H3) was
+supported. No validation-backed comparative campaign ran.
+
+Read the [aggregate result](docs/natural-development-results.md),
+[held-out decision](docs/decisions/0003-version-one-heldout-no-go.md), and
+[final integration audit](docs/final-program-audit.md) for the complete claim
+boundary.
+
+## Engineering depth
+
+| Responsibility        | Implementation                       | Verification                                                       |
+| --------------------- | ------------------------------------ | ------------------------------------------------------------------ |
+| Simulation            | Python, JAX, Waymax                  | deterministic repeated rollouts and fixed scenario contracts       |
+| Search                | PyTorch, BoTorch qLogNEHVI           | equal budgets, five seeds, sealed proposals, frozen gates          |
+| Systems               | C++20, pybind11                      | randomized oracle parity and isolated-kernel benchmark             |
+| Dataflow              | Apache Beam, Parquet, DuckDB         | resumable shards, stable partitions, SQL reconciliation            |
+| Evidence service      | FastAPI                              | loopback-only token auth, fixed routes, no client SQL or paths     |
+| Product               | Angular, TypeScript, Three.js, Spark | strict typecheck, component tests, optimized production build      |
+| 3D reconstruction     | Apple SHARP on MPS/CUDA/CPU          | pinned source frame, vertex count, byte size, SHA-256 manifest     |
+| Agent layer           | deterministic tools, optional Gemini | allowlisted aggregates, sealed citations, explicit provider status |
+| Learned control study | JAX, Optax double DQN                | deterministic checkpoint; failed safety gate preserved as `no_go`  |
 
 ## Repository map
 
-| Path                               | Responsibility                                                       |
-| ---------------------------------- | -------------------------------------------------------------------- |
-| [`src/planmargin`](src/planmargin) | Simulation, search, dataflow, evidence API, assistant, and analytics |
-| [`cpp`](cpp)                       | Measured C++20 interaction-metrics kernel                            |
-| [`schemas`](schemas)               | Versioned experiment and analytics contracts                         |
-| [`tests`](tests)                   | Data-free scientific, parity, reconstruction, and privacy checks     |
-| [`web/debugger`](web/debugger)     | Angular/TypeScript/Three.js/Spark scenario simulator                 |
-| [`docs`](docs)                     | Frozen protocols, decisions, results, and engineering evidence       |
-| [`experiments`](experiments)       | Privacy-safe stage reports and implementation checkpoints            |
-
-## Design decisions
-
-- **Frozen contracts over post hoc tuning.** Thresholds, budgets, and
-  hypothesis rules do not change in response to an observed method result.
-- **Negative results are results.** Zero findings made H1 and H2 untestable;
-  those outcomes were reported rather than converted into proxy wins.
-- **Measured optimization only.** C++ owns one profiled geometry hotspot, and
-  its 585–619× result is reported only as an isolated-kernel benchmark—not an
-  end-to-end campaign speedup.
-- **Technology must own a responsibility.** FastAPI owns the authenticated
-  real-evidence boundary, and Beam owns restartable feature dataflow; every
-  evaluated layer had to pass its own responsibility and verification gate
-  before it could be claimed as a product capability.
-- **Zero-cost execution.** The core system runs on local Apple silicon, CPU
-  JAX, optional Colab Free, and data-free GitHub Actions.
+| Path                                         | Responsibility                                                               |
+| -------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`src/planmargin`](src/planmargin)           | simulation, search, dataflow, evidence API, assistant, and readiness tooling |
+| [`cpp`](cpp)                                 | measured C++20 interaction-metrics kernel                                    |
+| [`web/debugger`](web/debugger)               | Angular/TypeScript/Three.js/Spark workbench                                  |
+| [`schemas`](schemas)                         | versioned experiment and analytics contracts                                 |
+| [`tests`](tests)                             | data-free science, parity, API, privacy, and setup checks                    |
+| [`docs`](docs)                               | architecture, frozen protocols, decisions, results, and runbooks             |
+| [`experiments`](experiments)                 | privacy-safe aggregate reports and checkpoints                               |
+| [`release/huggingface`](release/huggingface) | aggregate-only distribution package; no WOD scene files                      |
 
 ## Documentation
 
-| Area                     | Start here                                                                                                                                                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Product and architecture | [Project specification](docs/project-spec.md) · [Implemented architecture](docs/architecture.md) · [Version-one checkpoint](docs/decisions/0002-version-one-product-checkpoint.md)                                                    |
-| Experiment contract      | [Behavioral realism and matched search](docs/behavioral-realism-and-matched-search.md) · [Campaign protocol](docs/matched-search-campaign.md)                                                                                         |
-| Final evidence           | [Aggregate result](docs/natural-development-results.md) · [Held-out decision](docs/decisions/0003-version-one-heldout-no-go.md)                                                                                                       |
-| Data and systems         | [Analytics](docs/analytics.md) · [Native geometry](docs/native-geometry.md) · [Rollout records](docs/rollout-record.md)                                                                                                               |
-| Dataflow                 | [Beam feature pipeline](docs/beam-feature-pipeline.md)                                                                                                                                                                                |
-| Evidence assistant       | [Constrained offline and Gemini contract](docs/evidence-assistant.md)                                                                                                                                                                 |
-| Product interface        | [Campaign investigation workbench](docs/campaign-investigation-workbench.md) · [Local evidence API](docs/evidence-api.md) · [Debugger design](docs/debugger-design.md) · [Trajectory visualization](docs/trajectory-visualization.md) |
-| Reproduction             | [Local setup](docs/setup.md) · [Data boundary](data/README.md)                                                                                                                                                                        |
-| Program audit            | [Original-program recovery](docs/decisions/0004-recover-original-program.md) · [Final integration audit](docs/final-program-audit.md)                                                                                                 |
+- [Architecture](docs/architecture.md)
+- [Project specification](docs/project-spec.md)
+- [Workspace reproduction](docs/reproducing-the-workspace.md)
+- [Campaign protocol](docs/matched-search-campaign.md)
+- [Analytics and SQL reconciliation](docs/analytics.md)
+- [Beam feature pipeline](docs/beam-feature-pipeline.md)
+- [Evidence API](docs/evidence-api.md)
+- [Evidence assistant](docs/evidence-assistant.md)
+- [Debugger design](docs/debugger-design.md)
+- [Distribution boundary](docs/distribution.md)
+- [Contributing](CONTRIBUTING.md)
 
-## Data, licensing, and affiliation
+## License, data, and affiliation
 
-PlanMargin is an independent project and is **not affiliated with, endorsed by,
-or representative of Waymo LLC**. It does not evaluate the production Waymo
+PlanMargin is independent and is **not affiliated with, endorsed by, or
+representative of Waymo LLC**. It does not evaluate the production Waymo
 Driver.
-
-Waymo Open Dataset and Waymax access are governed by their respective terms
-and non-commercial-use conditions. Users are responsible for obtaining access
-and accepting those terms. Raw data, credentials, and restricted artifacts
-must never be committed here. See [data/README.md](data/README.md).
 
 This software was made using the Waymo Open Dataset, provided by Waymo LLC
 under the [Waymo Dataset License Agreement for Non-Commercial Use](https://waymo.com/open/terms/),
-and access and use are governed by that agreement.
+and access and use of the resulting work are governed by that agreement. WOD
+source data and restricted per-scenario derivatives are not included in this
+repository.
 
-The original code in this repository is licensed under the
-[Apache License 2.0](LICENSE). Third-party software and datasets retain their
-own licenses.
+Original PlanMargin code is licensed under [Apache License 2.0](LICENSE).
+Dataset terms, model terms, and third-party software licenses remain separate;
+see [NOTICE](NOTICE).

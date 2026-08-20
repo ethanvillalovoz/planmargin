@@ -109,6 +109,23 @@ Validation access is never implicit. The CLI rejects a validation URI unless
 `--allow-validation-access` is supplied under a separately authorized protocol.
 That override is not part of the reproduction workflow.
 
+## Build the local Perception Sensor Lab
+
+The product bootstrap downloads only the four pinned WOD v2 Perception
+components needed by the visual scene, installs Apple SHARP at a pinned
+revision, generates the source-frame 3DGS on MPS/CUDA/CPU, and prepares the
+camera, native annotation, and LiDAR manifests:
+
+```bash
+uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms
+```
+
+Run `uv run --frozen planmargin-doctor` before and after preparation for an
+explicit capability report. See the
+[complete workspace runbook](reproducing-the-workspace.md) for campaign and
+planning-replay reproduction; the sensor bootstrap does not fabricate or
+download those private experiment records.
+
 ## Optional Gemini explanation adapter
 
 The evidence assistant is offline by default and needs no additional package:
