@@ -95,7 +95,7 @@ an issue, or reuse it as a hosted credential.
 
 ## Connect the debugger
 
-Run `uv run --frozen planmargin-workbench` to start both services. The launcher opens a one-time URL
+Run `uv run --frozen planmargin-workbench` to start both services. The launcher opens an ephemeral URL
 whose fragment carries the ephemeral token. URL fragments are not sent to the
 web server; the client reads the token into memory and immediately removes the
 fragment from browser history before performing the verified handshake. The

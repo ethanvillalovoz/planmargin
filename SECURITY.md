@@ -20,7 +20,7 @@ data should describe the failure without attaching that data.
 - The evidence API binds to loopback and rejects requests without a
   cryptographically random session token.
 - The workbench keeps the token in memory, sends it only in the local API
-  header, and removes the one-time launch fragment before loading evidence.
+  header, and removes the ephemeral launch fragment before loading evidence.
 - API responses are closed, privacy-reduced models with `no-store` and
   `nosniff`; raw paths, source URIs, scenario IDs, and record indexes are not
   exposed.

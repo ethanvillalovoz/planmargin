@@ -47,7 +47,8 @@ import { SimulatorStore } from '../simulator.store';
             <label for="local-token">Manual session recovery</label>
             <p>
               <code>uv run --frozen planmargin-workbench</code> normally connects automatically.
-              Paste the launcher's one-time token here only if this browser was opened separately.
+              Paste the launcher's ephemeral session token here only if this browser was opened
+              separately.
             </p>
             <input
               id="local-token"
