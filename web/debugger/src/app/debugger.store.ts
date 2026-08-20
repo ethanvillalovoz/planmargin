@@ -1,18 +1,22 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
-import { SYNTHETIC_DEBUGGER_RUN } from './debugger.fixture';
-import { DebuggerRun, MobileView } from './debugger.types';
+import { DebuggerRun } from './debugger.types';
 
 @Injectable({ providedIn: 'root' })
 export class DebuggerStore {
   private readonly destroyRef = inject(DestroyRef);
   private playbackTimer: ReturnType<typeof setInterval> | undefined;
 
-  readonly run = signal<DebuggerRun>(SYNTHETIC_DEBUGGER_RUN);
-  readonly selectedHypothesisId = signal('proposal-02');
-  readonly timestepIndex = signal(48);
+  private readonly loadedRun = signal<DebuggerRun | undefined>(undefined);
+  readonly hasRun = computed(() => this.loadedRun() !== undefined);
+  readonly run = computed(() => {
+    const run = this.loadedRun();
+    if (run === undefined) throw new Error('Real local planning evidence is not connected');
+    return run;
+  });
+  readonly selectedHypothesisId = signal('');
+  readonly timestepIndex = signal(0);
   readonly playing = signal(false);
   readonly playbackSpeed = signal<0.5 | 1 | 2>(1);
-  readonly mobileView = signal<MobileView>('scene');
 
   readonly selectedHypothesis = computed(() => {
     const hypotheses = this.run().hypotheses;
@@ -30,16 +34,16 @@ export class DebuggerStore {
 
   loadRun(run: DebuggerRun): void {
     this.stop();
-    this.run.set(run);
+    this.loadedRun.set(run);
     this.selectedHypothesisId.set(run.hypotheses[0].id);
     this.timestepIndex.set(0);
   }
 
-  resetToSynthetic(): void {
+  clearRun(): void {
     this.stop();
-    this.run.set(SYNTHETIC_DEBUGGER_RUN);
-    this.selectedHypothesisId.set('proposal-02');
-    this.timestepIndex.set(48);
+    this.loadedRun.set(undefined);
+    this.selectedHypothesisId.set('');
+    this.timestepIndex.set(0);
   }
 
   selectHypothesis(id: string): void {

@@ -15,9 +15,9 @@ import { DebuggerStore } from '../debugger.store';
 import { Point2d, TrajectoryKind } from '../debugger.types';
 
 const COLORS: Record<TrajectoryKind, number> = {
-  tested: 0xff7900,
-  reference: 0x17b9d6,
-  recorded: 0x858d93,
+  tested: 0xf16347,
+  reference: 0x0ba8bd,
+  recorded: 0x83919c,
 };
 
 interface FallbackScene {
@@ -28,6 +28,7 @@ interface FallbackScene {
     readonly kind: TrajectoryKind;
     readonly points: string;
     readonly current: Point2d;
+    readonly callout: Point2d;
   }[];
   readonly markerRadius: number;
 }
@@ -36,49 +37,62 @@ interface FallbackScene {
   selector: 'app-scene-viewport',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div
-      #viewport
-      class="viewport"
-      [attr.aria-label]="
-        store.run().synthetic ? 'Synthetic trajectory scene' : 'Real local trajectory scene'
-      "
-    ></div>
-    @if (rendererUnavailable()) {
-      <svg
-        class="fallback"
-        [attr.viewBox]="fallbackScene().viewBox"
-        role="img"
-        aria-label="Trajectory scene rendered without WebGL"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        <g>
-          @for (road of fallbackScene().roadCenterlines; track $index) {
-            <polyline class="road" [attr.points]="road" />
-          }
-          @if (fallbackScene().conflictRegion) {
-            <polygon class="conflict" [attr.points]="fallbackScene().conflictRegion" />
-          }
-          @for (trajectory of fallbackScene().trajectories; track trajectory.kind) {
-            <polyline [attr.class]="trajectory.kind" [attr.points]="trajectory.points" />
-            <circle
-              [attr.class]="trajectory.kind"
-              [attr.cx]="trajectory.current.x"
-              [attr.cy]="-trajectory.current.y"
-              [attr.r]="fallbackScene().markerRadius"
-            />
-          }
-        </g>
-      </svg>
-    }
+    <svg
+      class="fallback"
+      [attr.viewBox]="fallbackScene().viewBox"
+      role="img"
+      aria-label="Real local trajectory scene"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <g>
+        @for (road of fallbackScene().roadCenterlines; track $index) {
+          <polyline class="road" [attr.points]="road" />
+        }
+        @if (fallbackScene().conflictRegion) {
+          <polygon class="conflict" [attr.points]="fallbackScene().conflictRegion" />
+        }
+        @for (trajectory of fallbackScene().trajectories; track trajectory.kind) {
+          <polyline [attr.class]="trajectory.kind" [attr.points]="trajectory.points" />
+          <rect
+            [attr.class]="trajectory.kind"
+            [attr.x]="trajectory.current.x - fallbackScene().markerRadius * 1.8"
+            [attr.y]="-trajectory.current.y - fallbackScene().markerRadius"
+            [attr.width]="fallbackScene().markerRadius * 3.6"
+            [attr.height]="fallbackScene().markerRadius * 2"
+            [attr.rx]="fallbackScene().markerRadius * 0.35"
+          />
+          <line
+            class="marker-callout"
+            [attr.x1]="trajectory.current.x + fallbackScene().markerRadius * 1.8"
+            [attr.y1]="-trajectory.current.y"
+            [attr.x2]="trajectory.callout.x"
+            [attr.y2]="trajectory.callout.y"
+          />
+          <text
+            class="marker-label"
+            [attr.x]="trajectory.callout.x + fallbackScene().markerRadius * 0.45"
+            [attr.y]="trajectory.callout.y + fallbackScene().markerRadius * 0.35"
+            [attr.font-size]="fallbackScene().markerRadius * 1.35"
+          >
+            {{ trajectory.kind }}
+          </text>
+        }
+      </g>
+    </svg>
+    <div #viewport hidden></div>
     <div class="scene-label">
       <strong>Scene</strong>
       <span>{{ store.selectedHypothesis().label }}</span>
     </div>
-    <div class="orientation" aria-hidden="true"><span>N</span><i></i></div>
+    <div class="orientation" aria-hidden="true"><span>Ego aligned</span><i></i></div>
     <div class="legend" aria-label="Trajectory legend">
       <span><i class="tested"></i>Tested</span>
       <span><i class="reference"></i>Reference</span>
       <span><i class="recorded"></i>Recorded</span>
+    </div>
+    <div class="planning-guide">
+      <strong>Planner rollout · {{ store.timeSeconds().toFixed(1) }} s</strong>
+      <span>Three planner outcomes for the same ego vehicle—not three traffic actors.</span>
     </div>
     <div class="scale" aria-hidden="true"><i></i><span>10 m</span></div>
   `,
@@ -102,7 +116,7 @@ interface FallbackScene {
       height: 100%;
       background: var(--app-bg);
     }
-    .fallback :is(polyline, polygon, circle) {
+    .fallback :is(polyline, polygon, rect) {
       vector-effect: non-scaling-stroke;
     }
     .fallback polyline {
@@ -136,6 +150,18 @@ interface FallbackScene {
       stroke-width: 1.5;
       stroke-dasharray: 4 4;
     }
+    .fallback .marker-label {
+      fill: #dce5e8;
+      paint-order: stroke;
+      stroke: #080d11;
+      stroke-width: 0.35px;
+      text-transform: capitalize;
+    }
+    .fallback .marker-callout {
+      stroke: #8496a1;
+      stroke-width: 0.65;
+      vector-effect: non-scaling-stroke;
+    }
     .viewport canvas {
       display: block;
       width: 100%;
@@ -151,11 +177,11 @@ interface FallbackScene {
       pointer-events: none;
     }
     .scene-label strong {
-      color: var(--primary);
+      color: #f4f8fa;
       font-size: 0.78rem;
     }
     .scene-label span {
-      color: var(--secondary);
+      color: #aab9c4;
       font-size: 0.64rem;
     }
     .orientation {
@@ -164,14 +190,14 @@ interface FallbackScene {
       right: 1rem;
       display: grid;
       justify-items: center;
-      color: var(--secondary);
+      color: #aab9c4;
       font-size: 0.58rem;
     }
     .orientation i {
       width: 1px;
       height: 24px;
       margin-top: 2px;
-      background: var(--secondary);
+      background: #aab9c4;
     }
     .legend {
       position: absolute;
@@ -182,7 +208,7 @@ interface FallbackScene {
       padding: 0.4rem 0.55rem;
       border: 1px solid var(--divider);
       background: #080d11dd;
-      color: var(--secondary);
+      color: #b8c5ce;
       font-size: 0.6rem;
     }
     .legend span {
@@ -208,42 +234,93 @@ interface FallbackScene {
       position: absolute;
       left: 1rem;
       bottom: 0.8rem;
-      color: var(--secondary);
+      color: #aab9c4;
       font-size: 0.58rem;
+    }
+    .planning-guide {
+      position: absolute;
+      left: 50%;
+      bottom: 0.8rem;
+      display: grid;
+      max-width: 390px;
+      gap: 0.15rem;
+      padding: 0.5rem 0.65rem;
+      transform: translateX(-50%);
+      border: 1px solid var(--divider);
+      background: #080d11e8;
+      color: #dce5e8;
+      text-align: center;
+      pointer-events: none;
+    }
+    .planning-guide strong {
+      font-size: 0.66rem;
+    }
+    .planning-guide span {
+      color: #91a2ad;
+      font-size: 0.56rem;
     }
     .scale i {
       display: block;
       width: 58px;
       height: 5px;
       margin-bottom: 0.25rem;
-      border-right: 1px solid var(--secondary);
-      border-bottom: 1px solid var(--secondary);
-      border-left: 1px solid var(--secondary);
+      border-right: 1px solid #aab9c4;
+      border-bottom: 1px solid #aab9c4;
+      border-left: 1px solid #aab9c4;
     }
     @media (max-width: 760px) {
       :host {
         min-height: 440px;
       }
       .legend {
-        right: 0.75rem;
-        bottom: 0.75rem;
+        right: 0.65rem;
+        bottom: 4.6rem;
         gap: 0.55rem;
+      }
+      .planning-guide {
+        right: 0.65rem;
+        bottom: 0.65rem;
+        left: auto;
+        width: min(330px, calc(100% - 1.3rem));
+        transform: none;
+        text-align: right;
+      }
+      .scale {
+        bottom: 4.6rem;
       }
     }
   `,
 })
 export class SceneViewport {
   protected readonly store = inject(DebuggerStore);
-  protected readonly rendererUnavailable = signal(false);
+  protected readonly rendererUnavailable = signal(true);
   protected readonly fallbackScene = computed((): FallbackScene => {
     const run = this.store.run();
     const hypothesis = this.store.selectedHypothesis();
     const index = this.store.timestepIndex();
+    const anchor = hypothesis.trajectories.tested[0];
+    const destination = hypothesis.trajectories.tested.at(-1) ?? anchor;
+    const rotation = -Math.atan2(destination.y - anchor.y, destination.x - anchor.x);
+    const transform = (point: Point2d): Point2d => {
+      const x = point.x - anchor.x;
+      const y = point.y - anchor.y;
+      return {
+        x: x * Math.cos(rotation) - y * Math.sin(rotation),
+        y: x * Math.sin(rotation) + y * Math.cos(rotation),
+      };
+    };
+    const roadCenterlines = run.roadCenterlines.map((line) => line.map(transform));
+    const trajectories = {
+      tested: hypothesis.trajectories.tested.map(transform),
+      reference: hypothesis.trajectories.reference.map(transform),
+      recorded: hypothesis.trajectories.recorded.map(transform),
+    };
+    const conflictRegion = run.conflictRegion.map(transform);
     const allPoints = [
-      ...run.roadCenterlines.flat(),
-      ...hypothesis.trajectories.tested,
-      ...hypothesis.trajectories.reference,
-      ...hypothesis.trajectories.recorded,
+      ...trajectories.tested,
+      ...trajectories.reference,
+      ...trajectories.recorded,
+      ...conflictRegion,
     ];
     const xs = allPoints.map((point) => point.x);
     const ys = allPoints.map((point) => point.y);
@@ -254,18 +331,38 @@ export class SceneViewport {
     const width = Math.max(10, maxX - minX);
     const height = Math.max(10, maxY - minY);
     const padding = Math.max(3, width * 0.08, height * 0.08);
+    const viewportAspect = 16 / 9;
+    let viewWidth = width + padding * 2;
+    let viewHeight = height + padding * 2;
+    if (viewWidth / viewHeight < viewportAspect) viewWidth = viewHeight * viewportAspect;
+    else viewHeight = viewWidth / viewportAspect;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
     const points = (line: readonly Point2d[]): string =>
       line.map((point) => `${point.x},${-point.y}`).join(' ');
+    const markerRadius = Math.max(width, height) * 0.009;
+    const calloutOffsets: Record<TrajectoryKind, number> = {
+      tested: -2.8,
+      reference: 0,
+      recorded: 2.8,
+    };
     return {
-      viewBox: `${minX - padding} ${-(maxY + padding)} ${width + padding * 2} ${height + padding * 2}`,
-      roadCenterlines: run.roadCenterlines.map(points),
-      conflictRegion: run.conflictRegion.length >= 3 ? points(run.conflictRegion) : '',
-      trajectories: (Object.keys(COLORS) as TrajectoryKind[]).map((kind) => ({
-        kind,
-        points: points(hypothesis.trajectories[kind]),
-        current: hypothesis.trajectories[kind][index],
-      })),
-      markerRadius: Math.max(width, height) * 0.012,
+      viewBox: `${centerX - viewWidth / 2} ${-(centerY + viewHeight / 2)} ${viewWidth} ${viewHeight}`,
+      roadCenterlines: roadCenterlines.map(points),
+      conflictRegion: conflictRegion.length >= 3 ? points(conflictRegion) : '',
+      trajectories: (Object.keys(COLORS) as TrajectoryKind[]).map((kind) => {
+        const current = trajectories[kind][index];
+        return {
+          kind,
+          points: points(trajectories[kind]),
+          current,
+          callout: {
+            x: current.x + markerRadius * 4.2,
+            y: -current.y + markerRadius * calloutOffsets[kind],
+          },
+        };
+      }),
+      markerRadius,
     };
   });
   private readonly destroyRef = inject(DestroyRef);
@@ -344,7 +441,7 @@ export class SceneViewport {
     ];
     const bounds = this.fitCamera(allPoints);
     this.drawGrid(bounds);
-    run.roadCenterlines.forEach((line) => this.drawLine(line, 0x35434c, 0));
+    run.roadCenterlines.forEach((line) => this.drawLine(line, 0x435766, 0));
     if (run.conflictRegion.length >= 3) this.drawConflictRegion(run.conflictRegion);
     (Object.keys(COLORS) as TrajectoryKind[]).forEach((kind) => {
       this.drawLine(hypothesis.trajectories[kind], COLORS[kind], kind === 'recorded' ? 0.25 : 0.55);
@@ -436,7 +533,7 @@ export class SceneViewport {
     }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    scene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0x162129 })));
+    scene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0x182731 })));
   }
 
   private drawLine(points: readonly Point2d[], color: number, opacity: number): void {
@@ -464,7 +561,7 @@ export class SceneViewport {
     );
     shape.closePath();
     const material = new THREE.MeshBasicMaterial({
-      color: 0xff7900,
+      color: 0xf16347,
       transparent: true,
       opacity: 0.08,
       side: THREE.DoubleSide,

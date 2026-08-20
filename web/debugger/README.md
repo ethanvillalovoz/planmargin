@@ -1,27 +1,62 @@
-# PlanMargin scenario debugger
+# PlanMargin scenario simulator
 
-This Angular and Three.js application is PlanMargin's local evidence debugger.
-It always boots into a deterministic synthetic fixture and can optionally read
-privacy-reduced real experiment evidence from the authenticated loopback-only
-FastAPI service. It never uploads records or claims to inspect the production
-Waymo Driver.
+This Angular, TypeScript, Three.js, and Spark application is PlanMargin's local
+counterfactual-driving workbench. Its default workspace combines four visible
+responsibilities:
+
+- replay 199 recorded FRONT-camera frames with native per-frame tracked 2D
+  boxes from the same local Waymo Open Dataset Perception segment;
+- orbit a 1,179,648-primitive Apple SHARP 3D Gaussian reconstruction of frame
+  99 and a 50,241-primitive same-frame LiDAR Gaussian field;
+- replay the sealed WOMD planning trajectories on their own timeline, separate
+  from the 199-frame Camera timeline and source-frame 3DGS/LiDAR assets; and
+- query the authenticated evidence assistant without exporting local records.
+
+The visual sensor scene and the planning evidence are separate dataset
+segments. The interface labels that boundary explicitly. The 3D reconstruction
+is visual context and a rendering demonstration, not planner input or safety
+evidence, and PlanMargin does not inspect the production Waymo Driver.
+
+## Prepare the ignored local sensor scene
+
+The preparation step reads only already-downloaded local inputs and writes only
+ignored `data/` and `artifacts/` outputs:
+
+```bash
+uv run python scripts/prepare_perception_scene.py
+```
+
+It expects the local Perception Parquet files—including `camera_box.parquet`—
+and SHARP PLY described by the script's validation errors. It extracts the 199
+camera JPEGs and tracked boxes, deterministically fits the same-frame LiDAR
+Gaussian field, hashes every asset, and writes
+`artifacts/sensor-scene/waymo-front/manifest.json`.
 
 ## Run locally
 
-Use Node.js 24.15.0 (recorded in `.nvmrc`):
+In one terminal at the repository root:
 
 ```bash
+uv run --frozen planmargin-serve-evidence
+```
+
+In another terminal, using the Node version in `.nvmrc`:
+
+```bash
+cd web/debugger
 npm ci
 npm start
 ```
 
-Then open `http://127.0.0.1:4200`.
-
-To inspect ignored local evidence, first run `uv run --frozen
-planmargin-serve-evidence` from the repository root. Select **Synthetic demo**
-in the debugger, paste the ephemeral token printed by the service, and choose
-**Connect local evidence**. The token stays only in service memory; it is not
+Open `http://127.0.0.1:4200`, choose **Connect local evidence**, and paste the
+ephemeral token printed by the API. The token stays in memory only. It is not
 placed in browser storage, URLs, logs, or exports.
+
+The deterministic local assistant is the default and costs nothing. If the API
+is deliberately started with the repository's optional Gemini provider, the
+UI displays that provider by name. Gemini receives only the existing public
+aggregate allowlist; raw frames, 3D assets, trajectories, and the raw question
+remain local.
 
 ## Quality checks
 
@@ -31,25 +66,19 @@ npm run format:check
 npm audit --audit-level=moderate
 ```
 
-`npm run check` performs strict application and test typechecking, unit tests,
-and an optimized production build. Three.js is loaded as a lazy chunk, keeping
-the initial application payload small.
-
-## Data boundary
-
-`Open run` accepts JSON only when it conforms to the
-`planmargin.debugger.v1` synthetic contract and is no larger than 5 MB. The
-parser rejects non-finite geometry, misaligned timelines, duplicate proposal
-identifiers, and non-synthetic records before rendering. `Export view` writes
-only the current synthetic run ID, proposal ID, timestep, and time; it does not
-export trajectories or provenance payloads.
-
-The real-evidence mode calls only fixed `http://127.0.0.1:8765/api/v1`
-endpoints with `GET`, `no-store`, omitted credentials, no referrer, and the
-ephemeral token header. It maps closed API response models into debugger state,
-renders nullable TTC values as “Not closing,” exposes sealed campaign proposal
-evidence in a separate panel, and hard-disables export. Disconnecting clears
-the token and restores the bundled synthetic fixture.
-
-The accepted visual system and browser acceptance criteria live in
+`npm run check` performs strict application and test typechecking, Vitest, and
+an optimized production build. Three.js, Spark, and the sensor renderer remain
+lazy chunks. The accepted visual contract is documented in
 [`../../docs/debugger-design.md`](../../docs/debugger-design.md).
+
+## Local-data boundary
+
+All sensor and evidence requests are fixed authenticated `GET` calls to
+`http://127.0.0.1:8765/api/v1`, with `no-store`, omitted credentials, and no
+referrer. The API accepts no client path, SQL, mutation, or write operation.
+Disconnecting clears the token and removes access to every local sensor asset.
+
+The production application contains no bundled demo run or synthetic fallback.
+It starts disconnected, and its planning, camera, 3DGS, and LiDAR views render
+only authenticated local evidence. Unit tests use small data-free API-shaped
+fixtures; those fixtures are never imported into the application bundle.

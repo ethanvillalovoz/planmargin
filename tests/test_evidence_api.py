@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 import json
 from pathlib import Path
 from typing import Any
@@ -11,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from planmargin import analytics
+from planmargin import evidence_assistant
 from planmargin import evidence_api
 from planmargin import random_search
 
@@ -106,6 +109,145 @@ def _seed_repository(repository: evidence_api.EvidenceRepository) -> None:
     repository._cell_by_id = {CELL_ID: ("bayesian", 0, 1)}
 
 
+def _seed_gaussian(root: Path) -> bytes:
+    directory = root / evidence_api.DEFAULT_GAUSSIAN
+    directory.mkdir(parents=True, exist_ok=True)
+    field = b"ply\nformat ascii 1.0\nelement vertex 0\nend_header\n"
+    field_path = directory / "field.ply"
+    field_path.write_bytes(field)
+    manifest = random_search._seal_record(
+        {
+            "record_type": "planmargin.lidar_gaussian_field_manifest",
+            "schema_version": "1.0.0",
+            "decision": "no_go",
+            "representation": "deterministic_lidar_gaussian_field",
+            "field_sha256": random_search._file_sha256(field_path),
+            "observed": {
+                "primitive_count": 75_000,
+                "field_bytes": len(field),
+                "runtime_seconds": 3.7,
+                "trajectory_linkage_fraction": 0.2366,
+                "geometric_quality": {
+                    "median_nearest_mean_distance_m": 0.105,
+                    "p90_nearest_mean_distance_m": 0.172,
+                    "coverage_within_0_50_m": 0.9844,
+                },
+            },
+            "gates": {
+                "authorized_exact_input": True,
+                "determinism": True,
+                "geometric_quality": True,
+                "local_compute": True,
+                "scale": True,
+                "trajectory_linkage": False,
+            },
+            "privacy": {
+                "contains_scenario_id": False,
+                "contains_source_uri": False,
+                "contains_raw_points": False,
+                "unrestricted_export": False,
+            },
+            "claim_boundary": "not_photorealistic_not_learned_not_safety_evidence",
+        },
+        "manifest_sha256",
+    )
+    (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return field
+
+
+def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes]:
+    frame = b"\xff\xd8real-waymo-frame\xff\xd9"
+    reconstruction = b"ply\nformat ascii 1.0\nelement vertex 1\nend_header\n"
+    lidar = b"ply\nformat ascii 1.0\nelement vertex 2\nend_header\n"
+    annotations = json.dumps(
+        {
+            "record_type": "planmargin.sensor_frame_annotations",
+            "schema_version": "1.0.0",
+            "source": "Waymo Open Dataset v2 Perception camera_box",
+            "image_width": 1920,
+            "image_height": 1280,
+            "frames": [
+                {
+                    "index": 0,
+                    "timestamp_micros": 1,
+                    "boxes": [
+                        {
+                            "track_id": "track-1",
+                            "category": "vehicle",
+                            "center_x": 960.0,
+                            "center_y": 640.0,
+                            "width": 100.0,
+                            "height": 50.0,
+                        }
+                    ],
+                }
+            ],
+        }
+    ).encode()
+    frames_directory = root / "data" / "raw" / "perception" / "segment" / "front_frames"
+    frames_directory.mkdir(parents=True)
+    (frames_directory / "000-1.jpg").write_bytes(frame)
+    reconstruction_path = root / "artifacts" / "real-3dgs" / "scene.ply"
+    reconstruction_path.parent.mkdir(parents=True)
+    reconstruction_path.write_bytes(reconstruction)
+    sensor_directory = root / evidence_api.DEFAULT_SENSOR_SCENE
+    sensor_directory.mkdir(parents=True)
+    lidar_path = sensor_directory / "lidar.ply"
+    lidar_path.write_bytes(lidar)
+    annotations_path = sensor_directory / "front-camera-boxes.json"
+    annotations_path.write_bytes(annotations)
+    (sensor_directory / "manifest.json").write_text(
+        json.dumps(
+            {
+                "record_type": "planmargin.sensor_scene_manifest",
+                "schema_version": "1.0.0",
+                "source": "Waymo Open Dataset v2 Perception",
+                "segment_id": "segment",
+                "camera_name": "FRONT",
+                "camera_enum": 1,
+                "frame_count": 1,
+                "frame_rate_hz": 10,
+                "frames_directory": "data/raw/perception/segment/front_frames",
+                "frames": [
+                    {
+                        "index": 0,
+                        "timestamp_micros": 1,
+                        "file": "000-1.jpg",
+                        "bytes": len(frame),
+                        "sha256": hashlib.sha256(frame).hexdigest(),
+                    }
+                ],
+                "annotations": {
+                    "representation": "native_tracked_camera_boxes",
+                    "frame_count": 1,
+                    "box_count": 1,
+                    "file": str(annotations_path.relative_to(root)),
+                    "bytes": len(annotations),
+                    "sha256": hashlib.sha256(annotations).hexdigest(),
+                },
+                "reconstruction": {
+                    "representation": "apple_sharp_3d_gaussian_splatting",
+                    "source_frame_index": 0,
+                    "primitive_count": 1,
+                    "file": "artifacts/real-3dgs/scene.ply",
+                    "bytes": len(reconstruction),
+                    "sha256": hashlib.sha256(reconstruction).hexdigest(),
+                },
+                "lidar": {
+                    "representation": "same_frame_lidar_gaussian_field",
+                    "source_frame_index": 0,
+                    "primitive_count": 2,
+                    "file": str(lidar_path.relative_to(root)),
+                    "bytes": len(lidar),
+                    "sha256": hashlib.sha256(lidar).hexdigest(),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return frame, reconstruction, lidar, annotations
+
+
 def _fake_query(sql: str) -> list[dict[str, Any]]:
     if "FROM campaign" in sql:
         return [
@@ -183,6 +325,45 @@ def test_authenticated_routes_are_redacted_and_not_cached(
         if cell_id == CELL_ID
         else (_ for _ in ()).throw(KeyError(cell_id)),
     )
+    monkeypatch.setattr(
+        evidence_api.EvidenceRepository,
+        "investigation",
+        lambda _: {
+            "evidence_mode": "real_local_redacted",
+            "integrity": "verified",
+            "cell_count": 1,
+            "proposal_count": 1,
+            "funnel": {
+                "proposed": 1,
+                "mutation_valid": 0,
+                "scenario_valid": 0,
+                "pipeline_valid": 0,
+                "support_valid": 0,
+                "reference_passes": 0,
+                "tested_fails": 0,
+                "qualifying_findings": 0,
+            },
+            "closest_margin": [],
+            "smallest_mutation": [],
+            "highest_support": [],
+        },
+    )
+    monkeypatch.setattr(
+        evidence_api.EvidenceRepository,
+        "proposal_analysis",
+        lambda _, cell_id, proposal_number: {
+            "evidence_mode": "real_local_redacted",
+            "analysis_mode": "deterministic_proposal_specific",
+            "cell_id": cell_id,
+            "proposal_number": proposal_number,
+            "decision": "not_qualified",
+            "decisive_gate": "mutation_geometry",
+            "explanation": "The bounded mutation geometry was rejected.",
+            "facts": [{"label": "method", "value": "bayesian"}],
+            "record_sha256": "a" * 64,
+            "trajectory_available": False,
+        },
+    )
     app = evidence_api.create_app(root=app_root, token=TOKEN)
 
     with TestClient(app) as client:
@@ -197,11 +378,24 @@ def test_authenticated_routes_are_redacted_and_not_cached(
         campaign = client.get("/api/v1/campaign", headers=headers)
         cells = client.get("/api/v1/cells", headers=headers)
         proposals = client.get(f"/api/v1/cells/{CELL_ID}/proposals", headers=headers)
+        investigation = client.get("/api/v1/investigation", headers=headers)
+        proposal_analysis = client.get(
+            f"/api/v1/cells/{CELL_ID}/proposals/1/analysis", headers=headers
+        )
         runs = client.get("/api/v1/runs", headers=headers)
         run = client.get("/api/v1/runs/run_opaque", headers=headers)
         contract = client.get("/api/v1/openapi.json", headers=headers)
 
-        for response in (campaign, cells, proposals, runs, run, contract):
+        for response in (
+            campaign,
+            cells,
+            proposals,
+            investigation,
+            proposal_analysis,
+            runs,
+            run,
+            contract,
+        ):
             assert response.status_code == 200
             assert response.headers["cache-control"] == "no-store"
             assert response.headers["x-content-type-options"] == "nosniff"
@@ -216,6 +410,9 @@ def test_authenticated_routes_are_redacted_and_not_cached(
         assert campaign.json()["held_out_comparison_run"] is False
         assert cells.json()[0]["cell_id"] == CELL_ID
         assert proposals.json()[0]["support_passes"] is None
+        assert investigation.json()["proposal_count"] == 1
+        assert investigation.json()["funnel"]["qualifying_findings"] == 0
+        assert proposal_analysis.json()["trajectory_available"] is False
         assert run.json()["synthetic"] is False
         assert len(run.json()["hypothesis"]["metrics"]) == 2
         assert "RunEvidence" in contract.json()["components"]["schemas"]
@@ -237,6 +434,95 @@ def test_authenticated_routes_are_redacted_and_not_cached(
                 headers={**headers, "Host": "attacker.example"},
             ).status_code
             == 400
+        )
+
+
+def test_assistant_and_gaussian_workspaces_are_authenticated(
+    app_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    field = _seed_gaussian(app_root)
+
+    def open_repository(repository: evidence_api.EvidenceRepository) -> None:
+        _seed_repository(repository)
+
+    monkeypatch.setattr(evidence_api.EvidenceRepository, "open", open_repository)
+    monkeypatch.setattr(
+        evidence_assistant.LocalEvidenceTools,
+        "execute",
+        lambda _self, query_id: evidence_assistant.PublicEvidenceTools().execute(
+            query_id
+        ),
+    )
+    app = evidence_api.create_app(root=app_root, token=TOKEN)
+
+    with TestClient(app) as client:
+        headers = {"X-PlanMargin-Token": TOKEN}
+        status_response = client.get("/api/v1/assistant/status", headers=headers)
+        questions = client.get("/api/v1/assistant/questions", headers=headers)
+        answer = client.get("/api/v1/assistant/method_comparison", headers=headers)
+        summary = client.get("/api/v1/gaussian-field", headers=headers)
+        field_response = client.get("/api/v1/gaussian-field/field.ply", headers=headers)
+
+        assert status_response.json() == {
+            "provider_id": "offline_deterministic",
+            "model": None,
+            "source_mode": "real_local_redacted",
+            "gemini_configured": False,
+            "explanation_only": True,
+        }
+        assert len(questions.json()) == 5
+        assert answer.status_code == 200
+        assert answer.json()["question"]["query_id"] == "method_comparison"
+        assert answer.json()["privacy"]["private_data_sent_to_provider"] is False
+        assert summary.json()["primitive_count"] == 75_000
+        assert summary.json()["gates"]["trajectory_linkage"] is False
+        assert field_response.content == field
+        assert field_response.headers["cache-control"] == "no-store"
+        assert field_response.headers["content-type"].startswith(
+            "application/octet-stream"
+        )
+
+
+def test_real_sensor_scene_is_authenticated_and_streamed(
+    app_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    frame, reconstruction, lidar, annotations = _seed_sensor_scene(app_root)
+
+    def open_repository(repository: evidence_api.EvidenceRepository) -> None:
+        _seed_repository(repository)
+
+    monkeypatch.setattr(evidence_api.EvidenceRepository, "open", open_repository)
+    app = evidence_api.create_app(root=app_root, token=TOKEN)
+
+    with TestClient(app) as client:
+        headers = {"X-PlanMargin-Token": TOKEN}
+        summary = client.get("/api/v1/sensor-scene", headers=headers)
+        front = client.get("/api/v1/sensor-scene/front/0.jpg", headers=headers)
+        boxes = client.get(
+            "/api/v1/sensor-scene/front/annotations.json", headers=headers
+        )
+        sharp = client.get("/api/v1/sensor-scene/reconstruction.ply", headers=headers)
+        point_field = client.get("/api/v1/sensor-scene/lidar.ply", headers=headers)
+
+        assert summary.status_code == 200
+        assert summary.json()["evidence_mode"] == "real_local_sensor"
+        assert summary.json()["reconstruction"]["primitive_count"] == 1
+        assert summary.json()["annotations"]["box_count"] == 1
+        assert front.content == frame
+        assert boxes.content == annotations
+        assert sharp.content == reconstruction
+        assert point_field.content == lidar
+        assert client.get("/api/v1/sensor-scene").status_code == 401
+        assert (
+            client.get("/api/v1/sensor-scene/front/99.jpg", headers=headers).status_code
+            == 404
+        )
+
+        assert client.get("/api/v1/assistant/status").status_code == 401
+        assert client.get("/api/v1/gaussian-field").status_code == 401
+        assert (
+            client.get("/api/v1/assistant/not-allowlisted", headers=headers).status_code
+            == 404
         )
 
 

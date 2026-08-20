@@ -1,10 +1,13 @@
 import { CampaignEvidence } from './campaign-evidence';
 import { DebuggerHypothesis, DebuggerRun, MetricSample, Point2d } from './debugger.types';
 import {
+  CampaignInvestigation,
+  InvestigationProposal,
   LocalCell,
   LocalEvidenceSnapshot,
   LocalProposal,
   LocalRunSummary,
+  ProposalAnalysis,
 } from './local-evidence.types';
 
 function object(value: unknown, path: string): Record<string, unknown> {
@@ -307,6 +310,11 @@ export function parseProposals(value: unknown): readonly LocalProposal[] {
       item['mutation_parameters'],
       `proposals[${index}].mutation_parameters`,
     );
+    const objectives = array(item['objectives'], `proposals[${index}].objectives`);
+    const constraints = array(item['constraints'], `proposals[${index}].constraints`);
+    if (objectives.length !== 2 || constraints.length !== 3) {
+      throw new Error(`proposals[${index}] must contain two objectives and three constraints`);
+    }
     return {
       proposalNumber: integer(item['proposal_number'], `proposals[${index}].proposal_number`),
       attemptStatus: text(item['attempt_status'], `proposals[${index}].attempt_status`),
@@ -331,6 +339,10 @@ export function parseProposals(value: unknown): readonly LocalProposal[] {
         item['objective_available'],
         `proposals[${index}].objective_available`,
       ),
+      criticality: number(objectives[0], `proposals[${index}].objectives[0]`),
+      minimality: number(objectives[1], `proposals[${index}].objectives[1]`),
+      pipelinePasses: number(constraints[0], `proposals[${index}].constraints[0]`) <= 0,
+      referencePasses: number(constraints[2], `proposals[${index}].constraints[2]`) <= 0,
       policySpecificAvoidableFailure: nullableBoolean(
         item['policy_specific_avoidable_failure'],
         `proposals[${index}].policy_specific_avoidable_failure`,
@@ -348,6 +360,82 @@ export function parseProposals(value: unknown): readonly LocalProposal[] {
   });
   if (proposals.length === 0) throw new Error('proposals must not be empty');
   return proposals;
+}
+
+export function parseCampaignInvestigation(value: unknown): CampaignInvestigation {
+  const root = object(value, 'investigation');
+  if (text(root['evidence_mode'], 'investigation.evidence_mode') !== 'real_local_redacted') {
+    throw new Error('investigation must use real local redacted evidence');
+  }
+  if (text(root['integrity'], 'investigation.integrity') !== 'verified') {
+    throw new Error('investigation integrity must be verified');
+  }
+  const parseRanking = (key: string): readonly InvestigationProposal[] => {
+    const source = array(root[key], `investigation.${key}`);
+    const proposals = parseProposals(source);
+    return proposals.map((proposal, index) => {
+      const item = object(source[index], `investigation.${key}[${index}]`);
+      const method = text(item['method'], `investigation.${key}[${index}].method`);
+      if (method !== 'random' && method !== 'bayesian') throw new Error('Invalid method');
+      return {
+        ...proposal,
+        cellId: text(item['cell_id'], `investigation.${key}[${index}].cell_id`),
+        method,
+        seed: integer(item['seed'], `investigation.${key}[${index}].seed`),
+        selectionOrder: integer(
+          item['selection_order'],
+          `investigation.${key}[${index}].selection_order`,
+        ),
+        decisiveGate: text(item['decisive_gate'], `investigation.${key}[${index}].decisive_gate`),
+      };
+    });
+  };
+  const funnel = object(root['funnel'], 'investigation.funnel');
+  return {
+    cellCount: integer(root['cell_count'], 'investigation.cell_count'),
+    proposalCount: integer(root['proposal_count'], 'investigation.proposal_count'),
+    funnel: {
+      proposed: integer(funnel['proposed'], 'investigation.funnel.proposed'),
+      mutationValid: integer(funnel['mutation_valid'], 'investigation.funnel.mutation_valid'),
+      scenarioValid: integer(funnel['scenario_valid'], 'investigation.funnel.scenario_valid'),
+      pipelineValid: integer(funnel['pipeline_valid'], 'investigation.funnel.pipeline_valid'),
+      supportValid: integer(funnel['support_valid'], 'investigation.funnel.support_valid'),
+      referencePasses: integer(funnel['reference_passes'], 'investigation.funnel.reference_passes'),
+      testedFails: integer(funnel['tested_fails'], 'investigation.funnel.tested_fails'),
+      qualifyingFindings: integer(
+        funnel['qualifying_findings'],
+        'investigation.funnel.qualifying_findings',
+      ),
+    },
+    closestMargin: parseRanking('closest_margin'),
+    smallestMutation: parseRanking('smallest_mutation'),
+    highestSupport: parseRanking('highest_support'),
+  };
+}
+
+export function parseProposalAnalysis(value: unknown): ProposalAnalysis {
+  const root = object(value, 'proposalAnalysis');
+  const facts = array(root['facts'], 'proposalAnalysis.facts').map((value, index) => {
+    const fact = object(value, `proposalAnalysis.facts[${index}]`);
+    return {
+      label: text(fact['label'], `proposalAnalysis.facts[${index}].label`),
+      value: text(fact['value'], `proposalAnalysis.facts[${index}].value`),
+    };
+  });
+  if (root['trajectory_available'] !== false) {
+    throw new Error('proposal analysis must preserve the trajectory availability boundary');
+  }
+  return {
+    analysisMode: 'deterministic_proposal_specific',
+    cellId: text(root['cell_id'], 'proposalAnalysis.cell_id'),
+    proposalNumber: integer(root['proposal_number'], 'proposalAnalysis.proposal_number'),
+    decision: text(root['decision'], 'proposalAnalysis.decision'),
+    decisiveGate: text(root['decisive_gate'], 'proposalAnalysis.decisive_gate'),
+    explanation: text(root['explanation'], 'proposalAnalysis.explanation'),
+    facts,
+    recordSha256: text(root['record_sha256'], 'proposalAnalysis.record_sha256'),
+    trajectoryAvailable: false,
+  };
 }
 
 export function snapshot(

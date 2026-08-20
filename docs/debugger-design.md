@@ -1,132 +1,99 @@
-# Scenario debugger design specification
+# PlanMargin scenario simulator design
 
-The thin debugger is a local engineering instrument built from code-native UI,
-Three.js geometry, a bundled synthetic fixture, and an optional authenticated
-real-record adapter. The accepted desktop and mobile concepts are retained
-solely as implementation references:
+PlanMargin is a local counterfactual stress-testing workbench. Its primary user
+question is: **what is the smallest behaviorally plausible scene change that
+causes the tested planner to fail while a reference planner succeeds?** The
+workspace makes the scene, mutation, evidence source, and claim boundary
+visible in one synchronized engineering surface.
 
-- [desktop concept](assets/debugger/desktop-concept.png)
-- [mobile concept](assets/debugger/mobile-concept.png)
+## Workspace contract
+
+The simulator uses one full-bleed scene rather than separate product pages:
+
+1. The **top bar** identifies the active real-local dataset, current Camera
+   frame or Planning step, assistant entry point, and primary planning-replay
+   action.
+2. **View-specific controls** expose only real actions or sealed facts: native
+   tracked boxes in Camera, read-only mutation/outcome/metric evidence in
+   Planning, and source-frame provenance in 3DGS/LiDAR.
+3. The **sensor switcher** changes among the separate Planning replay,
+   recorded Camera, real Apple SHARP 3D Gaussian reconstruction, and same-frame
+   LiDAR Gaussian field.
+4. **Evidence analysis** exposes the active provider, bounded explanations,
+   source limitations, and direct questions over sealed aggregate evidence.
+5. The **timeline** scrubs or plays all 199 recorded Camera frames or the
+   81-step Planning run as independent clocks. 3DGS and LiDAR replace playback
+   controls with a spatial-inspection footer because they are single-frame
+   assets.
+
+Every capability named in the workspace has a visible status, action, result,
+evidence source, and limitation. Camera playback, 3D
+orbit/source/novel/reset, layer toggles, one-second seeking, planning replay,
+and assistant questions are
+functional rather than decorative.
 
 ## Visual system
 
-| Token | Value | Responsibility |
-| --- | --- | --- |
-| App background | `#080d11` | global shell and canvas |
-| Raised rail | `#0b1217` | run/evidence rails and mobile sheets |
-| Primary text | `#f3f6f8` | titles and active values |
-| Secondary text | `#aab4bc` | labels and inactive controls |
-| Divider | `#3b464e` | panel and section boundaries |
-| Subtle grid | `#162129` | canvas and chart grids |
-| Tested | `#ff7900` | tested trajectory and metric series |
-| Reference | `#17b9d6` | reference trajectory and metric series |
-| Recorded | `#858d93` | recorded trajectory and metric series |
-| Success | `#73d12f` | supported/succeeds values |
-| Failure | `#ff3b30` | failure and threshold values |
+The visual system is an original dark engineering instrument inspired by
+autonomous-vehicle simulation tools, not a copy of Waymo product chrome.
+Near-black surfaces preserve focus on sensor imagery; cyan identifies selected
+controls and candidate paths; green identifies observed paths; coral identifies
+counterfactual paths or conflicts. Corners, borders, and shadows remain
+restrained so dense evidence reads as an operational tool.
 
-Typography uses `Inter`, then the operating-system sans-serif stack. Titles are
-600 weight; labels and controls are 500; evidence values are 400. Desktop UI
-chrome uses a 12–14 px scale, while mobile uses 14–17 px for touch readability.
-Corners remain square except for 2 px control rounding and circular trajectory
-markers. Shadows, glass, glow, gradients, and decorative cards are prohibited.
+The PlanMargin mark is original repository artwork. No Waymo logo, proprietary
+UI, map tile, or brand asset is copied. “Waymo Open Dataset” describes the
+input source, not affiliation or production-driver access.
 
-## Desktop composition
+## Sensor and evidence boundary
 
-- 56 px top bar: `PlanMargin`, `Scenario debugger`, `Campaign results`,
-  `Open run`, `Export view`.
-- 210 px run rail: run metadata, Original/Proposal 01/Proposal 02 selection,
-  playback controls, time, step, and speed.
-- Flexible scene canvas: roadgraph, conflict region, three trajectories,
-  current vehicle states, legend, scale, and north marker.
-- 300 px evidence rail: Mutation, Validity, Controller outcomes, Provenance.
-- 210 px bottom timeline: scrubber plus signed-separation and longitudinal-TTC
-  plots synchronized to the scene.
-
-## Mobile composition
-
-The mobile shell does not compress all desktop panels. It provides a shared
-`Scene` / `Evidence` / `Metrics` view selector. Scene is the default and shows
-the canvas, compact legend, playback row, Proposal 02 summary, and the beginning
-of the first metric plot to communicate scroll continuation. File and export
-actions move into the compact overflow menu while evidence mode and campaign
-results remain visible.
-
-## Allowed visible copy
-
-Above the fold may contain only the accepted concepts' interface strings and
-the following accessibility equivalents:
-
-- `PlanMargin`, `Scenario debugger`, `Open run`, `Export view`
-- `RUN`, `PROPOSALS`, `Original`, `Proposal 01`, `Proposal 02`
-- `synthetic-demo-v1`, `lead_braking_fixture`, `local_fixture`, `Demo fixture`
-- `Scene`, `Evidence`, `Metrics`, `Tested`, `Reference`, `Recorded`
-- `Mutation`, `Validity`, `Controller outcomes`, `Provenance`
-- `Onset`, `Speed`, `Supported (fixture)`, `Deterministic`, `All checks passed`
-- `Fails`, `Succeeds`, `Qualifying (synthetic)`, `Bundled demo data`
-- `Signed separation`, `Longitudinal TTC`, `Real-time`
-
-The synthetic disclosure is mandatory in fixture mode. The interface must not claim to inspect
-the production Waymo Driver, name a real map or person, or expose restricted
-record fields.
-
-Real mode adds only the local API's closed, privacy-reduced vocabulary: opaque
-run and cell IDs, redacted mutation parameters, outcomes, support decisions,
-cost, road geometry, trajectories, and interaction metrics. It is labeled
-`Real local · redacted`; export is disabled. The token is memory-only, and
-disconnect restores the synthetic fixture.
-
-The `Campaign results` surface is the sole exception to the synthetic fixture
-copy above. It contains only the already-published campaign aggregates: method
-budgets, valid rates, zero finding counts, H1/H2/H3 decisions, total physical
-cost, reconstruction/analytics evidence, the isolated native-kernel benchmark,
-and the held-out-comparison/production-driver claim boundary. It contains no scenario,
-cell, proposal, controller-trace, feature-vector, or support-score record.
+- Camera and LiDAR come from one local Waymo Open Dataset v2 Perception
+  segment. Camera boxes come from that segment's native `camera_box` component
+  and preserve cross-frame track IDs. The SHARP 3DGS is generated from camera
+  frame 99 of that segment.
+- The planning overlay and counterfactual outcome come from a separate,
+  privacy-reduced WOMD Motion/Stage-0 evidence path. They are not geometrically
+  registered to the visual Perception segment and are labeled as separate.
+- The SHARP result is a genuine learned 3D Gaussian reconstruction and supports
+  nearby novel views. It is not planner input, production Waymo reconstruction,
+  or safety evidence.
+- The same-frame LiDAR view is a deterministic Gaussian field over genuine
+  range returns. It is distinct from the earlier exact-planning-scenario
+  feasibility field whose frozen 23.66% trajectory-linkage result remains
+  `no_go`.
+- The deterministic local assistant is fully functional. Optional Gemini is an
+  explanation-only adapter over public aggregates and is shown as active only
+  when the backend is explicitly configured for it.
+- Real sensor assets remain ignored, localhost-only, authenticated, and
+  non-exportable.
 
 ## Component ownership
 
-- `DebuggerStore`: selected proposal, timestep, playing state, mobile view.
-- `RunRail`: metadata, proposal selection, transport controls.
-- `SceneViewport`: Three.js lifecycle, resizing, trajectories, vehicle state.
-- `EvidenceInspector`: deterministic evidence sections from typed fixture data.
-- `MetricTimeline`: shared scrubber and two SVG plots.
-- `CampaignSummary`: aggregate-only campaign evidence and explicit claim scope.
-- `LocalEvidenceService`: sequential authenticated reads from fixed loopback
-  endpoints, strict response parsing, memory-only token lifecycle, and
-  synthetic restoration on disconnect.
-- `LocalEvidencePanel`: connection/privacy states plus campaign cell and sealed
-  proposal inspection.
-- `MobileViewNav`: responsive region selection without duplicated state.
-- `ExportService`: stable, synthetic-view JSON export.
-
-No generated bitmap is consumed by the application. The concepts define the
-visual contract; the shipped scene, plots, controls, labels, and icons are
-rendered from Angular, CSS, SVG, and Three.js.
+- `SimulatorWorkspace`: the unified scene, top bar, controls, modes, timeline,
+  and stress replay.
+- `SimulatorStore`: sensor mode, independent Camera and Planning clocks,
+  source-frame spatial lock, scene layers, and replay state.
+- `SensorViewport`: authenticated camera lifecycle, Spark/Three.js renderers,
+  calibrated SHARP camera, LiDAR view, native Camera annotations, orbit, reset,
+  and cleanup.
+- `ScenarioAssistant`: provider status, bounded questions, public-claim limits,
+  and privacy disclosure.
+- `LocalEvidenceService`: fixed authenticated reads, memory-only token,
+  `no-store` requests, and binary sensor loading.
+- `DebuggerStore`: the existing validated planning evidence and metric samples.
 
 ## Verification contract
 
-The shipped slice always has a data-free synthetic path. A local run file is
-rendered only when it passes `planmargin.debugger.v1` validation: positive fixed timestep, finite
-geometry and metrics, unique proposal identifiers, aligned trajectory and
-metric lengths, deterministic/support flags, and a timeline matching the
-declared step. Local files are capped at 5 MB. View exports contain selection
-and timestep metadata, not trajectory arrays or private provenance fields.
+Before merge:
 
-Real records are accepted only from the authenticated fixed-origin service and
-must pass the dedicated closed-response parsers. Nullable longitudinal TTC is
-rendered as “Not closing” and as a chart gap rather than imputed. Browser
-storage, URL tokens, arbitrary paths, arbitrary queries, and real-data exports
-are prohibited.
-
-Before merge, the implementation must pass:
-
-- strict TypeScript compilation, Vitest unit tests, and the Angular production
-  build under the pinned Node 24 runtime;
-- a dependency audit at moderate severity or higher;
-- desktop browser checks for selection, playback, synchronized evidence and
-  metrics, and export feedback;
-- mobile browser checks at 390 × 844 for Scene, Evidence, and Metrics view
-  switching, playback, and timeline scrubbing; and
-- a console review with no warnings or errors.
-
-The concept images were generated for this repository as visual references.
-They are documentation artifacts and are never loaded by the runtime.
+- strict TypeScript compilation, Vitest, Angular production build, Python API
+  contract tests, Ruff, and the repository test suite pass;
+- desktop browser testing covers local connection, recorded-frame seeking,
+  stress replay, assistant questions, Camera playback, source-frame 3DGS/LiDAR
+  switching, 3D source/novel/reset views,
+  and a clean current console;
+- a compact viewport has no horizontal document overflow and retains access to
+  the core controls; and
+- the selected design source and implementation screenshot are normalized to
+  the same crop and dimensions for hierarchy, workspace composition, palette,
+  control legibility, and evidence-boundary clarity.

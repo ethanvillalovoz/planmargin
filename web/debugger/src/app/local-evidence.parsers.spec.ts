@@ -1,6 +1,8 @@
 import {
+  parseCampaignInvestigation,
   parseCampaign,
   parseLocalRun,
+  parseProposalAnalysis,
   parseProposals,
   parseRunSummaries,
 } from './local-evidence.parsers';
@@ -8,6 +10,7 @@ import {
   API_CAMPAIGN,
   API_CELLS,
   API_HYPOTHESES,
+  API_INVESTIGATION,
   API_METHODS,
   API_PROPOSALS,
   API_RUN,
@@ -42,6 +45,27 @@ describe('local evidence response parsers', () => {
       supportPasses: true,
       physicalRollouts: 6,
     });
+  });
+
+  it('maps the campaign-wide index and proposal-specific sealed analysis', () => {
+    const investigation = parseCampaignInvestigation(API_INVESTIGATION);
+    const analysis = parseProposalAnalysis({
+      evidence_mode: 'real_local_redacted',
+      analysis_mode: 'deterministic_proposal_specific',
+      cell_id: 'cell_opaque',
+      proposal_number: 1,
+      decision: 'not_qualified',
+      decisive_gate: 'tested_controller_failure',
+      explanation: 'The tested controller remained successful.',
+      facts: [{ label: 'method', value: 'bayesian' }],
+      record_sha256: 'a'.repeat(64),
+      trajectory_available: false,
+    });
+
+    expect(investigation.proposalCount).toBe(1);
+    expect(investigation.closestMargin[0].cellId).toBe('cell_opaque');
+    expect(analysis.decisiveGate).toBe('tested_controller_failure');
+    expect(analysis.trajectoryAvailable).toBe(false);
   });
 
   it('rejects an opened held-out claim and misaligned replay timeline', () => {
