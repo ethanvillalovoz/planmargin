@@ -84,6 +84,21 @@ The default path is offline. The optional Gemini adapter receives only
 allowlisted public aggregates after the user explicitly confirms provider use;
 restricted scenario records are never sent.
 
+To use Gemini inside the workbench, create a key for a Google AI Studio project
+that has no billing account attached, then launch with:
+
+```bash
+uv sync --frozen --extra assistant
+export GEMINI_API_KEY="..."
+uv run --frozen --extra assistant planmargin-workbench \
+  --assistant-provider gemini \
+  --confirm-gemini-free-tier
+```
+
+The assistant header must read **Gemini analysis** and show
+`gemini-3.1-flash-lite · public aggregate only`. If the free quota is exhausted,
+the request fails rather than switching providers or enabling billing.
+
 ## Troubleshooting
 
 - Run `uv run --frozen planmargin-doctor` for a capability-by-capability status

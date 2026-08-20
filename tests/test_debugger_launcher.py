@@ -19,3 +19,26 @@ def test_workbench_url_carries_token_only_in_fragment() -> None:
     assert url.startswith("http://127.0.0.1:4200/#")
     assert "token=local+token%2F%2Bvalue" in url
     assert "?" not in url
+
+
+def test_launcher_defaults_to_offline_assistant() -> None:
+    args = debugger_launcher._parse_args([])
+
+    assert args.assistant_provider == "offline"
+    assert not args.confirm_gemini_free_tier
+
+
+def test_launcher_accepts_explicit_free_tier_gemini_configuration() -> None:
+    args = debugger_launcher._parse_args(
+        [
+            "--assistant-provider",
+            "gemini",
+            "--confirm-gemini-free-tier",
+            "--gemini-model",
+            "gemini-3.1-flash-lite",
+        ]
+    )
+
+    assert args.assistant_provider == "gemini"
+    assert args.confirm_gemini_free_tier
+    assert args.gemini_model == "gemini-3.1-flash-lite"
