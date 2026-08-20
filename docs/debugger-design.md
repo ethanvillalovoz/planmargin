@@ -6,13 +6,6 @@ causes the tested planner to fail while a reference planner succeeds?** The
 workspace makes the scene, mutation, evidence source, and claim boundary
 visible in one synchronized engineering surface.
 
-![PlanMargin workbench design target](assets/debugger/workbench-v3-concept.png)
-
-This design target replaces the earlier synthetic-demo concepts. It leads with
-the engineer's decision, keeps the scene and timeline dominant, translates raw
-scores into operational language, and moves experiment reporting behind the
-Evidence task.
-
 ## Workspace contract
 
 The simulator uses one full-bleed scene rather than separate product pages:
