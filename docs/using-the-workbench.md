@@ -12,7 +12,7 @@ uv run --frozen planmargin-doctor --require full
 uv run --frozen planmargin-workbench
 ```
 
-The launcher starts the local API and web application, then opens a one-time
+The launcher starts the local API and web application, then opens an ephemeral
 authenticated URL. The token is consumed into memory and removed from the
 address bar. Use the manual connection dialog only when the browser was opened
 separately.

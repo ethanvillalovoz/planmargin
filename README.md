@@ -58,7 +58,7 @@ uv run --frozen planmargin-workbench
 ```
 
 The launcher starts the loopback-only API and the Angular application, opens an
-authenticated one-time URL, consumes the token into browser memory, and removes
+authenticated ephemeral URL, consumes the token into browser memory, and removes
 it from the address bar. There is no token-copy step. Private responses use
 `Cache-Control: no-store`, and source identifiers never enter the UI.
 
