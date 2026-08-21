@@ -117,6 +117,8 @@ describe('ProductShell', () => {
         testedMutatedFailure: false,
         referenceMutatedSuccess: true,
         physicalRollouts: 6,
+        trajectoryAvailable: false,
+        replayRunId: null,
       },
     ]);
     local.selectedProposalNumber.set(1);
@@ -134,6 +136,6 @@ describe('ProductShell', () => {
     expect(text).toContain('Safety result');
     expect(text).toContain('Change size');
     expect(text).not.toContain('Criticality 0.400');
-    expect(text).toContain('Proposal trajectory is not stored');
+    expect(text).toContain('Proposal trajectory is not retained');
   });
 });

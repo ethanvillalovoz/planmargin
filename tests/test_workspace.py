@@ -24,6 +24,7 @@ def test_empty_clone_reports_each_private_capability_without_faking_readiness(
     assert report.public_ready
     assert isinstance(report.native_build_ready, bool)
     assert not report.evidence_ready
+    assert not report.proposal_replay_ready
     assert not report.sensor_ready
     assert not report.research_program_ready
     assert not report.full_workbench_ready

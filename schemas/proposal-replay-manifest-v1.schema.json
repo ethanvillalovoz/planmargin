@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/proposal-replay-manifest-v1.schema.json",
+  "title": "PlanMargin proposal replay manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "record_type",
+    "campaign_id",
+    "identity",
+    "proposal_record_sha256",
+    "cell_configuration_fingerprint",
+    "scientific_evidence_sha256",
+    "collection_file",
+    "collection_sha256",
+    "verification",
+    "privacy",
+    "manifest_sha256"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/proposal-replay-manifest-v1.schema.json"
+    },
+    "schema_version": { "const": "1.0.0" },
+    "record_type": { "const": "planmargin.proposal_replay_manifest" },
+    "campaign_id": { "type": "string", "minLength": 1 },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "track", "seed", "selection_order", "proposal_number"],
+      "properties": {
+        "method": { "enum": ["random", "bayesian"] },
+        "track": { "const": "natural" },
+        "seed": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "selection_order": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "proposal_number": { "type": "integer", "minimum": 1, "maximum": 32 }
+      }
+    },
+    "proposal_record_sha256": { "$ref": "#/$defs/digest" },
+    "cell_configuration_fingerprint": { "$ref": "#/$defs/digest" },
+    "scientific_evidence_sha256": { "$ref": "#/$defs/digest" },
+    "collection_file": { "const": "collection.json" },
+    "collection_sha256": { "$ref": "#/$defs/digest" },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal_record_seal_verified",
+        "source_scenario_identity_verified",
+        "mutation_parameters_match",
+        "scenario_validation_matches",
+        "original_tested_matches_v1",
+        "original_reference_matches_v1",
+        "counterfactual_tested_matches_v1",
+        "counterfactual_reference_matches_v1",
+        "all_replays_deterministic",
+        "inputs_unchanged_by_replay"
+      ],
+      "properties": {
+        "proposal_record_seal_verified": { "const": true },
+        "source_scenario_identity_verified": { "const": true },
+        "mutation_parameters_match": { "const": true },
+        "scenario_validation_matches": { "const": true },
+        "original_tested_matches_v1": { "const": true },
+        "original_reference_matches_v1": { "const": true },
+        "counterfactual_tested_matches_v1": { "const": true },
+        "counterfactual_reference_matches_v1": { "const": true },
+        "all_replays_deterministic": { "const": true },
+        "inputs_unchanged_by_replay": { "const": true }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_restricted_scenario_derivatives", "unrestricted_export"],
+      "properties": {
+        "contains_restricted_scenario_derivatives": { "const": true },
+        "unrestricted_export": { "const": false }
+      }
+    },
+    "manifest_sha256": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

@@ -55,6 +55,10 @@ function nullableNumber(value: unknown, path: string): number | null {
   return value === null ? null : number(value, path);
 }
 
+function nullableText(value: unknown, path: string): string | null {
+  return value === null ? null : text(value, path);
+}
+
 function point(value: unknown, path: string): Point2d {
   const candidate = object(value, path);
   return { x: number(candidate['x'], `${path}.x`), y: number(candidate['y'], `${path}.y`) };
@@ -315,6 +319,14 @@ export function parseProposals(value: unknown): readonly LocalProposal[] {
     if (objectives.length !== 2 || constraints.length !== 3) {
       throw new Error(`proposals[${index}] must contain two objectives and three constraints`);
     }
+    const trajectoryAvailable = boolean(
+      item['trajectory_available'],
+      `proposals[${index}].trajectory_available`,
+    );
+    const replayRunId = nullableText(item['replay_run_id'], `proposals[${index}].replay_run_id`);
+    if (trajectoryAvailable !== (replayRunId !== null)) {
+      throw new Error(`proposals[${index}] replay availability is inconsistent`);
+    }
     return {
       proposalNumber: integer(item['proposal_number'], `proposals[${index}].proposal_number`),
       attemptStatus: text(item['attempt_status'], `proposals[${index}].attempt_status`),
@@ -356,6 +368,8 @@ export function parseProposals(value: unknown): readonly LocalProposal[] {
         `proposals[${index}].reference_mutated_success`,
       ),
       physicalRollouts: integer(item['physical_rollouts'], `proposals[${index}].physical_rollouts`),
+      trajectoryAvailable,
+      replayRunId,
     };
   });
   if (proposals.length === 0) throw new Error('proposals must not be empty');
@@ -422,8 +436,13 @@ export function parseProposalAnalysis(value: unknown): ProposalAnalysis {
       value: text(fact['value'], `proposalAnalysis.facts[${index}].value`),
     };
   });
-  if (root['trajectory_available'] !== false) {
-    throw new Error('proposal analysis must preserve the trajectory availability boundary');
+  const trajectoryAvailable = boolean(
+    root['trajectory_available'],
+    'proposalAnalysis.trajectory_available',
+  );
+  const replayRunId = nullableText(root['replay_run_id'], 'proposalAnalysis.replay_run_id');
+  if (trajectoryAvailable !== (replayRunId !== null)) {
+    throw new Error('proposal analysis replay availability is inconsistent');
   }
   return {
     analysisMode: 'deterministic_proposal_specific',
@@ -434,7 +453,8 @@ export function parseProposalAnalysis(value: unknown): ProposalAnalysis {
     explanation: text(root['explanation'], 'proposalAnalysis.explanation'),
     facts,
     recordSha256: text(root['record_sha256'], 'proposalAnalysis.record_sha256'),
-    trajectoryAvailable: false,
+    trajectoryAvailable,
+    replayRunId,
   };
 }
 

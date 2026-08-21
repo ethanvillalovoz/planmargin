@@ -33,6 +33,8 @@ export interface LocalProposal {
   readonly testedMutatedFailure: boolean | null;
   readonly referenceMutatedSuccess: boolean | null;
   readonly physicalRollouts: number;
+  readonly trajectoryAvailable: boolean;
+  readonly replayRunId: string | null;
 }
 
 export interface InvestigationProposal extends LocalProposal {
@@ -72,7 +74,8 @@ export interface ProposalAnalysis {
   readonly explanation: string;
   readonly facts: readonly { readonly label: string; readonly value: string }[];
   readonly recordSha256: string;
-  readonly trajectoryAvailable: false;
+  readonly trajectoryAvailable: boolean;
+  readonly replayRunId: string | null;
 }
 
 export type ProposalGate =

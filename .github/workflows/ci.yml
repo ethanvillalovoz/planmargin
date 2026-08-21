@@ -74,3 +74,9 @@ jobs:
 
       - name: Typecheck, test, and build
         run: npm run check
+
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser, responsive, and accessibility checks
+        run: npm run e2e

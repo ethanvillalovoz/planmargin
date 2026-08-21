@@ -13,6 +13,13 @@ specific to the tested planner.
 It is an engineering workbench, not a benchmark leaderboard or a Waymo Driver
 evaluation.
 
+![PlanMargin public workbench showing its licensed-evidence boundary](docs/assets/planmargin-public-workbench.jpg)
+
+The public clone opens as the real product shell and fails closed when licensed
+records are absent. An authorized local launch unlocks the exact proposal replay,
+candidate investigation, recorded camera annotations, LiDAR, and 3D Gaussian
+reconstruction without uploading those artifacts.
+
 ## The engineering workflow
 
 1. **Search** bounded scenario changes with matched random and constrained
@@ -119,11 +126,17 @@ uniform random search, but failure-discovery efficiency and failure minimality
 remain untestable because neither method found a qualifying failure. No
 validation-backed comparison was opened after that no-go.
 
-The retained Stage-0 planning replay is authentic but separate from proposal
-records whose full trajectories were not stored. The WOD Perception camera,
-LiDAR, and Apple SHARP reconstruction are also a separate visual track. The UI
-labels those boundaries instead of implying synchronization that does not
-exist.
+The original Stage-0 planning replay is authentic but separate from the
+campaign. PlanMargin now also retains one separately versioned replay for the
+campaign's closest-to-failure proposal. That replay was re-executed from its
+authorized WOMD source, and its tested/reference trajectory hashes, outcomes,
+interaction metrics, scenario validation, and repeated executions match the
+sealed v1 proposal. The other proposal records remain hash-and-metric evidence
+unless they are deliberately re-executed through the same verifier.
+
+The WOD Perception camera, LiDAR, and Apple SHARP reconstruction remain a
+separate visual track. The UI labels those boundaries instead of implying
+synchronization that does not exist.
 
 Read the [aggregate result](docs/natural-development-results.md) and
 [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md) for the
@@ -155,6 +168,7 @@ flowchart LR
 | Product          | Angular, TypeScript, Three.js, Spark | strict types, component tests, production build         |
 | Reconstruction   | Apple SHARP                          | pinned source, model hash, MPS/CUDA/CPU execution       |
 | Assistant        | deterministic tools, optional Gemini | allowlisted evidence and sealed citations               |
+| Replay retention | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching      |
 
 ## Data and distribution boundary
 
@@ -166,12 +180,27 @@ evidence:
 | Source, schemas, tests, architecture | Included          | Included                                     |
 | Aggregate experiment decision        | Included          | Included                                     |
 | Per-proposal records and exact gates | Not redistributed | Seal-verified locally                        |
-| Planning replay                      | Not redistributed | Seal-verified locally                        |
+| Planning and proposal-linked replays | Not redistributed | Seal- and hash-verified locally               |
 | Camera, annotations, LiDAR, and 3DGS | Not redistributed | Seal-verified locally                        |
 | Deterministic evidence assistant     | Aggregate scope   | Local evidence scope                         |
 | Gemini explanation                   | Optional          | User key and explicit free-tier confirmation |
 
 This is a licensing boundary, not a synthetic-data fallback.
+
+To retain another accepted proposal locally, use its one-based campaign
+identity:
+
+```bash
+uv run --frozen planmargin-retain-proposal-replay \\
+  --method random \\
+  --seed 1 \\
+  --selection-order 8 \\
+  --proposal-number 12
+```
+
+The command refuses rejected proposals and existing outputs. It publishes
+nothing: the resulting package stays under the ignored
+`artifacts/proposal-replays/` boundary.
 
 ## Verify the repository
 

@@ -7,6 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
+    "e2e": "playwright test",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run typecheck && npm test && npm run build"
@@ -32,6 +33,8 @@
     "@angular/build": "22.1.3",
     "@angular/cli": "22.1.3",
     "@angular/compiler-cli": "22.1.1",
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.55.1",
     "@types/three": "0.180.0",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",

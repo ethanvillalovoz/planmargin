@@ -32,11 +32,11 @@ The default surface is the planning workbench.
 4. Read signed separation and time-to-collision together. A raw value is never
    the decision by itself; the frozen gates define the decision.
 5. Use **Review candidate records** to move from the retained trajectory to the
-   ranked campaign proposals. Those records preserve outcomes and metrics, but
-   not additional full paths.
+   ranked campaign proposals. Those records preserve outcomes and metrics;
+   separately verified replay packages can add an exact full path.
 
-This replay is the retained Stage-0 controller comparison. It is not silently
-substituted for a campaign proposal whose full trajectory was not stored.
+The default replay is the retained Stage-0 controller comparison. It is not
+silently substituted for a campaign proposal.
 
 ## Sensors: inspect recorded perception evidence
 
@@ -68,7 +68,10 @@ Choose **Evidence** to inspect the immutable search campaign.
    instrumentation.
 5. Use **Analyze selected proposal** for a deterministic, proposal-specific
    explanation tied to the sealed record hash.
-6. Export the privacy-reduced HTML report when the decision must travel outside
+6. If the proposal says **Exact proposal replay retained and verified**, open
+   it to replace the planning canvas with the re-executed, hash-matched
+   proposal trajectory. Otherwise the UI keeps the not-retained boundary.
+7. Export the privacy-reduced HTML report when the decision must travel outside
    the running application.
 
 ### Metric translations
@@ -107,8 +110,10 @@ uv run --frozen --extra assistant planmargin-workbench \
 The assistant header must read **Gemini analysis** and show
 `gemini-3.1-flash-lite · public aggregate only`. If Gemini times out or rejects
 the request, the same verified facts are explained by the deterministic local
-provider and the panel labels that fallback. PlanMargin never enables billing
-or sends a second hosted request automatically.
+provider and the panel labels that fallback. The answer always displays the
+deterministic fact values below the prose, so a vague hosted summary cannot
+hide the measured counts. PlanMargin never enables billing or sends a second
+hosted request automatically.
 
 ## Troubleshooting
 

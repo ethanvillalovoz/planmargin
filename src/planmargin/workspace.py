@@ -61,6 +61,7 @@ class ReadinessReport:
     public_ready: bool
     native_build_ready: bool
     evidence_ready: bool
+    proposal_replay_ready: bool
     sensor_ready: bool
     research_program_ready: bool
     full_workbench_ready: bool
@@ -108,6 +109,21 @@ def _evidence_ready(root: Path) -> tuple[bool, str]:
         True,
         "The sealed campaign, analytics database, and planning replay verified.",
     )
+
+
+def _proposal_replay_ready(root: Path) -> tuple[bool, str]:
+    repository = EvidenceRepository(EvidencePaths.from_root(root))
+    try:
+        repository.open()
+    except (FileNotFoundError, NotADirectoryError, ValueError, OSError) as error:
+        return False, str(error)
+    count = repository.proposal_replay_count
+    if count == 0:
+        return (
+            False,
+            "No separately retained exact campaign proposal replay is present.",
+        )
+    return True, f"{count} exact campaign proposal replay package(s) verified."
 
 
 def _sensor_ready(root: Path) -> tuple[bool, str]:
@@ -234,6 +250,7 @@ def inspect_workspace(root: Path) -> ReadinessReport:
     public_ready = _public_bundle_ready(root)
     native_build_ready, native_build_detail = _native_build_ready()
     evidence_ready, evidence_detail = _evidence_ready(root)
+    proposal_replay_ready, proposal_replay_detail = _proposal_replay_ready(root)
     sensor_ready, sensor_detail = _sensor_ready(root)
     gaussian_ready, gaussian_detail = _gaussian_study_ready(root)
     beam_ready, beam_detail = _beam_study_ready(root)
@@ -271,6 +288,13 @@ def inspect_workspace(root: Path) -> ReadinessReport:
             "authorized local",
             evidence_detail,
             "uv run --frozen planmargin-run-matched-campaign --readiness-only",
+        ),
+        Capability(
+            "Exact proposal replay",
+            proposal_replay_ready,
+            "authorized local",
+            proposal_replay_detail,
+            "uv run --frozen planmargin-retain-proposal-replay --help",
         ),
         Capability(
             "Authorized Perception inputs",
@@ -338,9 +362,15 @@ def inspect_workspace(root: Path) -> ReadinessReport:
         public_ready=public_ready,
         native_build_ready=native_build_ready,
         evidence_ready=evidence_ready,
+        proposal_replay_ready=proposal_replay_ready,
         sensor_ready=sensor_ready,
         research_program_ready=research_program_ready,
-        full_workbench_ready=evidence_ready and sensor_ready and research_program_ready,
+        full_workbench_ready=(
+            evidence_ready
+            and proposal_replay_ready
+            and sensor_ready
+            and research_program_ready
+        ),
         capabilities=capabilities,
     )
 
@@ -364,6 +394,8 @@ def _print_report(report: ReadinessReport) -> None:
         + ("ready" if report.native_build_ready else "not ready")
         + " | Local evidence: "
         + ("ready" if report.evidence_ready else "not ready")
+        + " | Exact replay: "
+        + ("ready" if report.proposal_replay_ready else "not ready")
         + " | Sensor Lab: "
         + ("ready" if report.sensor_ready else "not ready")
         + " | Research program: "

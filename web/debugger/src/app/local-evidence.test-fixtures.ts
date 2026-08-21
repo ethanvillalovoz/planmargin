@@ -139,6 +139,8 @@ export const API_PROPOSALS = [
     tested_mutated_failure: false,
     reference_mutated_success: true,
     physical_rollouts: 6,
+    trajectory_available: false,
+    replay_run_id: null,
   },
 ];
 

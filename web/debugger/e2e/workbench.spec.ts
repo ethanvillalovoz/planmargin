@@ -1,0 +1,118 @@
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Page, type Route } from '@playwright/test';
+import {
+  API_CAMPAIGN,
+  API_CELLS,
+  API_HYPOTHESES,
+  API_INVESTIGATION,
+  API_METHODS,
+  API_PROPOSALS,
+  API_RUN,
+  API_RUNS,
+} from '../src/app/local-evidence.test-fixtures';
+
+function fulfill(route: Route, value: unknown): Promise<void> {
+  return route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    headers: {
+      'Access-Control-Allow-Origin': 'http://127.0.0.1:4200',
+      'Access-Control-Allow-Credentials': 'true',
+    },
+    body: JSON.stringify(value),
+  });
+}
+
+async function mockExactReplayApi(page: Page): Promise<void> {
+  const proposal = {
+    ...API_PROPOSALS[0],
+    trajectory_available: true,
+    replay_run_id: 'run_exact',
+  };
+  const investigation = {
+    ...API_INVESTIGATION,
+    closest_margin: [{ ...API_INVESTIGATION.closest_margin[0], ...proposal }],
+    smallest_mutation: [{ ...API_INVESTIGATION.smallest_mutation[0], ...proposal }],
+    highest_support: [{ ...API_INVESTIGATION.highest_support[0], ...proposal }],
+  };
+  await page.route('**/api/v1/**', async (route) => {
+    const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+    if (path === '/health')
+      return fulfill(route, { status: 'ready', evidence_mode: 'real_local_redacted' });
+    if (path === '/campaign') return fulfill(route, API_CAMPAIGN);
+    if (path === '/methods') return fulfill(route, API_METHODS);
+    if (path === '/hypotheses') return fulfill(route, API_HYPOTHESES);
+    if (path === '/cells') return fulfill(route, API_CELLS);
+    if (path === '/runs')
+      return fulfill(route, [
+        ...API_RUNS,
+        {
+          ...API_RUNS[0],
+          run_id: 'run_exact',
+          label: 'Exact campaign replay · bayesian · S1 · seed 0 · proposal 1',
+        },
+      ]);
+    if (path === '/runs/run_opaque') return fulfill(route, API_RUN);
+    if (path === '/runs/run_exact')
+      return fulfill(route, {
+        ...API_RUN,
+        run_id: 'run_exact',
+        scenario_label: 'Campaign replay · bayesian · S1 · seed 0',
+        hypothesis: {
+          ...API_RUN.hypothesis,
+          id: 'proposal-linked-counterfactual',
+          label: 'Exact retained proposal 1',
+        },
+      });
+    if (path === '/investigation') return fulfill(route, investigation);
+    if (path === '/cells/cell_opaque/proposals') return fulfill(route, [proposal]);
+    return route.fulfill({ status: 404, body: '{}' });
+  });
+}
+
+test('public clone stays honest, usable, and accessible without licensed records', async ({
+  page,
+}) => {
+  const consoleErrors: string[] = [];
+  await page.route('http://127.0.0.1:8765/**', (route) => route.abort('connectionrefused'));
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  await page.goto('/');
+  await expect(page).toHaveTitle('PlanMargin campaign workbench');
+  await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close local evidence' }).click();
+  await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeHidden();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Open the local workspace to review candidate cases.' }),
+  ).toBeVisible();
+  await expect(page.getByText('invented examples')).toBeVisible();
+
+  const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(accessibility.violations).toEqual([]);
+  expect(
+    consoleErrors.filter(
+      (message) => !message.includes('Failed to load resource: net::ERR_CONNECTION_REFUSED'),
+    ),
+  ).toEqual([]);
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('retained proposal opens its exact planning replay', async ({ page }) => {
+  await mockExactReplayApi(page);
+  await page.goto('/');
+  await expect(page.getByText('Local records verified')).toBeVisible();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
+  await expect(page.getByText('Exact proposal replay retained and verified.')).toBeVisible();
+  await page.getByRole('button', { name: 'Open exact proposal replay' }).click();
+  const planning = page.getByLabel('Planning evidence', { exact: true });
+  await expect(planning.getByText('Exact retained proposal 1').first()).toBeVisible();
+  await expect(planning.getByText('Exact campaign link verified', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Forward one second in planning evidence' }).click();
+  await expect(page.getByRole('contentinfo').locator('strong')).toContainText('Step 001');
+});
