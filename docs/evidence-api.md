@@ -117,6 +117,10 @@ provenance. Disconnecting returns to
 Camera, clears local planning evidence and sensor access, and leaves the
 workspace explicitly empty; no demo or synthetic run is substituted.
 
+Automatic bootstrap retries one transient loopback connection failure. A
+temporary API interruption does not discard the tab session; an explicit
+authentication rejection does.
+
 ## Fixed endpoints
 
 | Endpoint                                                           | Responsibility                                                                       |

@@ -189,15 +189,24 @@ describe('LocalEvidenceService', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('redacts connection failures and clears authorization state', async () => {
+  it('redacts transient connection failures without discarding refresh recovery', async () => {
     window.sessionStorage.setItem('planmargin.local-evidence-token.v1', 'fedcba9876543210');
     fetchMock.mockRejectedValueOnce(new TypeError('network failed with sensitive details'));
 
     await expect(service.connect('0123456789abcdef')).rejects.toThrow();
     expect(service.state()).toBe('error');
     expect(service.error()).toContain('127.0.0.1:8765');
-    expect(service.restoreSessionToken()).toBeUndefined();
+    expect(service.restoreSessionToken()).toBe('fedcba9876543210');
     await expect(service.loadRun('run_opaque')).rejects.toThrow('not connected');
+  });
+
+  it('clears refresh recovery when the local API rejects the token', async () => {
+    window.sessionStorage.setItem('planmargin.local-evidence-token.v1', 'fedcba9876543210');
+    fetchMock.mockResolvedValueOnce(response({ detail: 'unauthorized' }, 401));
+
+    await expect(service.connect('fedcba9876543210')).rejects.toThrow('token was rejected');
+
+    expect(service.restoreSessionToken()).toBeUndefined();
   });
 
   it('loads bounded assistant answers and Gaussian bytes through authenticated routes', async () => {

@@ -4,7 +4,10 @@ import { DebuggerStore } from './debugger.store';
 import { LocalEvidenceService } from './local-evidence.service';
 
 describe('launch session bootstrap', () => {
-  afterEach(() => window.history.replaceState(null, '', '/'));
+  afterEach(() => {
+    vi.useRealTimers();
+    window.history.replaceState(null, '', '/');
+  });
 
   it('consumes a fragment token and immediately removes it from the address bar', () => {
     window.history.replaceState(null, '', '/workspace?mode=local#token=abc%2F123%2Bsecure');
@@ -59,6 +62,31 @@ describe('launch session bootstrap', () => {
     await vi.waitFor(() => expect(loadRun).toHaveBeenCalledWith(initialRun));
     expect(restoreSessionToken).toHaveBeenCalledOnce();
     expect(connect).toHaveBeenCalledWith('fedcba9876543210');
+    TestBed.resetTestingModule();
+  });
+
+  it('retries one transient API startup failure during automatic recovery', async () => {
+    vi.useFakeTimers();
+    const initialRun = { runId: 'run_after_retry' };
+    const connect = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('temporarily unavailable'))
+      .mockResolvedValueOnce({ initialRun });
+    const restoreSessionToken = vi.fn().mockReturnValue('fedcba9876543210');
+    const loadRun = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: LocalEvidenceService, useValue: { connect, restoreSessionToken } },
+        { provide: DebuggerStore, useValue: { loadRun } },
+      ],
+    });
+    window.history.replaceState(null, '', '/');
+
+    TestBed.runInInjectionContext(() => new App());
+    await vi.advanceTimersByTimeAsync(250);
+
+    expect(connect).toHaveBeenCalledTimes(2);
+    expect(loadRun).toHaveBeenCalledWith(initialRun);
     TestBed.resetTestingModule();
   });
 });
