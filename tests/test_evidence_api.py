@@ -616,8 +616,44 @@ def test_cors_allows_only_declared_debugger_origin(
 
     assert allowed.status_code == 200
     assert allowed.headers["access-control-allow-origin"] == headers["Origin"]
+    assert allowed.headers["access-control-allow-credentials"] == "true"
+    assert "POST" in allowed.headers["access-control-allow-methods"]
     assert forbidden.status_code == 400
     assert "access-control-allow-origin" not in forbidden.headers
+
+
+def test_browser_session_cookie_authenticates_fresh_requests_and_logout(
+    app_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        evidence_api.EvidenceRepository,
+        "open",
+        lambda repository: _seed_repository(repository),
+    )
+    app = evidence_api.create_app(root=app_root, token=TOKEN)
+
+    with TestClient(app) as client:
+        assert client.get("/api/v1/health").status_code == 401
+
+        session = client.post(
+            "/api/v1/session", headers={"X-PlanMargin-Token": TOKEN}
+        )
+        assert session.status_code == 204
+        cookie = session.headers["set-cookie"]
+        assert f"{evidence_api.SESSION_COOKIE_NAME}=" in cookie
+        assert "HttpOnly" in cookie
+        assert "SameSite=strict" in cookie
+        assert "Path=/api/v1" in cookie
+        assert client.get("/api/v1/health").status_code == 200
+
+        logout = client.post("/api/v1/session/logout")
+        assert logout.status_code == 204
+        assert client.get("/api/v1/health").status_code == 401
+
+        rejected = client.post(
+            "/api/v1/session", headers={"X-PlanMargin-Token": "incorrect"}
+        )
+        assert rejected.status_code == 401
 
 
 def _analytics_fixture(root: Path) -> tuple[evidence_api.EvidenceRepository, Path]:

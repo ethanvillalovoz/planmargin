@@ -78,8 +78,8 @@ input source, not affiliation or production-driver access.
   and cleanup.
 - `ScenarioAssistant`: provider status, bounded questions, public-claim limits,
   and privacy disclosure.
-- `LocalEvidenceService`: fixed authenticated reads, same-tab session token,
-  `no-store` requests, and binary sensor loading.
+- `LocalEvidenceService`: fixed authenticated reads, HttpOnly browser-session
+  handshake, `no-store` requests, and binary sensor loading.
 - `DebuggerStore`: the existing validated planning evidence and metric samples.
 
 ## Verification contract

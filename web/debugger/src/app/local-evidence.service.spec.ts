@@ -23,9 +23,14 @@ describe('LocalEvidenceService', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    window.sessionStorage.clear();
-    fetchMock = vi.fn((input: string | URL | Request) => {
+    fetchMock = vi.fn((input: string | URL | Request, options?: RequestInit) => {
       const url = String(input);
+      if (url.endsWith('/session/logout') && options?.method === 'POST') {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      if (url.endsWith('/session') && options?.method === 'POST') {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
       if (url.endsWith('/health')) {
         return Promise.resolve(response({ status: 'ready', evidence_mode: 'real_local_redacted' }));
       }
@@ -150,8 +155,8 @@ describe('LocalEvidenceService', () => {
     service = TestBed.inject(LocalEvidenceService);
   });
 
-  afterEach(() => {
-    service.disconnect();
+  afterEach(async () => {
+    await service.disconnect();
     vi.unstubAllGlobals();
     TestBed.resetTestingModule();
   });
@@ -160,26 +165,28 @@ describe('LocalEvidenceService', () => {
     const evidence = await service.connect('0123456789abcdef');
 
     expect(service.state()).toBe('connected');
-    expect(service.restoreSessionToken()).toBe('0123456789abcdef');
     expect(evidence.initialRun.synthetic).toBe(false);
     expect(service.proposals()[0].proposalNumber).toBe(1);
     expect((await service.proposalAnalysis('cell_opaque', 1)).decisiveGate).toBe(
       'tested_controller_failure',
     );
-    expect(fetchMock).toHaveBeenCalledTimes(10);
-    for (const [url, options] of fetchMock.mock.calls as [string, RequestInit][]) {
-      expect(url).toMatch(/^http:\/\/127\.0\.0\.1:8765\/api\/v1\//);
+    expect(fetchMock).toHaveBeenCalledTimes(11);
+    const [sessionUrl, sessionOptions] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(sessionUrl).toMatch(/^http:\/\/(127\.0\.0\.1|localhost):8765\/api\/v1\/session$/);
+    expect(sessionOptions.method).toBe('POST');
+    expect((sessionOptions.headers as Record<string, string>)['X-PlanMargin-Token']).toBe(
+      '0123456789abcdef',
+    );
+    for (const [url, options] of fetchMock.mock.calls.slice(1) as [string, RequestInit][]) {
+      expect(url).toMatch(/^http:\/\/(127\.0\.0\.1|localhost):8765\/api\/v1\//);
       expect(options.cache).toBe('no-store');
-      expect(options.credentials).toBe('omit');
+      expect(options.credentials).toBe('include');
       expect(options.referrerPolicy).toBe('no-referrer');
-      expect((options.headers as Record<string, string>)['X-PlanMargin-Token']).toBe(
-        '0123456789abcdef',
-      );
+      expect(options.headers).toBeUndefined();
     }
 
-    service.disconnect();
+    await service.disconnect();
     expect(service.state()).toBe('disconnected');
-    expect(service.restoreSessionToken()).toBeUndefined();
     expect(service.cells()).toEqual([]);
     expect(service.campaign().mode).toBe('published-aggregate');
   });
@@ -189,24 +196,40 @@ describe('LocalEvidenceService', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('redacts transient connection failures without discarding refresh recovery', async () => {
-    window.sessionStorage.setItem('planmargin.local-evidence-token.v1', 'fedcba9876543210');
+  it('redacts transient connection failures', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('network failed with sensitive details'));
 
     await expect(service.connect('0123456789abcdef')).rejects.toThrow();
     expect(service.state()).toBe('error');
     expect(service.error()).toContain('127.0.0.1:8765');
-    expect(service.restoreSessionToken()).toBe('fedcba9876543210');
     await expect(service.loadRun('run_opaque')).rejects.toThrow('not connected');
   });
 
-  it('clears refresh recovery when the local API rejects the token', async () => {
-    window.sessionStorage.setItem('planmargin.local-evidence-token.v1', 'fedcba9876543210');
+  it('rejects an invalid session bootstrap token', async () => {
     fetchMock.mockResolvedValueOnce(response({ detail: 'unauthorized' }, 401));
 
     await expect(service.connect('fedcba9876543210')).rejects.toThrow('token was rejected');
+    expect(service.state()).toBe('error');
+  });
 
-    expect(service.restoreSessionToken()).toBeUndefined();
+  it('restores a browser session without exposing a token to JavaScript', async () => {
+    const evidence = await service.restoreBrowserSession();
+
+    expect(evidence?.initialRun.runId).toBe('run_opaque');
+    expect(service.state()).toBe('connected');
+    expect(fetchMock).toHaveBeenCalledTimes(9);
+    for (const [, options] of fetchMock.mock.calls as [string, RequestInit][]) {
+      expect(options.credentials).toBe('include');
+      expect(options.headers).toBeUndefined();
+    }
+  });
+
+  it('quietly remains disconnected when no browser session exists', async () => {
+    fetchMock.mockResolvedValueOnce(response({ detail: 'unauthorized' }, 401));
+
+    await expect(service.restoreBrowserSession()).resolves.toBeUndefined();
+    expect(service.state()).toBe('disconnected');
+    expect(service.error()).toBeUndefined();
   });
 
   it('loads bounded assistant answers and Gaussian bytes through authenticated routes', async () => {
@@ -223,9 +246,8 @@ describe('LocalEvidenceService', () => {
     expect(Array.from(new Uint8Array(gaussian.bytes))).toEqual([112, 108, 121]);
     for (const [url, options] of fetchMock.mock.calls.slice(-5) as [string, RequestInit][]) {
       expect(url).toMatch(/assistant|gaussian-field/);
-      expect((options.headers as Record<string, string>)['X-PlanMargin-Token']).toBe(
-        '0123456789abcdef',
-      );
+      expect(options.credentials).toBe('include');
+      expect(options.headers).toBeUndefined();
     }
   });
 

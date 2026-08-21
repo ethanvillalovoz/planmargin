@@ -44,14 +44,13 @@ describe('launch session bootstrap', () => {
     TestBed.resetTestingModule();
   });
 
-  it('restores the same-tab session after a page refresh', async () => {
+  it('restores the browser session after a page refresh or fresh tab', async () => {
     const initialRun = { runId: 'run_restored' };
-    const connect = vi.fn().mockResolvedValue({ initialRun });
-    const restoreSessionToken = vi.fn().mockReturnValue('fedcba9876543210');
+    const restoreBrowserSession = vi.fn().mockResolvedValue({ initialRun });
     const loadRun = vi.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: LocalEvidenceService, useValue: { connect, restoreSessionToken } },
+        { provide: LocalEvidenceService, useValue: { restoreBrowserSession } },
         { provide: DebuggerStore, useValue: { loadRun } },
       ],
     });
@@ -60,23 +59,21 @@ describe('launch session bootstrap', () => {
     TestBed.runInInjectionContext(() => new App());
 
     await vi.waitFor(() => expect(loadRun).toHaveBeenCalledWith(initialRun));
-    expect(restoreSessionToken).toHaveBeenCalledOnce();
-    expect(connect).toHaveBeenCalledWith('fedcba9876543210');
+    expect(restoreBrowserSession).toHaveBeenCalledOnce();
     TestBed.resetTestingModule();
   });
 
   it('retries one transient API startup failure during automatic recovery', async () => {
     vi.useFakeTimers();
     const initialRun = { runId: 'run_after_retry' };
-    const connect = vi
+    const restoreBrowserSession = vi
       .fn()
       .mockRejectedValueOnce(new TypeError('temporarily unavailable'))
       .mockResolvedValueOnce({ initialRun });
-    const restoreSessionToken = vi.fn().mockReturnValue('fedcba9876543210');
     const loadRun = vi.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: LocalEvidenceService, useValue: { connect, restoreSessionToken } },
+        { provide: LocalEvidenceService, useValue: { restoreBrowserSession } },
         { provide: DebuggerStore, useValue: { loadRun } },
       ],
     });
@@ -85,7 +82,7 @@ describe('launch session bootstrap', () => {
     TestBed.runInInjectionContext(() => new App());
     await vi.advanceTimersByTimeAsync(250);
 
-    expect(connect).toHaveBeenCalledTimes(2);
+    expect(restoreBrowserSession).toHaveBeenCalledTimes(2);
     expect(loadRun).toHaveBeenCalledWith(initialRun);
     TestBed.resetTestingModule();
   });

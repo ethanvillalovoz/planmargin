@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 import duckdb
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Request, Security, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, Security, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import APIKeyHeader
@@ -40,6 +40,7 @@ DEFAULT_ROLLOUTS = Path("artifacts/stage-0/rollout-records.json")
 DEFAULT_GAUSSIAN = Path("artifacts/gaussian-field/feasibility")
 DEFAULT_SENSOR_SCENE = Path("artifacts/sensor-scene/waymo-front")
 DEFAULT_ORIGINS = ("http://127.0.0.1:4200", "http://localhost:4200")
+SESSION_COOKIE_NAME = "planmargin_local_session"
 MAX_JSON_BYTES = 128 * 1024 * 1024
 GAUSSIAN_LINKAGE_GATE = 0.90
 ASSISTANT_QUESTIONS = {
@@ -1406,8 +1407,8 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(origins),
-        allow_credentials=False,
-        allow_methods=["GET"],
+        allow_credentials=True,
+        allow_methods=["GET", "POST"],
         allow_headers=["X-PlanMargin-Token"],
     )
 
@@ -1428,14 +1429,54 @@ def create_app(
 
     token_header = APIKeyHeader(name="X-PlanMargin-Token", auto_error=False)
 
-    def authorize(supplied: str | None = Security(token_header)) -> None:
-        if supplied is None or not secrets.compare_digest(supplied, token):
+    def valid_token(supplied: str | None) -> bool:
+        return supplied is not None and secrets.compare_digest(supplied, token)
+
+    def authorize(
+        request: Request,
+        supplied: str | None = Security(token_header),
+    ) -> None:
+        if not valid_token(supplied) and not valid_token(
+            request.cookies.get(SESSION_COOKIE_NAME)
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="A valid local evidence token is required",
             )
 
     auth = Depends(authorize)
+
+    @app.post("/api/v1/session", status_code=status.HTTP_204_NO_CONTENT)
+    def create_session(
+        supplied: str | None = Security(token_header),
+    ) -> Response:
+        if not valid_token(supplied):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="A valid local evidence token is required",
+            )
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=token,
+            httponly=True,
+            secure=False,
+            samesite="strict",
+            path="/api/v1",
+        )
+        return response
+
+    @app.post("/api/v1/session/logout", status_code=status.HTTP_204_NO_CONTENT)
+    def delete_session() -> Response:
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
+        response.delete_cookie(
+            key=SESSION_COOKIE_NAME,
+            httponly=True,
+            secure=False,
+            samesite="strict",
+            path="/api/v1",
+        )
+        return response
 
     @app.get("/api/v1/health", dependencies=[auth], response_model=HealthEvidence)
     def health() -> dict[str, str]:

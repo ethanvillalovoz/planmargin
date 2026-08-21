@@ -58,10 +58,12 @@ uv run --frozen planmargin-workbench
 ```
 
 The launcher starts the loopback-only API and the Angular application, opens an
-authenticated ephemeral URL, retains the token in same-tab session storage, and
-removes it from the address bar. Refresh reconnects automatically; disconnecting
-or closing the tab clears access. There is no token-copy step. Private responses
-use `Cache-Control: no-store`, and source identifiers never enter the UI.
+authenticated ephemeral URL, exchanges its token for an HttpOnly same-site
+browser-session cookie, and removes the token from the address bar. Refreshes
+and additional local tabs reconnect automatically; disconnecting or closing the
+browser session clears access. There is no token-copy step and JavaScript cannot
+read the session credential. Private responses use `Cache-Control: no-store`,
+and source identifiers never enter the UI.
 
 To enable Gemini explanations in that same workbench while keeping the Google
 project on its free tier:
