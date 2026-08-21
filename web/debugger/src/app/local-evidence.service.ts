@@ -108,7 +108,9 @@ export class LocalEvidenceService {
     } catch (error: unknown) {
       if (generation === this.requestGeneration) {
         this.token = undefined;
-        this.forgetSessionToken();
+        if (error instanceof Error && error.message === 'The local evidence token was rejected') {
+          this.forgetSessionToken();
+        }
         this.state.set('error');
         this.error.set(this.safeMessage(error));
       }

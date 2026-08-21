@@ -56,11 +56,18 @@ export class App {
     const token =
       consumeLaunchToken(window.location, window.history) ?? this.local.restoreSessionToken();
     if (token === undefined) return;
-    try {
-      const evidence = await this.local.connect(token);
-      this.debuggerStore.loadRun(evidence.initialRun);
-    } catch {
-      this.showLocalEvidence.set(true);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const evidence = await this.local.connect(token);
+        this.debuggerStore.loadRun(evidence.initialRun);
+        return;
+      } catch (error: unknown) {
+        if (!(error instanceof TypeError) || attempt === 1) {
+          this.showLocalEvidence.set(true);
+          return;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+      }
     }
   }
 }
