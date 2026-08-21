@@ -21,6 +21,7 @@ The service reads five fixed artifact families beneath the repository root:
 | `artifacts/analytics/natural-development-v1`         | sealed manifest, DuckDB hash and size, exact table allowlist, row counts                                        | campaign, method, hypothesis, and cell aggregates                                                     |
 | `artifacts/search-comparison/natural-development-v1` | sealed campaign identity linked by the analytics manifest; sealed cell/proposal checkpoints on access           | selected proposal parameters, outcomes, support decisions, findings, and cost                         |
 | `artifacts/stage-0/rollout-records.json`             | rollout collection schema, stable identities, trajectory and scene-context hashes                               | local road geometry, redacted trajectories, controller outcomes, and recomputed interaction timelines |
+| `artifacts/proposal-replays/natural-development-v1`  | proposal-record link, collection hash, fresh trajectory-hash/outcome/metric agreement, and rollout schema       | exact replay for each deliberately retained proposal                                                    |
 | `artifacts/gaussian-field/feasibility`               | sealed manifest, exact gate allowlist, privacy declaration, PLY size and SHA-256                                | geometry metrics, integration decision, and authenticated binary field                                |
 | `artifacts/sensor-scene/waymo-front`                 | fixed manifest paths, frame indices, byte sizes, SHA-256 digests, source-frame alignment, and PLY vertex counts | recorded FRONT JPEGs, real SHARP reconstruction, and same-frame LiDAR Gaussian field                  |
 
@@ -29,9 +30,10 @@ The sensor-scene manifest is produced by
 Perception inputs. It is a visual product surface, not campaign evidence.
 
 Campaign proposal records contain hashes but not replayable trajectories. The
-API therefore never represents proposal-level campaign evidence as trajectory
-evidence. Its replay endpoint comes only from the separate validated Stage 0
-rollout collection.
+API represents proposal evidence as a trajectory only when a separate replay
+package reproduces the sealed hashes, outcomes, interaction metrics, and
+scenario validation. The current workspace has one such package. Stage-0
+remains separate and is never substituted for an unretained proposal.
 
 The response allowlist excludes scenario IDs, source-shard paths, TFRecord
 indices, mutated object indices, controller configuration details, raw
@@ -136,7 +138,7 @@ disconnect does.
 | `GET /api/v1/cells/{cell_id}/proposals`                            | sealed proposal evidence for an opaque cell                                          |
 | `GET /api/v1/investigation`                                        | cached campaign-wide funnel and top proposal rankings across all 3,200 seals         |
 | `GET /api/v1/cells/{cell_id}/proposals/{proposal_number}/analysis` | deterministic proposal-specific gate explanation and sealed-record citation          |
-| `GET /api/v1/runs`                                                 | available validated replay evidence                                                  |
+| `GET /api/v1/runs`                                                 | Stage-0 plus every proposal-linked replay that passes startup validation              |
 | `GET /api/v1/runs/{run_id}`                                        | redacted scene, trajectories, outcomes, and interaction timeline                     |
 | `GET /api/v1/assistant/status`                                     | active explanation provider and input scope                                          |
 | `GET /api/v1/assistant/questions`                                  | five natural-language questions mapped to a closed query allowlist                   |

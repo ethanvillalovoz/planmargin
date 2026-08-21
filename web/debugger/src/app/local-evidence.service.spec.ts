@@ -57,6 +57,7 @@ describe('LocalEvidenceService', () => {
             facts: [{ label: 'method', value: 'bayesian' }],
             record_sha256: 'a'.repeat(64),
             trajectory_available: false,
+            replay_run_id: null,
           }),
         );
       }

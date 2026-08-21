@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/proposal-replay-manifest-v1.schema.json",
+  "title": "PlanMargin proposal replay manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "record_type",
+    "campaign_id",
+    "identity",
+    "proposal_record_sha256",
+    "cell_configuration_fingerprint",
+    "collection_file",
+    "collection_sha256",
+    "verification",
+    "privacy",
+    "manifest_sha256"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/proposal-replay-manifest-v1.schema.json"
+    },
+    "schema_version": { "const": "1.0.0" },
+    "record_type": { "const": "planmargin.proposal_replay_manifest" },
+    "campaign_id": { "type": "string", "minLength": 1 },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "track", "seed", "selection_order", "proposal_number"],
+      "properties": {
+        "method": { "enum": ["random", "bayesian"] },
+        "track": { "const": "natural" },
+        "seed": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "selection_order": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "proposal_number": { "type": "integer", "minimum": 1, "maximum": 32 }
+      }
+    },
+    "proposal_record_sha256": { "$ref": "#/$defs/digest" },
+    "cell_configuration_fingerprint": { "$ref": "#/$defs/digest" },
+    "collection_file": { "const": "collection.json" },
+    "collection_sha256": { "$ref": "#/$defs/digest" },
+    "verification": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "const": true }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_restricted_scenario_derivatives", "unrestricted_export"],
+      "properties": {
+        "contains_restricted_scenario_derivatives": { "const": true },
+        "unrestricted_export": { "const": false }
+      }
+    },
+    "manifest_sha256": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

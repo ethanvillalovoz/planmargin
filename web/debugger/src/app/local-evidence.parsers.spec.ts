@@ -47,6 +47,14 @@ describe('local evidence response parsers', () => {
     });
   });
 
+  it('rejects inconsistent proposal replay availability', () => {
+    const proposals = structuredClone(API_PROPOSALS);
+    proposals[0]!.trajectory_available = true;
+    proposals[0]!.replay_run_id = null;
+
+    expect(() => parseProposals(proposals)).toThrowError(/replay availability is inconsistent/);
+  });
+
   it('maps the campaign-wide index and proposal-specific sealed analysis', () => {
     const investigation = parseCampaignInvestigation(API_INVESTIGATION);
     const analysis = parseProposalAnalysis({
@@ -60,6 +68,7 @@ describe('local evidence response parsers', () => {
       facts: [{ label: 'method', value: 'bayesian' }],
       record_sha256: 'a'.repeat(64),
       trajectory_available: false,
+      replay_run_id: null,
     });
 
     expect(investigation.proposalCount).toBe(1);

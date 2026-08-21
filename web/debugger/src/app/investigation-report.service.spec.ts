@@ -36,6 +36,8 @@ describe('InvestigationReportService', () => {
         testedMutatedFailure: false,
         referenceMutatedSuccess: true,
         physicalRollouts: 6,
+        trajectoryAvailable: false,
+        replayRunId: null,
       },
     });
     expect(report).toContain('Tested planner still succeeds');

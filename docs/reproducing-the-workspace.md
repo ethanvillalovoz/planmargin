@@ -8,10 +8,11 @@ PlanMargin has two reproducibility levels:
    uploaded.
 
 Run `uv run --frozen planmargin-doctor` at any time. It reports the exact state
-of the public bundle, sealed campaign, planning replay, Perception inputs,
-SHARP model output, prepared Sensor Lab, Beam reconciliation, planning-linked
-Gaussian decision, and JAX controller decision. `--require full` exits nonzero
-unless the complete local workbench and research program are ready.
+of the public bundle, sealed campaign, Stage-0 planning replay, exact campaign
+proposal replay, Perception inputs, SHARP model output, prepared Sensor Lab,
+Beam reconciliation, planning-linked Gaussian decision, and JAX controller
+decision. `--require full` exits nonzero unless the complete local workbench
+and research program are ready.
 
 ## 1. Install the locked environments
 
@@ -91,7 +92,22 @@ artifacts/stage-0/rollout-records.json
 ```
 
 Campaign proposals retain trajectory hashes and measured outcomes, not full
-trajectories. PlanMargin does not invent missing playback.
+trajectories. PlanMargin does not invent missing playback. Retain an accepted
+proposal by its one-based campaign identity when exact inspection is needed:
+
+```bash
+uv run --frozen planmargin-retain-proposal-replay \
+  --method random \
+  --seed 1 \
+  --selection-order 8 \
+  --proposal-number 12
+```
+
+The exporter re-executes both planners twice, compares trajectory hashes,
+outcomes, interaction metrics, scenario validation, and input immutability to
+the sealed campaign record, then atomically installs the replay package. The
+package remains under ignored `artifacts/proposal-replays/` and is not approved
+for redistribution.
 
 ## 5. Reproduce the Sensor Lab
 
@@ -115,9 +131,9 @@ uv run --frozen planmargin-doctor --require full
 .venv/bin/python scripts/launch_debugger.py
 ```
 
-The doctor validates content seals, database hashes, all 199 frame hashes,
-native annotations, both PLY hashes, and the expected product boundaries before
-declaring the complete workbench ready.
+The doctor validates content seals, campaign-to-replay identity, database
+hashes, all 199 frame hashes, native annotations, both PLY hashes, and the
+expected product boundaries before declaring the complete workbench ready.
 
 ## What cannot be made one-click public
 

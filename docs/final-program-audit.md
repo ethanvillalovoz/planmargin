@@ -1,6 +1,6 @@
 # Release-readiness audit
 
-**Audit date:** August 20, 2026
+**Audit date:** August 21, 2026
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -10,23 +10,21 @@ boundary, and task-first engineering workbench
 PlanMargin is ready as a local autonomous-driving research workbench with
 bounded claims. Its public source, aggregate result, authenticated evidence
 service, retained planning replay, recorded perception views, search pipeline,
-and deterministic assistant are implemented and verified.
+deterministic assistant, and exact proposal-replay retention path are
+implemented and verified. The local native toolchain is ready, including a
+fresh C++ build. Gemini was exercised through the optional free-tier adapter;
+the repository still defaults to the offline deterministic provider and stores
+no key.
 
-Two items are intentionally outside that readiness decision:
-
-- this Mac cannot perform a fresh native C++ rebuild until its owner reviews
-  and accepts the installed Xcode license; and
-- the optional Gemini explanation adapter is not configured. The offline
-  deterministic assistant remains available.
-
-Neither item blocks the currently verified local workbench. No paid service,
-hosted database, subscription, or purchased compute is required.
+No paid service, hosted database, subscription, or purchased compute is
+required.
 
 ## What an engineer can do
 
 1. Open an authenticated local session without copying a token.
-2. Replay the retained Stage-0 tested, reference, and recorded planner paths on
-   a shared timeline.
+2. Replay the retained Stage-0 paths or open the closest-to-failure campaign
+   proposal whose fresh tested/reference trajectories reproduce the sealed v1
+   hashes, outcomes, interaction metrics, and scenario validation.
 3. Inspect 199 recorded WOD FRONT frames with frame-specific tracked boxes.
 4. Orbit the pinned 1,179,648-primitive Apple SHARP reconstruction and inspect
    the 50,241-return same-frame LiDAR field.
@@ -42,9 +40,11 @@ point field, or reconstruction when licensed evidence is absent.
 
 ## Claim and synchronization boundaries
 
-- The 3,200 campaign proposals retain hashes, outcomes, objectives, and costs,
-  but not full replay trajectories. The UI never presents the separate Stage-0
-  trajectory as if it belonged to a selected campaign proposal.
+- The frozen 3,200 campaign proposals retain hashes, outcomes, objectives, and
+  costs, but did not originally retain full trajectories. One separately
+  versioned package now re-executes and verifies the top-ranked proposal. The
+  UI labels all remaining proposals as not retained and never substitutes the
+  separate Stage-0 trajectory.
 - The WOD Perception segment and WOMD planning replay are separate authorized
   records. Camera, 3DGS, and LiDAR are synchronized to one another where stated;
   they are not claimed to be registered to the planning replay.
@@ -70,18 +70,22 @@ point field, or reconstruction when licensed evidence is absent.
 | Three.js and Spark         | Shipped     | lazy-loaded LiDAR/3DGS and planning-scene rendering                                        |
 | 3D Gaussian splatting      | Split       | real SHARP Perception reconstruction shipped; planning-linked study preserved as `no_go`   |
 | Evidence assistant         | Shipped     | deterministic local tools; Gemini is an optional allowlisted explanation adapter           |
+| Proposal replay retention  | Shipped     | exact re-execution linked to the sealed proposal by trajectory, outcome, metric, and seal checks |
 | Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                 |
 
 ## Verification performed on this revision
 
 - Ruff: all checks passed.
-- Python: 221 tests passed. The three warnings are upstream PyTorch deprecation
-  and BoTorch's documented pure-Python fallback when Ninja is unavailable.
-- Angular/Vitest: 36 tests passed across launch authentication, local evidence,
+- Python: 231 tests passed. The two warnings are upstream PyTorch deprecation
+  notices.
+- Angular/Vitest: 49 tests passed across launch authentication, local evidence,
   parsers, stores, navigation, reports, and workbench behavior.
+- Playwright: four Chromium journeys passed across desktop and mobile. They
+  cover the data-free public boundary, exact proposal-to-replay transition,
+  responsive overflow, meaningful interaction, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
-  payload is about 301 kB raw, while Spark and Three.js viewers remain lazy.
+  payload is about 309 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
 - Authenticated HTTP: frontend, health, campaign, investigation, planning runs,
@@ -89,8 +93,9 @@ point field, or reconstruction when licensed evidence is absent.
 - Authorization and headers: unauthenticated health returned `401`; private
   responses included `Cache-Control: no-store` and
   `X-Content-Type-Options: nosniff`.
-- Workspace doctor: public source, campaign evidence, Sensor evidence, Beam
-  output, Gaussian research, and JAX research all verified as ready.
+- Workspace doctor: public source, campaign evidence, exact proposal replay,
+  Sensor evidence, Beam output, Gaussian research, and JAX research all
+  verified as ready.
 
 ## Scientific outcome
 
@@ -106,10 +111,12 @@ preserves what was measured, what failed, and what cannot be claimed.
 
 ## Remaining operator actions
 
-- Review and accept the Xcode license before requesting a fresh native rebuild
-  on this Mac. PlanMargin will not perform that privileged acceptance step.
-- Supply a Gemini key only if optional external explanations are wanted and the
-  current free-tier/provider terms have been reviewed. It is not required.
-- Perform final visual sign-off in the authenticated local browser whenever UI
-  source changes; licensed evidence is deliberately not uploaded for remote
-  visual testing.
+- Supply a Gemini key only when optional external explanations are wanted and
+  the current free-tier/provider terms have been reviewed. It is not required,
+  and the key must remain process-local.
+- Keep proposal replay packages and all WOD-derived scene media local. They are
+  restricted evidence and are not part of a public release or Hugging Face
+  upload.
+- Re-run the authenticated visual sign-off whenever UI or evidence-contract
+  source changes. CI covers a data-free equivalent because licensed evidence
+  is deliberately not uploaded.

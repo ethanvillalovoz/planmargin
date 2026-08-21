@@ -102,6 +102,20 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
               }
               <p>{{ response.explanation.summary }}</p>
               <p>{{ response.explanation.interpretation }}</p>
+              <section class="verified-facts" aria-label="Verified facts used in this answer">
+                <strong>Verified facts</strong>
+                <dl>
+                  @for (fact of response.tool_result.facts; track fact.fact_id) {
+                    <div>
+                      <dt>{{ fact.statement }}</dt>
+                      <dd>
+                        {{ fact.value === null ? 'not available' : fact.value
+                        }}{{ fact.unit ? ' ' + fact.unit : '' }}
+                      </dd>
+                    </div>
+                  }
+                </dl>
+              </section>
               <small>{{ response.explanation.limitation }}</small>
             } @else {
               <p>{{ scenarioInsight() }}</p>
@@ -247,6 +261,40 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
       color: #7f929d;
       font-size: 0.6rem;
       line-height: 1.5;
+    }
+    .verified-facts {
+      margin-top: 0.8rem;
+      padding-top: 0.7rem;
+      border-top: 1px solid rgb(132 155 168 / 13%);
+    }
+    .verified-facts > strong {
+      color: #9dafb8;
+      font-size: 0.58rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .verified-facts dl {
+      display: grid;
+      gap: 0.45rem;
+      margin: 0.55rem 0 0;
+    }
+    .verified-facts div {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+    .verified-facts dt {
+      color: #9dafb8;
+      font-size: 0.58rem;
+      line-height: 1.4;
+    }
+    .verified-facts dd {
+      margin: 0;
+      color: #eef4f5;
+      font-size: 0.64rem;
+      font-weight: 700;
+      text-align: right;
     }
     .assistant-actions {
       display: grid;
@@ -452,7 +500,7 @@ export class ScenarioAssistant {
     if (query === undefined) {
       this.notice.set(
         /\b(path|planning|replay|scenario|case)\b/i.test(value)
-          ? 'Only one trajectory replay is retained. Close analysis and use Review candidate records for the other sealed cases.'
+          ? 'Only trajectory packages that pass the replay-link verification can open. Close analysis and use Review candidate records to see availability.'
           : 'I could not route that question safely. Choose one of the verified evidence questions above.',
       );
       return;

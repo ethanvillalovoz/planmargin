@@ -34,6 +34,8 @@ compile_commands.json
 node_modules/
 .angular/
 coverage/
+web/debugger/playwright-report/
+web/debugger/test-results/
 
 # Editors and operating systems
 .DS_Store

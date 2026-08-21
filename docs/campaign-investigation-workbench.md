@@ -30,20 +30,26 @@ documentation rather than occupying a product navigation section.
    tested-planner decisions without collapsing them into one score.
 8. Proposal-specific deterministic analysis cites the selected sealed record
    hash and never sends private evidence to Gemini.
-9. Report export produces self-contained HTML and a SHA-256 digest over the
+9. When a separately versioned replay package exists, the proposal opens that
+   exact replay only after the API verifies the campaign-record link, fresh
+   trajectory hashes, outcomes, interaction metrics, and collection seal.
+10. Report export produces self-contained HTML and a SHA-256 digest over the
    selected privacy-reduced evidence payload.
-10. **Sensors** keeps the WOD Perception camera, 3DGS, and LiDAR study
+11. **Sensors** keeps the WOD Perception camera, 3DGS, and LiDAR study
     available as a secondary, explicitly independent workspace.
 
 ## Replay boundary
 
 The 3,200 campaign proposal records contain parameters, support evidence,
 objectives, constraints, deterministic outcomes, cost, and validated trajectory
-hashes. They do not contain the underlying controller trajectories. The UI
-therefore does not synthesize or imply per-proposal playback. It links to the
-single sealed Stage-0 replay package whose complete trajectories actually
-exist. Producing additional campaign replays requires a separately versioned
-re-execution/export protocol and cannot be inferred from hashes.
+hashes. They did not retain the underlying controller trajectories.
+
+The separately versioned replay-retention protocol closes that gap only for
+explicitly re-executed proposals. The current local workspace contains one:
+the closest-to-failure campaign proposal. Its fresh trajectories reproduce the
+sealed v1 hashes and metrics. The UI labels all other proposal records as not
+retained and never substitutes the Stage-0 replay. Additional proposals must be
+re-executed and verified; a trajectory cannot be inferred from its hash.
 
 ## Research follow-ups
 

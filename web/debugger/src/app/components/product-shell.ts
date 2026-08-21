@@ -14,6 +14,7 @@ import {
   phosphorStack,
 } from '@ng-icons/phosphor-icons/regular';
 import { InvestigationReportService } from '../investigation-report.service';
+import { DebuggerStore } from '../debugger.store';
 import { LocalEvidenceService } from '../local-evidence.service';
 import { InvestigationProposal, LocalProposal, ProposalAnalysis } from '../local-evidence.types';
 import { SimulatorStore } from '../simulator.store';
@@ -453,15 +454,37 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                         }
                       </ol>
                       <div class="replay-boundary">
-                        <strong>Proposal trajectory is not stored.</strong>
-                        <p>
-                          The campaign retained validated trajectory hashes, outcomes, objectives,
-                          and cost—not a replay package for every proposal. The available Stage-0
-                          replay is separate evidence.
-                        </p>
-                        <button type="button" (click)="openReplay()">
-                          <ng-icon name="phosphorPlay" size="15" />Open available sealed replay
-                        </button>
+                        @if (proposal.trajectoryAvailable && proposal.replayRunId) {
+                          <strong>Exact proposal replay retained and verified.</strong>
+                          <p>
+                            This proposal was re-executed from its authorized WOMD source. Fresh
+                            tested and reference trajectories match the sealed v1 trajectory hashes.
+                          </p>
+                          <button
+                            type="button"
+                            (click)="openProposalReplay(proposal.replayRunId)"
+                            [disabled]="replayLoading()"
+                          >
+                            <ng-icon name="phosphorPlay" size="15" />{{
+                              replayLoading()
+                                ? 'Loading exact replay…'
+                                : 'Open exact proposal replay'
+                            }}
+                          </button>
+                        } @else {
+                          <strong>Proposal trajectory is not retained.</strong>
+                          <p>
+                            The frozen campaign kept trajectory hashes, outcomes, objectives, and
+                            cost. It did not keep every full path. The available Stage-0 replay is
+                            separate evidence and is labeled as such.
+                          </p>
+                          <button type="button" (click)="openReplay()">
+                            <ng-icon name="phosphorPlay" size="15" />Open separate Stage-0 replay
+                          </button>
+                        }
+                        @if (replayError()) {
+                          <span class="replay-error" role="alert">{{ replayError() }}</span>
+                        }
                       </div>
                       <div class="detail-actions">
                         <button
@@ -680,7 +703,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .primary {
       border-color: var(--tested);
       background: var(--tested);
-      color: #fff;
+      color: #071218;
     }
     .investigation-page {
       min-height: calc(100dvh - 64px);
@@ -1267,6 +1290,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       min-height: 34px;
       padding: 0 0.7rem;
     }
+    .replay-error {
+      display: block;
+      margin-top: 0.6rem;
+      color: #ff9b8c;
+      font-size: 0.61rem;
+    }
     .detail-actions {
       display: flex;
       gap: 0.5rem;
@@ -1473,6 +1502,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
 export class ProductShell {
   protected readonly local = inject(LocalEvidenceService);
   protected readonly simulator = inject(SimulatorStore);
+  private readonly debuggerStore = inject(DebuggerStore);
   private readonly reports = inject(InvestigationReportService);
   readonly connectRequested = output<void>();
   protected readonly view = signal<ProductView>('replay');
@@ -1483,6 +1513,8 @@ export class ProductShell {
   protected readonly analysis = signal<ProposalAnalysis | undefined>(undefined);
   protected readonly analysisLoading = signal(false);
   protected readonly analysisError = signal<string | undefined>(undefined);
+  protected readonly replayLoading = signal(false);
+  protected readonly replayError = signal<string | undefined>(undefined);
 
   protected readonly rankedProposals = computed(() => {
     const proposals = this.local.proposals().filter((proposal) => {
@@ -1711,6 +1743,18 @@ export class ProductShell {
   protected openReplay(): void {
     this.simulator.selectMode('planning');
     this.view.set('replay');
+  }
+  protected async openProposalReplay(runId: string): Promise<void> {
+    this.replayLoading.set(true);
+    this.replayError.set(undefined);
+    try {
+      this.debuggerStore.loadRun(await this.local.loadRun(runId));
+      this.openReplay();
+    } catch (error: unknown) {
+      this.replayError.set(error instanceof Error ? error.message : 'Exact replay failed to load');
+    } finally {
+      this.replayLoading.set(false);
+    }
   }
   protected async groundAnalysis(): Promise<void> {
     this.analysisLoading.set(true);

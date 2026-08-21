@@ -29,6 +29,7 @@ from planmargin import interaction_metrics
 from planmargin import matched_campaign
 from planmargin import matched_coordinator
 from planmargin import matched_search
+from planmargin import proposal_replay
 from planmargin import random_search
 from planmargin import rollout_record
 from planmargin import speed_mutation
@@ -39,6 +40,7 @@ DEFAULT_CAMPAIGN = Path("artifacts/search-comparison/natural-development-v1")
 DEFAULT_ROLLOUTS = Path("artifacts/stage-0/rollout-records.json")
 DEFAULT_GAUSSIAN = Path("artifacts/gaussian-field/feasibility")
 DEFAULT_SENSOR_SCENE = Path("artifacts/sensor-scene/waymo-front")
+DEFAULT_PROPOSAL_REPLAYS = Path("artifacts/proposal-replays/natural-development-v1")
 DEFAULT_ORIGINS = ("http://127.0.0.1:4200", "http://localhost:4200")
 SESSION_COOKIE_NAME = "planmargin_local_session"
 MAX_JSON_BYTES = 128 * 1024 * 1024
@@ -138,6 +140,8 @@ class ProposalEvidence(EvidenceModel):
     tested_mutated_failure: bool | None
     reference_mutated_success: bool | None
     physical_rollouts: int
+    trajectory_available: bool
+    replay_run_id: str | None
 
 
 class InvestigationProposalEvidence(ProposalEvidence):
@@ -185,7 +189,8 @@ class ProposalAnalysisEvidence(EvidenceModel):
     explanation: str
     facts: list[ProposalAnalysisFactEvidence]
     record_sha256: str
-    trajectory_available: Literal[False]
+    trajectory_available: bool
+    replay_run_id: str | None
 
 
 class RunSummaryEvidence(EvidenceModel):
@@ -442,7 +447,14 @@ class EvidenceRepository:
         self.collection: dict[str, Any] | None = None
         self._cell_by_id: dict[str, tuple[str, int, int]] = {}
         self._run_id: str | None = None
+        self._proposal_replays: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
+        self._proposal_run_by_identity: dict[tuple[str, int, int, int], str] = {}
         self._investigation_cache: dict[str, Any] | None = None
+
+    @property
+    def proposal_replay_count(self) -> int:
+        """Return the number of fully validated exact proposal replays."""
+        return len(self._proposal_replays)
 
     def open(self) -> None:
         """Verify every source before accepting requests."""
@@ -497,6 +509,122 @@ class EvidenceRepository:
                 "ORDER BY selection_order, seed, method"
             )
         }
+        self._load_proposal_replays()
+
+    def _load_proposal_replays(self) -> None:
+        """Load optional, separately versioned, proposal-linked replay packages."""
+        root = self.paths.root / DEFAULT_PROPOSAL_REPLAYS
+        self._proposal_replays = {}
+        self._proposal_run_by_identity = {}
+        if not root.exists():
+            return
+        if root.is_symlink() or not root.is_dir():
+            raise ValueError("Proposal replay root must be a regular local directory")
+        _confine_artifact(root.resolve(), self.paths.root)
+        for manifest_path in sorted(root.glob("*/*/*/*/manifest.json")):
+            if manifest_path.is_symlink() or not manifest_path.is_file():
+                raise ValueError("Proposal replay manifest must be a regular local file")
+            _confine_artifact(manifest_path.resolve(), self.paths.root)
+            manifest = _json_object(manifest_path)
+            expected = {
+                "$schema": proposal_replay.MANIFEST_SCHEMA_URI,
+                "schema_version": proposal_replay.SCHEMA_VERSION,
+                "record_type": proposal_replay.MANIFEST_TYPE,
+                "collection_file": "collection.json",
+                "campaign_id": matched_campaign.CAMPAIGN_ID,
+            }
+            if any(manifest.get(key) != value for key, value in expected.items()):
+                raise ValueError("Proposal replay manifest contract is invalid")
+            random_search._validate_seal(
+                manifest, "manifest_sha256", path=manifest_path
+            )
+            if set(manifest.get("verification", {}).values()) != {True}:
+                raise ValueError("Proposal replay verification is incomplete")
+            if manifest.get("privacy") != {
+                "contains_restricted_scenario_derivatives": True,
+                "unrestricted_export": False,
+            }:
+                raise ValueError("Proposal replay privacy contract is invalid")
+            identity = manifest.get("identity")
+            if not isinstance(identity, dict) or identity.get("track") != "natural":
+                raise ValueError("Proposal replay identity is invalid")
+            try:
+                method = identity["method"]
+                seed = identity["seed"]
+                selection_order = identity["selection_order"]
+                proposal_number = identity["proposal_number"]
+                cell = matched_coordinator.CellConfig(
+                    method, "natural", seed, selection_order
+                )
+            except (KeyError, TypeError, ValueError) as error:
+                raise ValueError("Proposal replay identity is invalid") from error
+            if not isinstance(proposal_number, int) or not 1 <= proposal_number <= 32:
+                raise ValueError("Proposal replay number is invalid")
+            expected_directory = proposal_replay.replay_directory(
+                root,
+                method=method,
+                seed=seed,
+                selection_order=selection_order,
+                proposal_number=proposal_number,
+            )
+            if manifest_path.parent.resolve() != expected_directory.resolve():
+                raise ValueError("Proposal replay path does not match its identity")
+            collection_path = manifest_path.parent / "collection.json"
+            if collection_path.is_symlink() or not collection_path.is_file():
+                raise ValueError("Proposal replay collection must be a regular local file")
+            if random_search._file_sha256(collection_path) != manifest.get(
+                "collection_sha256"
+            ):
+                raise ValueError("Proposal replay collection hash mismatch")
+            collection = _json_object(collection_path)
+            errors = rollout_record.validate_collection(collection)
+            if errors or collection.get("collection_status") != "complete":
+                raise ValueError("Invalid proposal replay collection: " + "; ".join(errors))
+            campaign_directory = matched_campaign.cell_output_dir(
+                self.paths.campaign, cell
+            )
+            run_manifest_path = campaign_directory / "run-manifest.json"
+            run_manifest_raw = _json_object(run_manifest_path)
+            fingerprint = run_manifest_raw.get("configuration_fingerprint")
+            if not isinstance(fingerprint, str) or len(fingerprint) != 64:
+                raise ValueError("Proposal replay cell fingerprint is invalid")
+            matched_coordinator._load_sealed_record(
+                run_manifest_path,
+                record_type=matched_coordinator.MANIFEST_TYPE,
+                seal_field="manifest_sha256",
+                fingerprint=fingerprint,
+                cell=cell,
+                proposal_index=None,
+            )
+            if manifest.get("cell_configuration_fingerprint") != fingerprint:
+                raise ValueError("Proposal replay identifies a different campaign cell")
+            proposal_path = (
+                campaign_directory
+                / "proposals"
+                / f"proposal-{proposal_number - 1:04d}.json"
+            )
+            proposal = matched_coordinator._load_sealed_record(
+                proposal_path,
+                record_type=matched_coordinator.PROPOSAL_TYPE,
+                seal_field="record_sha256",
+                fingerprint=fingerprint,
+                cell=cell,
+                proposal_index=proposal_number - 1,
+            )
+            if proposal["attempt"]["status"] != "accepted":
+                raise ValueError("Proposal replay links to a rejected proposal")
+            if proposal.get("record_sha256") != manifest.get(
+                "proposal_record_sha256"
+            ):
+                raise ValueError("Proposal replay does not link to its sealed proposal")
+            key = (method, seed, selection_order, proposal_number)
+            if key in self._proposal_run_by_identity:
+                raise ValueError("Duplicate proposal replay identity")
+            run_id = _opaque_id(
+                "run", manifest["proposal_record_sha256"], collection["comparison_key"]
+            )
+            self._proposal_replays[run_id] = (manifest, collection)
+            self._proposal_run_by_identity[key] = run_id
 
     def _load_campaign_headers(self) -> tuple[dict[str, Any], dict[str, Any]]:
         """Validate the sealed campaign identity linked by the analytics build."""
@@ -717,7 +845,13 @@ class EvidenceRepository:
                 cell=cell,
                 proposal_index=index,
             )
-            result.append(self._proposal_projection(record, index + 1))
+            projection = self._proposal_projection(record, index + 1)
+            replay_run_id = self._proposal_run_by_identity.get(
+                (method, seed, selection_order, index + 1)
+            )
+            projection["trajectory_available"] = replay_run_id is not None
+            projection["replay_run_id"] = replay_run_id
+            result.append(projection)
         return result
 
     @staticmethod
@@ -912,6 +1046,9 @@ class EvidenceRepository:
         parameters = proposal["mutation_parameters"]
         onset = float(parameters["braking_onset_offset_s"])
         speed = float(parameters["speed_multiplier"])
+        replay_run_id = self._proposal_run_by_identity.get(
+            (method, seed, selection_order, proposal_number)
+        )
         return {
             "evidence_mode": "real_local_redacted",
             "analysis_mode": "deterministic_proposal_specific",
@@ -967,12 +1104,13 @@ class EvidenceRepository:
                 },
             ],
             "record_sha256": record["record_sha256"],
-            "trajectory_available": False,
+            "trajectory_available": replay_run_id is not None,
+            "replay_run_id": replay_run_id,
         }
 
     def runs(self) -> list[dict[str, Any]]:
         collection = self._require(self.collection)
-        return [
+        result = [
             {
                 "run_id": self._require(self._run_id),
                 "label": "Private local Stage 0 controller comparison",
@@ -984,11 +1122,44 @@ class EvidenceRepository:
                 ],
             }
         ]
+        for run_id, (manifest, replay) in sorted(self._proposal_replays.items()):
+            identity = manifest["identity"]
+            result.append(
+                {
+                    "run_id": run_id,
+                    "label": (
+                        f"Exact campaign replay · {identity['method']} · "
+                        f"S{identity['selection_order']} · seed {identity['seed']} · "
+                        f"proposal {identity['proposal_number']}"
+                    ),
+                    "evidence_mode": "real_local_redacted",
+                    "collection_status": replay["collection_status"],
+                    "record_count": len(replay["records"]),
+                    "policy_specific_avoidable_failure": replay[
+                        "comparison_finding"
+                    ].get("policy_specific_avoidable_failure", False),
+                }
+            )
+        return result
 
     def run(self, run_id: str) -> dict[str, Any]:
-        if run_id != self._run_id:
-            raise KeyError(run_id)
-        collection = self._require(self.collection)
+        if run_id == self._run_id:
+            collection = self._require(self.collection)
+            scenario_label = "Private local WOMD comparison"
+            hypothesis_id = "stage-0-counterfactual"
+            hypothesis_label = "Validated Stage 0 counterfactual"
+        else:
+            replay = self._proposal_replays.get(run_id)
+            if replay is None:
+                raise KeyError(run_id)
+            manifest, collection = replay
+            identity = manifest["identity"]
+            scenario_label = (
+                f"Campaign replay · {identity['method']} · "
+                f"S{identity['selection_order']} · seed {identity['seed']}"
+            )
+            hypothesis_id = "proposal-linked-counterfactual"
+            hypothesis_label = f"Exact retained proposal {identity['proposal_number']}"
         records = {
             (record["variant"], record["controller_role"]): record
             for record in collection["records"]
@@ -1013,7 +1184,7 @@ class EvidenceRepository:
         return {
             "schema_version": "planmargin.local-evidence.v1",
             "run_id": run_id,
-            "scenario_label": "Private local WOMD comparison",
+            "scenario_label": scenario_label,
             "evidence_mode": "real_local_redacted",
             "synthetic": False,
             "step_seconds": speed_mutation.TIME_INTERVAL_S,
@@ -1032,8 +1203,8 @@ class EvidenceRepository:
                 "counterfactual": self._points(lead),
             },
             "hypothesis": {
-                "id": "stage-0-counterfactual",
-                "label": "Validated Stage 0 counterfactual",
+                "id": hypothesis_id,
+                "label": hypothesis_label,
                 "mutation_type": mutation["mutation_type"],
                 "mutation_parameters": mutation["parameters"],
                 "onset_seconds": onset,

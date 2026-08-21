@@ -174,8 +174,13 @@ import { SensorViewport } from './sensor-viewport';
                   ><small>1 replay</small>
                 </div>
                 <p class="replay-boundary">
-                  This is the only retained trajectory replay. Campaign proposals keep sealed
-                  outcomes and metrics, but their full paths were not stored.
+                  @if (debuggerStore.selectedHypothesis().id === 'proposal-linked-counterfactual') {
+                    Exact campaign link verified: this fresh re-execution matches the selected
+                    proposal's sealed trajectory hashes, outcomes, and interaction metrics.
+                  } @else {
+                    This Stage-0 replay is separate from campaign proposals. Most proposal records
+                    retain sealed hashes, outcomes, and metrics without their full paths.
+                  }
                 </p>
                 <button type="button" class="review-records" (click)="evidenceRequested.emit()">
                   Review candidate records

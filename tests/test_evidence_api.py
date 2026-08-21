@@ -345,6 +345,8 @@ def test_authenticated_routes_are_redacted_and_not_cached(
                 "tested_mutated_failure": None,
                 "reference_mutated_success": None,
                 "physical_rollouts": 0,
+                "trajectory_available": False,
+                "replay_run_id": None,
             }
         ]
         if cell_id == CELL_ID
@@ -387,6 +389,7 @@ def test_authenticated_routes_are_redacted_and_not_cached(
             "facts": [{"label": "method", "value": "bayesian"}],
             "record_sha256": "a" * 64,
             "trajectory_available": False,
+            "replay_run_id": None,
         },
     )
     app = evidence_api.create_app(root=app_root, token=TOKEN)
