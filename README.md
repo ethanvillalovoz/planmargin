@@ -13,6 +13,13 @@ specific to the tested planner.
 It is an engineering workbench, not a benchmark leaderboard or a Waymo Driver
 evaluation.
 
+![PlanMargin public workbench showing its licensed-evidence boundary](docs/assets/planmargin-public-workbench.jpg)
+
+The public clone opens as the real product shell and fails closed when licensed
+records are absent. An authorized local launch unlocks the exact proposal replay,
+candidate investigation, recorded camera annotations, LiDAR, and 3D Gaussian
+reconstruction without uploading those artifacts.
+
 ## The engineering workflow
 
 1. **Search** bounded scenario changes with matched random and constrained

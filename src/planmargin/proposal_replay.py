@@ -32,6 +32,20 @@ MANIFEST_SCHEMA_URI = f"{SCHEMA_BASE_URI}/proposal-replay-manifest-v1.schema.jso
 MANIFEST_TYPE = "planmargin.proposal_replay_manifest"
 DEFAULT_CAMPAIGN = Path("artifacts/search-comparison/natural-development-v1")
 DEFAULT_OUTPUT_ROOT = Path("artifacts/proposal-replays/natural-development-v1")
+VERIFICATION_KEYS = frozenset(
+    {
+        "proposal_record_seal_verified",
+        "source_scenario_identity_verified",
+        "mutation_parameters_match",
+        "scenario_validation_matches",
+        "original_tested_matches_v1",
+        "original_reference_matches_v1",
+        "counterfactual_tested_matches_v1",
+        "counterfactual_reference_matches_v1",
+        "all_replays_deterministic",
+        "inputs_unchanged_by_replay",
+    }
+)
 
 
 def replay_directory(
@@ -110,6 +124,134 @@ def _scientific_controller_view(record: dict[str, Any]) -> dict[str, Any]:
             "interaction_metrics",
         )
     }
+
+
+def _scientific_evidence(
+    original_checkpoint: dict[str, Any], proposal: dict[str, Any]
+) -> dict[str, Any]:
+    """Return the sealed campaign facts an exact replay must reproduce."""
+    return {
+        "scenario": copy.deepcopy(proposal["scenario"]),
+        "mutation": copy.deepcopy(proposal["attempt"]["mutation"]),
+        "scenario_validation": copy.deepcopy(
+            proposal["attempt"]["scenario_validation"]
+        ),
+        "controllers": {
+            "original": {
+                role: _scientific_controller_view(record)
+                for role, record in original_checkpoint["original"][
+                    "controllers"
+                ].items()
+            },
+            "counterfactual": {
+                role: _scientific_controller_view(record)
+                for role, record in proposal["attempt"]["controllers"].items()
+            },
+        },
+        "finding": copy.deepcopy(proposal.get("finding") or {}),
+    }
+
+
+def _scientific_evidence_sha256(
+    original_checkpoint: dict[str, Any], proposal: dict[str, Any]
+) -> str:
+    return random_search._content_sha256(
+        _scientific_evidence(original_checkpoint, proposal)
+    )
+
+
+def validate_retained_collection(
+    *,
+    manifest: dict[str, Any],
+    collection: dict[str, Any],
+    original_checkpoint: dict[str, Any],
+    proposal: dict[str, Any],
+) -> None:
+    """Prove that one retained collection is the linked sealed proposal replay."""
+    verification = manifest.get("verification")
+    if (
+        not isinstance(verification, dict)
+        or set(verification) != VERIFICATION_KEYS
+        or any(value is not True for value in verification.values())
+    ):
+        raise ValueError("Proposal replay verification contract is incomplete")
+    expected_evidence = _scientific_evidence(original_checkpoint, proposal)
+    if manifest.get("scientific_evidence_sha256") != random_search._content_sha256(
+        expected_evidence
+    ):
+        raise ValueError("Proposal replay scientific evidence does not match campaign")
+
+    raw_records = collection.get("records")
+    if (
+        not isinstance(raw_records, list)
+        or len(raw_records) != 4
+        or any(not isinstance(record, dict) for record in raw_records)
+    ):
+        raise ValueError("Proposal replay must contain exactly four controller records")
+    records = {
+        (record.get("variant"), record.get("controller_role")): record
+        for record in raw_records
+    }
+    expected_keys = {
+        (variant, role)
+        for variant in ("original", "counterfactual")
+        for role in ("tested", "reference")
+    }
+    if set(records) != expected_keys:
+        raise ValueError("Proposal replay must contain exactly four controller records")
+    if collection.get("comparison_finding") != expected_evidence["finding"]:
+        raise ValueError("Proposal replay finding does not match campaign")
+
+    expected_scenario = expected_evidence["scenario"]
+    scenario_fields = (
+        "scenario_id",
+        "source_shard",
+        "record_index",
+        "selection_order",
+        "mutated_object_index",
+    )
+    expected_mutation = expected_evidence["mutation"]
+    for (variant, role), record in records.items():
+        scenario = record.get("scenario")
+        if not isinstance(scenario, dict) or any(
+            scenario.get(field) != expected_scenario.get(field)
+            for field in scenario_fields
+        ):
+            raise ValueError("Proposal replay scenario does not match campaign")
+        mutation = record.get("mutation")
+        if not isinstance(mutation, dict) or any(
+            mutation.get(field) != value for field, value in expected_mutation.items()
+        ):
+            raise ValueError("Proposal replay mutation does not match campaign")
+        if mutation.get("applied") is not (variant == "counterfactual"):
+            raise ValueError("Proposal replay mutation application is inconsistent")
+        if record.get("acceptance_gate_results") != verification:
+            raise ValueError(
+                "Proposal replay record verification gates are inconsistent"
+            )
+
+        expected_controller = expected_evidence["controllers"][variant][role]
+        reproducibility = record.get("reproducibility")
+        if not isinstance(reproducibility, dict) or any(
+            reproducibility.get(field) != expected_controller[field]
+            for field in ("outputs_identical", "trajectory_sha256")
+        ):
+            raise ValueError("Proposal replay trajectory does not match campaign")
+        if record.get("outcome") != expected_controller["outcome"]:
+            raise ValueError("Proposal replay outcome does not match campaign")
+
+        original_hash = expected_evidence["controllers"]["original"][role][
+            "trajectory_sha256"
+        ]
+        changed_from_original = (
+            None
+            if variant == "original"
+            else reproducibility["trajectory_sha256"] != original_hash
+        )
+        if changed_from_original != expected_controller["changed_from_original"]:
+            raise ValueError(
+                "Proposal replay trajectory change does not match campaign"
+            )
 
 
 def _run_variant(
@@ -317,6 +459,17 @@ def export(
         raise ValueError(
             "proposal replay output must remain under artifacts/proposal-replays"
         )
+    directory = replay_directory(
+        output_root,
+        method=method,
+        seed=seed,
+        selection_order=selection_order,
+        proposal_number=proposal_number,
+    )
+    if directory.exists():
+        raise FileExistsError(
+            "Proposal replay already exists; remove it deliberately before re-exporting"
+        )
     cell, run_manifest, original, proposal = _load_campaign_records(
         campaign_root,
         method=method,
@@ -333,17 +486,6 @@ def export(
         proposal=proposal,
     )
     collection = rollout_record.export_collection(source)
-    directory = replay_directory(
-        output_root,
-        method=method,
-        seed=seed,
-        selection_order=selection_order,
-        proposal_number=proposal_number,
-    )
-    if directory.exists():
-        raise FileExistsError(
-            "Proposal replay already exists; remove it deliberately before re-exporting"
-        )
     directory.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(
         prefix=f".{directory.name}.", dir=directory.parent
@@ -368,6 +510,9 @@ def export(
                 "cell_configuration_fingerprint": run_manifest[
                     "configuration_fingerprint"
                 ],
+                "scientific_evidence_sha256": _scientific_evidence_sha256(
+                    original, proposal
+                ),
                 "collection_file": "collection.json",
                 "collection_sha256": random_search._file_sha256(collection_path),
                 "verification": checks,

@@ -523,7 +523,9 @@ class EvidenceRepository:
         _confine_artifact(root.resolve(), self.paths.root)
         for manifest_path in sorted(root.glob("*/*/*/*/manifest.json")):
             if manifest_path.is_symlink() or not manifest_path.is_file():
-                raise ValueError("Proposal replay manifest must be a regular local file")
+                raise ValueError(
+                    "Proposal replay manifest must be a regular local file"
+                )
             _confine_artifact(manifest_path.resolve(), self.paths.root)
             manifest = _json_object(manifest_path)
             expected = {
@@ -538,8 +540,6 @@ class EvidenceRepository:
             random_search._validate_seal(
                 manifest, "manifest_sha256", path=manifest_path
             )
-            if set(manifest.get("verification", {}).values()) != {True}:
-                raise ValueError("Proposal replay verification is incomplete")
             if manifest.get("privacy") != {
                 "contains_restricted_scenario_derivatives": True,
                 "unrestricted_export": False,
@@ -571,7 +571,9 @@ class EvidenceRepository:
                 raise ValueError("Proposal replay path does not match its identity")
             collection_path = manifest_path.parent / "collection.json"
             if collection_path.is_symlink() or not collection_path.is_file():
-                raise ValueError("Proposal replay collection must be a regular local file")
+                raise ValueError(
+                    "Proposal replay collection must be a regular local file"
+                )
             if random_search._file_sha256(collection_path) != manifest.get(
                 "collection_sha256"
             ):
@@ -579,7 +581,9 @@ class EvidenceRepository:
             collection = _json_object(collection_path)
             errors = rollout_record.validate_collection(collection)
             if errors or collection.get("collection_status") != "complete":
-                raise ValueError("Invalid proposal replay collection: " + "; ".join(errors))
+                raise ValueError(
+                    "Invalid proposal replay collection: " + "; ".join(errors)
+                )
             campaign_directory = matched_campaign.cell_output_dir(
                 self.paths.campaign, cell
             )
@@ -613,10 +617,22 @@ class EvidenceRepository:
             )
             if proposal["attempt"]["status"] != "accepted":
                 raise ValueError("Proposal replay links to a rejected proposal")
-            if proposal.get("record_sha256") != manifest.get(
-                "proposal_record_sha256"
-            ):
+            if proposal.get("record_sha256") != manifest.get("proposal_record_sha256"):
                 raise ValueError("Proposal replay does not link to its sealed proposal")
+            original = matched_coordinator._load_sealed_record(
+                campaign_directory / "original.json",
+                record_type=matched_coordinator.ORIGINAL_TYPE,
+                seal_field="checkpoint_sha256",
+                fingerprint=fingerprint,
+                cell=cell,
+                proposal_index=None,
+            )
+            proposal_replay.validate_retained_collection(
+                manifest=manifest,
+                collection=collection,
+                original_checkpoint=original,
+                proposal=proposal,
+            )
             key = (method, seed, selection_order, proposal_number)
             if key in self._proposal_run_by_identity:
                 raise ValueError("Duplicate proposal replay identity")

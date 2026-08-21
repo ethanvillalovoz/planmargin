@@ -15,6 +15,100 @@ from planmargin import random_search
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _controller_record(trajectory: str, *, success: bool, changed: bool | None) -> dict:
+    return {
+        "outputs_identical": True,
+        "trajectory_sha256": trajectory,
+        "changed_from_original": changed,
+        "outcome": {"success": success},
+        "interaction_metrics": {
+            "jointly_valid_states": 80,
+            "minimum_signed_separation_m": 1.25,
+            "minimum_longitudinal_ttc_s": 2.5,
+        },
+        "first_rollout_seconds": 1.0,
+        "second_rollout_seconds": 0.9,
+    }
+
+
+def _retained_replay_fixture() -> tuple[dict, dict, dict, dict]:
+    original = {
+        "original": {
+            "controllers": {
+                "tested": _controller_record("a" * 64, success=True, changed=None),
+                "reference": _controller_record("b" * 64, success=True, changed=None),
+            }
+        }
+    }
+    mutation = {
+        "schema_version": 1,
+        "mutation_type": "lead_braking",
+        "parameters": {
+            "braking_onset_offset_s": -0.2,
+            "speed_multiplier": 0.8,
+        },
+        "accepted": True,
+        "metrics": {"maximum_deceleration_mps2": 3.0},
+        "rejection_reasons": [],
+    }
+    scenario = {
+        "scenario_id": "private-scenario",
+        "source_shard": "private-shard",
+        "shard_index": 1,
+        "record_index": 2,
+        "selection_order": 3,
+        "mutated_object_index": 4,
+    }
+    proposal = {
+        "scenario": scenario,
+        "proposal": {"parameters": mutation["parameters"]},
+        "attempt": {
+            "mutation": mutation,
+            "scenario_validation": {"accepted": True, "trajectory_sha256": "e" * 64},
+            "controllers": {
+                "tested": _controller_record("c" * 64, success=False, changed=True),
+                "reference": _controller_record("d" * 64, success=True, changed=True),
+            },
+        },
+        "finding": {"policy_specific_avoidable_failure": True},
+    }
+    verification = {key: True for key in proposal_replay.VERIFICATION_KEYS}
+    manifest = {
+        "verification": verification,
+        "scientific_evidence_sha256": proposal_replay._scientific_evidence_sha256(
+            original, proposal
+        ),
+    }
+    records = []
+    for variant, controllers in (
+        ("original", original["original"]["controllers"]),
+        ("counterfactual", proposal["attempt"]["controllers"]),
+    ):
+        for role, controller in controllers.items():
+            records.append(
+                {
+                    "variant": variant,
+                    "controller_role": role,
+                    "scenario": copy.deepcopy(scenario),
+                    "mutation": {
+                        "applied": variant == "counterfactual",
+                        **copy.deepcopy(mutation),
+                    },
+                    "outcome": copy.deepcopy(controller["outcome"]),
+                    "reproducibility": {
+                        "outputs_identical": controller["outputs_identical"],
+                        "trajectory_sha256": controller["trajectory_sha256"],
+                    },
+                    "acceptance_gate_results": copy.deepcopy(verification),
+                }
+            )
+    collection = {
+        "records": records,
+        "comparison_finding": copy.deepcopy(proposal["finding"]),
+    }
+    return manifest, collection, original, proposal
+
+
 def test_replay_directory_is_stable_and_one_based() -> None:
     assert proposal_replay.replay_directory(
         Path("artifacts/proposal-replays/natural-development-v1"),
@@ -83,9 +177,10 @@ def test_replay_manifest_schema_requires_restricted_export_boundary() -> None:
         },
         "proposal_record_sha256": "a" * 64,
         "cell_configuration_fingerprint": "b" * 64,
+        "scientific_evidence_sha256": "d" * 64,
         "collection_file": "collection.json",
         "collection_sha256": "c" * 64,
-        "verification": {"trajectory_hashes_match": True},
+        "verification": {key: True for key in proposal_replay.VERIFICATION_KEYS},
         "privacy": {
             "contains_restricted_scenario_derivatives": True,
             "unrestricted_export": False,
@@ -99,6 +194,113 @@ def test_replay_manifest_schema_requires_restricted_export_boundary() -> None:
         jsonschema.validate(invalid, schema)
 
 
+def test_replay_manifest_schema_rejects_arbitrary_verification_key() -> None:
+    schema = json.loads(
+        (ROOT / "schemas/proposal-replay-manifest-v1.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    manifest, _, _, _ = _retained_replay_fixture()
+    payload = {
+        "$schema": proposal_replay.MANIFEST_SCHEMA_URI,
+        "schema_version": proposal_replay.SCHEMA_VERSION,
+        "record_type": proposal_replay.MANIFEST_TYPE,
+        "campaign_id": "natural-development-v1",
+        "identity": {
+            "method": "random",
+            "track": "natural",
+            "seed": 1,
+            "selection_order": 3,
+            "proposal_number": 12,
+        },
+        "proposal_record_sha256": "a" * 64,
+        "cell_configuration_fingerprint": "b" * 64,
+        "scientific_evidence_sha256": manifest["scientific_evidence_sha256"],
+        "collection_file": "collection.json",
+        "collection_sha256": "c" * 64,
+        "verification": {"unrelated_claim": True},
+        "privacy": {
+            "contains_restricted_scenario_derivatives": True,
+            "unrestricted_export": False,
+        },
+    }
+    sealed = random_search._seal_record(payload, "manifest_sha256")
+
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(sealed, schema)
+
+
+def test_retained_collection_matches_every_sealed_campaign_fact() -> None:
+    manifest, collection, original, proposal = _retained_replay_fixture()
+
+    proposal_replay.validate_retained_collection(
+        manifest=manifest,
+        collection=collection,
+        original_checkpoint=original,
+        proposal=proposal,
+    )
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    (
+        (
+            lambda manifest, collection: manifest.update(
+                verification={"unrelated": True}
+            ),
+            "verification",
+        ),
+        (
+            lambda manifest, collection: manifest.update(
+                scientific_evidence_sha256="0" * 64
+            ),
+            "scientific evidence",
+        ),
+        (
+            lambda manifest, collection: collection["records"][0]["scenario"].update(
+                record_index=99
+            ),
+            "scenario",
+        ),
+        (
+            lambda manifest, collection: collection["records"][0]["mutation"][
+                "parameters"
+            ].update(speed_multiplier=0.7),
+            "mutation",
+        ),
+        (
+            lambda manifest, collection: collection["records"][2][
+                "reproducibility"
+            ].update(trajectory_sha256="f" * 64),
+            "trajectory",
+        ),
+        (
+            lambda manifest, collection: collection["records"][2].update(
+                outcome={"success": True}
+            ),
+            "outcome",
+        ),
+        (
+            lambda manifest, collection: collection["records"].append(
+                copy.deepcopy(collection["records"][0])
+            ),
+            "exactly four",
+        ),
+    ),
+)
+def test_retained_collection_rejects_semantic_mismatch(mutation, message: str) -> None:
+    manifest, collection, original, proposal = _retained_replay_fixture()
+    mutation(manifest, collection)
+
+    with pytest.raises(ValueError, match=message):
+        proposal_replay.validate_retained_collection(
+            manifest=manifest,
+            collection=collection,
+            original_checkpoint=original,
+            proposal=proposal,
+        )
+
+
 def test_export_installs_complete_package_atomically(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -109,8 +311,18 @@ def test_export_installs_complete_package_atomically(
         lambda *args, **kwargs: (
             object(),
             {"configuration_fingerprint": "b" * 64},
-            {},
-            {"attempt": {"status": "accepted"}, "record_sha256": "a" * 64},
+            {"original": {"controllers": {}}},
+            {
+                "scenario": {},
+                "attempt": {
+                    "status": "accepted",
+                    "mutation": {},
+                    "scenario_validation": {},
+                    "controllers": {},
+                },
+                "finding": {},
+                "record_sha256": "a" * 64,
+            },
         ),
     )
     monkeypatch.setattr(
@@ -158,8 +370,18 @@ def test_export_does_not_leave_partial_package_when_manifest_write_fails(
         lambda *args, **kwargs: (
             object(),
             {"configuration_fingerprint": "b" * 64},
-            {},
-            {"attempt": {"status": "accepted"}, "record_sha256": "a" * 64},
+            {"original": {"controllers": {}}},
+            {
+                "scenario": {},
+                "attempt": {
+                    "status": "accepted",
+                    "mutation": {},
+                    "scenario_validation": {},
+                    "controllers": {},
+                },
+                "finding": {},
+                "record_sha256": "a" * 64,
+            },
         ),
     )
     monkeypatch.setattr(

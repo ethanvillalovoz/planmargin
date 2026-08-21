@@ -76,7 +76,7 @@ point field, or reconstruction when licensed evidence is absent.
 ## Verification performed on this revision
 
 - Ruff: all checks passed.
-- Python: 231 tests passed. The two warnings are upstream PyTorch deprecation
+- Python: 240 tests passed. The two warnings are upstream PyTorch deprecation
   notices.
 - Angular/Vitest: 49 tests passed across launch authentication, local evidence,
   parsers, stores, navigation, reports, and workbench behavior.
