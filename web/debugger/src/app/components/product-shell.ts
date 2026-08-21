@@ -510,6 +510,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
           class="embedded-simulator"
           [embedded]="true"
           (connectRequested)="connectRequested.emit()"
+          (evidenceRequested)="setView('investigate')"
         />
       }
     </div>

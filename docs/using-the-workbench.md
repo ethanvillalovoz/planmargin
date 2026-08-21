@@ -29,6 +29,9 @@ The default surface is the planning workbench.
    metrics update with the scene.
 4. Read signed separation and time-to-collision together. A raw value is never
    the decision by itself; the frozen gates define the decision.
+5. Use **Review candidate records** to move from the retained trajectory to the
+   ranked campaign proposals. Those records preserve outcomes and metrics, but
+   not additional full paths.
 
 This replay is the retained Stage-0 controller comparison. It is not silently
 substituted for a campaign proposal whose full trajectory was not stored.
@@ -84,6 +87,10 @@ The default path is offline. The optional Gemini adapter receives only
 allowlisted public aggregates after the user explicitly confirms provider use;
 restricted scenario records are never sent.
 
+The panel lists every supported question. Free text is routed only when it
+clearly matches one of those evidence topics; an unrelated or unsupported path
+request is rejected instead of being silently mapped to a different answer.
+
 To use Gemini inside the workbench, create a key for a Google AI Studio project
 that has no billing account attached, then launch with:
 
@@ -96,8 +103,10 @@ uv run --frozen --extra assistant planmargin-workbench \
 ```
 
 The assistant header must read **Gemini analysis** and show
-`gemini-3.1-flash-lite · public aggregate only`. If the free quota is exhausted,
-the request fails rather than switching providers or enabling billing.
+`gemini-3.1-flash-lite · public aggregate only`. If Gemini times out or rejects
+the request, the same verified facts are explained by the deterministic local
+provider and the panel labels that fallback. PlanMargin never enables billing
+or sends a second hosted request automatically.
 
 ## Troubleshooting
 

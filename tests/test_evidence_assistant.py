@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -157,6 +158,18 @@ def test_gemini_receives_only_public_tool_packet_and_structured_schema() -> None
     sent = json.loads(packet["input"])
     assert sent["query_id"] == "method_comparison"
     assert set(sent) == {"facts", "instruction", "limitations", "query_id"}
+    hosted_context = json.dumps(
+        {
+            "facts": [fact["qualitative_statement"] for fact in sent["facts"]],
+            "limitations": sent["limitations"],
+        }
+    )
+    assert not re.search(r"\d", hosted_context)
+    assert not re.search(
+        r"\b(?:safe|safety|production|held[ -]?out|causality)\b",
+        hosted_context,
+        flags=re.IGNORECASE,
+    )
     assert response["privacy"]["provider_input_scope"] == (
         "public_aggregate_tool_result_only"
     )
@@ -202,6 +215,15 @@ def test_gemini_rejects_unknown_citations_and_safety_claims() -> None:
             {
                 "summary": "The method retained more eligible proposals.",
                 "interpretation": "This proves the planner is safer.",
+                "cited_fact_ids": ["method.valid_rate_delta"],
+                "limitation": "The evidence is bounded.",
+            },
+            "claim boundary",
+        ),
+        (
+            {
+                "summary": "The constrained method showed superior efficiency.",
+                "interpretation": "The eligible-proposal yield was higher.",
                 "cited_fact_ids": ["method.valid_rate_delta"],
                 "limitation": "The evidence is bounded.",
             },

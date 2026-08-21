@@ -98,10 +98,11 @@ interface FallbackScene {
   `,
   styles: `
     :host {
-      position: relative;
+      position: absolute;
+      inset: 0;
       display: block;
       min-width: 0;
-      min-height: 280px;
+      min-height: 0;
       overflow: hidden;
       background: var(--app-bg);
     }
@@ -269,9 +270,6 @@ interface FallbackScene {
       border-left: 1px solid #aab9c4;
     }
     @media (max-width: 760px) {
-      :host {
-        min-height: 440px;
-      }
       .legend {
         right: 0.65rem;
         bottom: 4.6rem;

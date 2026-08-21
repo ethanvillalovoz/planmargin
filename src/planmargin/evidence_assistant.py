@@ -715,6 +715,73 @@ class OfflineProvider:
         return draft.model_copy(update={"cited_fact_ids": cited})
 
 
+def _qualitative_provider_text(value: str) -> str:
+    """Remove metric and claim-boundary tokens from hosted-provider context."""
+    text = re.sub(r"\bH1\b", "the efficiency hypothesis", value, flags=re.IGNORECASE)
+    text = re.sub(r"\bH2\b", "the minimality hypothesis", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bH3\b", "the validity hypothesis", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"(?<![A-Za-z])[-+]?\d[\d,]*(?:\.\d+)?%?",
+        "[quantitative value omitted]",
+        text,
+    )
+    text = re.sub(
+        r"\b(?:percent(?:age)?(?: points?)?|zero)\b",
+        lambda match: "rate" if match.group(0).lower() != "zero" else "no",
+        text,
+        flags=re.IGNORECASE,
+    )
+    replacements = (
+        (r"\bproduction Waymo Driver\b", "deployed driving system"),
+        (r"\bWaymo Driver\b", "deployed driving system"),
+        (r"\bproduction\b", "deployed"),
+        (r"\bheld[ -]?out\b", "independent"),
+        (r"\bsafet(?:y|ies)\b", "deployment readiness"),
+        (r"\bcaus(?:al|ality|ation)\w*\b", "explanatory"),
+    )
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return " ".join(text.split())
+
+
+HOSTED_FACT_TEXT = {
+    "campaign.cells": "The campaign completed every frozen experiment cell.",
+    "campaign.proposals": "The campaign evaluated its frozen proposal budget.",
+    "campaign.rollouts": "The campaign completed the recorded physical rollout workload.",
+    "campaign.steps": "The campaign completed the recorded Waymax rollout workload.",
+    "campaign.findings": "Neither search method produced a qualifying finding.",
+    "campaign.held_out": "No independent comparative campaign was run.",
+    "method.random_valid_rate": "Random search produced eligible proposals at a lower rate than constrained Bayesian search.",
+    "method.bayesian_valid_rate": "Constrained Bayesian search produced eligible proposals at a higher rate than random search.",
+    "method.valid_rate_delta": "The constrained Bayesian eligible-proposal yield was higher than the random-search yield.",
+    "method.random_hypervolume": "Random search had the lower final feasible hypervolume.",
+    "method.bayesian_hypervolume": "Constrained Bayesian search had the higher final feasible hypervolume.",
+    "method.findings": "Neither search method produced a qualifying finding.",
+    "method.h3": "The validity hypothesis was supported.",
+    "hypothesis.h1": "The efficiency hypothesis was untestable because neither method found a qualifying failure.",
+    "hypothesis.h2": "The minimality hypothesis was untestable because there were no paired qualifying findings.",
+    "hypothesis.h3": "The validity hypothesis was supported under its predeclared noninferiority rule.",
+    "hypothesis.no_censoring": "Budget-censored discovery costs were not reported as observed costs.",
+    "claim.supported": "The evidence supports a narrower claim of higher eligible-proposal yield for constrained Bayesian search in development.",
+    "claim.not_discovery": "The evidence does not establish better failure discovery or smaller failure-inducing mutations.",
+    "claim.not_waymo": "PlanMargin does not evaluate a deployed driving system.",
+    "claim.development": "The result covers a selected development subset and is not a broad statistical generalization.",
+    "claim.held_out": "No independent comparative evaluation was run.",
+    "beam.records": "The verified integration consumed its recorded WOMD source set.",
+    "beam.events": "The pipeline retained its accepted feature events.",
+    "beam.shards": "The run consumed every sealed source-shard checkpoint.",
+    "beam.partitions": "Every deterministic partition was reconciled.",
+    "beam.integrity": "Every published pipeline integrity gate passed.",
+    "beam.held_out": "The pipeline did not open independent evaluation data.",
+}
+
+
+def _qualitative_provider_fact(fact: Fact) -> str:
+    return HOSTED_FACT_TEXT.get(
+        fact.fact_id, _qualitative_provider_text(fact.statement)
+    )
+
+
 class GeminiProvider:
     """Optional hosted explainer that receives public aggregate facts only."""
 
@@ -745,17 +812,28 @@ class GeminiProvider:
             raise ValueError("Gemini mode accepts public aggregate evidence only")
         prompt_packet = {
             "instruction": (
-                "Explain only the supplied PlanMargin evidence. Do not calculate, "
-                "copy, or spell out numeric metrics; those render separately. Do not "
-                "claim safety, production Waymo Driver evaluation, held-out evidence, "
-                "or causality. Cite only supplied fact IDs."
+                "Explain only the supplied PlanMargin evidence. The fact text is "
+                "intentionally qualitative. Never write digits, number words, "
+                "percentages, ratios, counts, version labels, or hypothesis codes with "
+                "digits. Never use the words safe, safety, production, held-out, or "
+                "causality. Do not call either method superior, more efficient, or an "
+                "outperformer. A method comparison may say only that eligible-proposal "
+                "yield or feasible hypervolume was higher, and must preserve the fact "
+                "that neither method found a qualifying failure. Cite only supplied "
+                "fact IDs."
             ),
             "query_id": result.query_id,
             "facts": [
-                {"fact_id": fact.fact_id, "statement": fact.statement}
+                {
+                    "fact_id": fact.fact_id,
+                    "qualitative_statement": _qualitative_provider_fact(fact),
+                }
                 for fact in result.facts
             ],
-            "limitations": list(result.limitations),
+            "limitations": [
+                _qualitative_provider_text(limitation)
+                for limitation in result.limitations
+            ],
         }
         client = self._client_factory(self._api_key)
         try:
@@ -785,11 +863,18 @@ class GeminiProvider:
 def _google_client(api_key: str) -> Any:
     try:
         from google import genai
+        from google.genai import types
     except ImportError as error:
         raise RuntimeError(
             "Gemini support is not installed; run `uv sync --extra assistant`"
         ) from error
-    return genai.Client(api_key=api_key, http_options={"timeout": 20_000})
+    return genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(
+            timeout=20_000,
+            retry_options=types.HttpRetryOptions(attempts=1),
+        ),
+    )
 
 
 def _validate_provider_draft(draft: ExplanationDraft, result: ToolResult) -> None:
@@ -812,7 +897,8 @@ def _validate_hosted_claims(draft: ExplanationDraft) -> None:
     generated = " ".join((draft.summary, draft.interpretation, draft.limitation))
     prohibited_words = (
         r"\b(?:safe|safer|safest|safety|certif\w*|guarantee\w*|production|"
-        r"held[ -]?out|caus\w*)\b"
+        r"held[ -]?out|caus\w*|superior|outperform\w*)\b|"
+        r"\b(?:more efficient|better efficiency)\b"
     )
     number_words = (
         r"\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|"
