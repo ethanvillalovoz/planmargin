@@ -14,8 +14,9 @@ uv run --frozen planmargin-workbench
 
 The launcher starts the local API and web application, then opens an ephemeral
 authenticated URL. The token is consumed into memory and removed from the
-address bar. Use the manual connection dialog only when the browser was opened
-separately.
+address bar, then retained only in same-tab session storage so a refresh can
+reconnect automatically. Disconnecting or closing the tab clears it. Use the
+manual connection dialog only when the browser was opened separately.
 
 ## Workbench: inspect the retained planning replay
 

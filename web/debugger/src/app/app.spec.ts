@@ -40,4 +40,25 @@ describe('launch session bootstrap', () => {
     expect(window.location.hash).toBe('');
     TestBed.resetTestingModule();
   });
+
+  it('restores the same-tab session after a page refresh', async () => {
+    const initialRun = { runId: 'run_restored' };
+    const connect = vi.fn().mockResolvedValue({ initialRun });
+    const restoreSessionToken = vi.fn().mockReturnValue('fedcba9876543210');
+    const loadRun = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: LocalEvidenceService, useValue: { connect, restoreSessionToken } },
+        { provide: DebuggerStore, useValue: { loadRun } },
+      ],
+    });
+    window.history.replaceState(null, '', '/');
+
+    TestBed.runInInjectionContext(() => new App());
+
+    await vi.waitFor(() => expect(loadRun).toHaveBeenCalledWith(initialRun));
+    expect(restoreSessionToken).toHaveBeenCalledOnce();
+    expect(connect).toHaveBeenCalledWith('fedcba9876543210');
+    TestBed.resetTestingModule();
+  });
 });

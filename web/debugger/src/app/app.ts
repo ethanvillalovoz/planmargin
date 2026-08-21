@@ -38,7 +38,7 @@ export class App {
   private returnFocus: HTMLElement | undefined;
 
   constructor() {
-    void this.connectFromLaunchUrl();
+    void this.connectFromAvailableSession();
   }
 
   protected openLocalEvidence(): void {
@@ -52,8 +52,9 @@ export class App {
     queueMicrotask(() => this.returnFocus?.focus());
   }
 
-  private async connectFromLaunchUrl(): Promise<void> {
-    const token = consumeLaunchToken(window.location, window.history);
+  private async connectFromAvailableSession(): Promise<void> {
+    const token =
+      consumeLaunchToken(window.location, window.history) ?? this.local.restoreSessionToken();
     if (token === undefined) return;
     try {
       const evidence = await this.local.connect(token);
