@@ -2,6 +2,8 @@
 
 **Audit date:** August 21, 2026
 
+**Release:** v1.0.0
+
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
 
@@ -41,10 +43,11 @@ point field, or reconstruction when licensed evidence is absent.
 ## Claim and synchronization boundaries
 
 - The frozen 3,200 campaign proposals retain hashes, outcomes, objectives, and
-  costs, but did not originally retain full trajectories. One separately
-  versioned package now re-executes and verifies the top-ranked proposal. The
-  UI labels all remaining proposals as not retained and never substitutes the
-  separate Stage-0 trajectory.
+  costs, but did not originally retain full trajectories. Five separately
+  versioned packages now re-execute and verify selected margin-, edit-, and
+  support-ranked proposals across both search methods. The UI labels all
+  remaining proposals as not retained and never substitutes the separate
+  Stage-0 trajectory.
 - The WOD Perception segment and WOMD planning replay are separate authorized
   records. Camera, 3DGS, and LiDAR are synchronized to one another where stated;
   they are not claimed to be registered to the planning replay.

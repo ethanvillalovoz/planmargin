@@ -45,11 +45,20 @@ objectives, constraints, deterministic outcomes, cost, and validated trajectory
 hashes. They did not retain the underlying controller trajectories.
 
 The separately versioned replay-retention protocol closes that gap only for
-explicitly re-executed proposals. The current local workspace contains one:
-the closest-to-failure campaign proposal. Its fresh trajectories reproduce the
-sealed v1 hashes and metrics. The UI labels all other proposal records as not
-retained and never substitutes the Stage-0 replay. Additional proposals must be
-re-executed and verified; a trajectory cannot be inferred from its hash.
+explicitly re-executed proposals. The current local workspace contains five:
+
+| Selection purpose | Method | Seed | Scenario order | Proposal |
+| --- | --- | ---: | ---: | ---: |
+| Overall closest margin | random | 1 | 8 | 12 |
+| Closest Bayesian margin | bayesian | 0 | 8 | 29 |
+| Small-edit near-margin case | bayesian | 3 | 8 | 20 |
+| Strongest-support Bayesian case | bayesian | 2 | 2 | 27 |
+| Strongest-support random case | random | 3 | 2 | 20 |
+
+Their fresh trajectories reproduce the sealed v1 hashes and metrics. The UI
+labels all other proposal records as not retained and never substitutes the
+Stage-0 replay. Additional proposals must be re-executed and verified; a
+trajectory cannot be inferred from its hash.
 
 ## Research follow-ups
 

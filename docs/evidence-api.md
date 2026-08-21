@@ -32,8 +32,9 @@ Perception inputs. It is a visual product surface, not campaign evidence.
 Campaign proposal records contain hashes but not replayable trajectories. The
 API represents proposal evidence as a trajectory only when a separate replay
 package reproduces the sealed hashes, outcomes, interaction metrics, and
-scenario validation. The current workspace has one such package. Stage-0
-remains separate and is never substituted for an unretained proposal.
+scenario validation. The current workspace has five such packages selected for
+margin, edit-size, support, and method diversity. Stage-0 remains separate and
+is never substituted for an unretained proposal.
 
 At startup, the API requires the complete ten-check replay-verification set,
 recomputes the scientific-evidence digest from the sealed original and proposal
