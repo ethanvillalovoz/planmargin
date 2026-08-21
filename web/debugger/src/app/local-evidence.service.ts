@@ -32,12 +32,11 @@ import {
   SensorSceneSummary,
 } from './product-evidence.types';
 
-const API_ROOT = 'http://127.0.0.1:8765/api/v1';
-const SESSION_TOKEN_KEY = 'planmargin.local-evidence-token.v1';
+const API_HOST = window.location.hostname === 'localhost' ? 'localhost' : '127.0.0.1';
+const API_ROOT = `http://${API_HOST}:8765/api/v1`;
 
 @Injectable({ providedIn: 'root' })
 export class LocalEvidenceService {
-  private token: string | undefined;
   private requestGeneration = 0;
   readonly state = signal<LocalConnectionState>('disconnected');
   readonly error = signal<string | undefined>(undefined);
@@ -57,63 +56,39 @@ export class LocalEvidenceService {
     this.proposals().find((proposal) => proposal.proposalNumber === this.selectedProposalNumber()),
   );
 
-  restoreSessionToken(): string | undefined {
-    try {
-      const token = window.sessionStorage.getItem(SESSION_TOKEN_KEY)?.trim();
-      if (token && token.length >= 16) return token;
-      window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
-    } catch {
-      // The workbench remains usable through the manual connection dialog when
-      // browser session storage is unavailable.
-    }
-    return undefined;
-  }
-
   async connect(candidateToken: string): Promise<LocalEvidenceSnapshot> {
     const token = candidateToken.trim();
     if (token.length < 16) throw new Error('Token must contain at least 16 characters');
     const generation = ++this.requestGeneration;
     this.state.set('connecting');
     this.error.set(undefined);
-    this.token = undefined;
     try {
-      const healthValue = await this.get('/health', token);
-      const health = this.record(healthValue, 'health');
-      if (health['status'] !== 'ready' || health['evidence_mode'] !== 'real_local_redacted') {
-        throw new Error('Local API did not return the expected readiness contract');
-      }
-      const campaignValue = await this.get('/campaign', token);
-      const methodsValue = await this.get('/methods', token);
-      const hypothesesValue = await this.get('/hypotheses', token);
-      const cellsValue = await this.get('/cells', token);
-      const runsValue = await this.get('/runs', token);
-      const campaign = parseCampaign(campaignValue, methodsValue, hypothesesValue, cellsValue);
-      const runs = parseRunSummaries(runsValue);
-      const [initialRunValue, investigationValue] = await Promise.all([
-        this.get(`/runs/${encodeURIComponent(runs[0].runId)}`, token),
-        this.get('/investigation', token),
-      ]);
-      const initialRun = parseLocalRun(initialRunValue);
-      const investigation = parseCampaignInvestigation(investigationValue);
-      if (generation !== this.requestGeneration) throw new Error('Connection was superseded');
-      this.token = token;
-      this.campaign.set(campaign.campaign);
-      this.cells.set(campaign.cells);
-      this.runs.set(runs);
-      this.investigation.set(investigation);
-      this.state.set('connected');
-      await this.selectCell(campaign.cells[0].cellId);
-      this.rememberSessionToken(token);
-      return snapshot(campaign.campaign, campaign.cells, runs, initialRun);
+      await this.startBrowserSession(token);
+      return await this.loadSnapshot(generation);
     } catch (error: unknown) {
       if (generation === this.requestGeneration) {
-        this.token = undefined;
-        if (error instanceof Error && error.message === 'The local evidence token was rejected') {
-          this.forgetSessionToken();
-        }
         this.state.set('error');
         this.error.set(this.safeMessage(error));
       }
+      throw error;
+    }
+  }
+
+  async restoreBrowserSession(): Promise<LocalEvidenceSnapshot | undefined> {
+    const generation = ++this.requestGeneration;
+    this.state.set('connecting');
+    this.error.set(undefined);
+    try {
+      return await this.loadSnapshot(generation);
+    } catch (error: unknown) {
+      if (generation !== this.requestGeneration) throw error;
+      if (error instanceof Error && error.message === 'The local evidence token was rejected') {
+        this.state.set('disconnected');
+        this.error.set(undefined);
+        return undefined;
+      }
+      this.state.set('error');
+      this.error.set(this.safeMessage(error));
       throw error;
     }
   }
@@ -224,10 +199,9 @@ export class LocalEvidenceService {
     return { summary, bytes };
   }
 
-  disconnect(): void {
+  async disconnect(): Promise<void> {
     this.requestGeneration++;
-    this.token = undefined;
-    this.forgetSessionToken();
+    const logout = this.endBrowserSession();
     this.state.set('disconnected');
     this.error.set(undefined);
     this.campaign.set(CAMPAIGN_EVIDENCE);
@@ -238,13 +212,14 @@ export class LocalEvidenceService {
     this.selectedCellId.set(undefined);
     this.selectedProposalNumber.set(undefined);
     this.loadingProposals.set(false);
+    await logout;
   }
 
   private authorizedGet(path: string): Promise<unknown> {
-    if (this.token === undefined || this.state() !== 'connected') {
+    if (this.state() !== 'connected') {
       return Promise.reject(new Error('Local evidence is not connected'));
     }
-    return this.get(path, this.token);
+    return this.get(path);
   }
 
   private async authorizedBytes(path: string): Promise<ArrayBuffer> {
@@ -252,28 +227,29 @@ export class LocalEvidenceService {
     return response.arrayBuffer();
   }
 
-  private async get(path: string, token: string): Promise<unknown> {
+  private async get(path: string, token?: string): Promise<unknown> {
     const response = await this.fetchWithToken(path, token);
     return response.json() as Promise<unknown>;
   }
 
   private authorizedFetch(path: string, signal?: AbortSignal): Promise<Response> {
-    if (this.token === undefined || this.state() !== 'connected') {
+    if (this.state() !== 'connected') {
       return Promise.reject(new Error('Local evidence is not connected'));
     }
-    return this.fetchWithToken(path, this.token, signal);
+    return this.fetchWithToken(path, undefined, signal);
   }
 
   private async fetchWithToken(
     path: string,
-    token: string,
+    token?: string,
     signal?: AbortSignal,
   ): Promise<Response> {
+    const headers = token === undefined ? undefined : { 'X-PlanMargin-Token': token };
     const response = await fetch(`${API_ROOT}${path}`, {
       method: 'GET',
-      headers: { 'X-PlanMargin-Token': token },
+      headers,
       cache: 'no-store',
-      credentials: 'omit',
+      credentials: 'include',
       mode: 'cors',
       referrerPolicy: 'no-referrer',
       signal,
@@ -283,6 +259,64 @@ export class LocalEvidenceService {
       throw new Error(`Local evidence request failed (${response.status})`);
     }
     return response;
+  }
+
+  private async startBrowserSession(token: string): Promise<void> {
+    const response = await fetch(`${API_ROOT}/session`, {
+      method: 'POST',
+      headers: { 'X-PlanMargin-Token': token },
+      cache: 'no-store',
+      credentials: 'include',
+      mode: 'cors',
+      referrerPolicy: 'no-referrer',
+    });
+    if (!response.ok) {
+      if (response.status === 401) throw new Error('The local evidence token was rejected');
+      throw new Error(`Local evidence request failed (${response.status})`);
+    }
+  }
+
+  private async endBrowserSession(): Promise<void> {
+    try {
+      await fetch(`${API_ROOT}/session/logout`, {
+        method: 'POST',
+        cache: 'no-store',
+        credentials: 'include',
+        mode: 'cors',
+        referrerPolicy: 'no-referrer',
+      });
+    } catch {
+      // Local state is still cleared immediately if the loopback API has stopped.
+    }
+  }
+
+  private async loadSnapshot(generation: number): Promise<LocalEvidenceSnapshot> {
+    const healthValue = await this.get('/health');
+    const health = this.record(healthValue, 'health');
+    if (health['status'] !== 'ready' || health['evidence_mode'] !== 'real_local_redacted') {
+      throw new Error('Local API did not return the expected readiness contract');
+    }
+    const campaignValue = await this.get('/campaign');
+    const methodsValue = await this.get('/methods');
+    const hypothesesValue = await this.get('/hypotheses');
+    const cellsValue = await this.get('/cells');
+    const runsValue = await this.get('/runs');
+    const campaign = parseCampaign(campaignValue, methodsValue, hypothesesValue, cellsValue);
+    const runs = parseRunSummaries(runsValue);
+    const [initialRunValue, investigationValue] = await Promise.all([
+      this.get(`/runs/${encodeURIComponent(runs[0].runId)}`),
+      this.get('/investigation'),
+    ]);
+    const initialRun = parseLocalRun(initialRunValue);
+    const investigation = parseCampaignInvestigation(investigationValue);
+    if (generation !== this.requestGeneration) throw new Error('Connection was superseded');
+    this.campaign.set(campaign.campaign);
+    this.cells.set(campaign.cells);
+    this.runs.set(runs);
+    this.investigation.set(investigation);
+    this.state.set('connected');
+    await this.selectCell(campaign.cells[0].cellId);
+    return snapshot(campaign.campaign, campaign.cells, runs, initialRun);
   }
 
   private record(value: unknown, path: string): Record<string, unknown> {
@@ -298,22 +332,5 @@ export class LocalEvidenceService {
       return 'Local API unavailable. Start it on 127.0.0.1:8765 and retry.';
     }
     return error.message.replaceAll(API_ROOT, 'local API');
-  }
-
-  private rememberSessionToken(token: string): void {
-    try {
-      window.sessionStorage.setItem(SESSION_TOKEN_KEY, token);
-    } catch {
-      // The verified in-memory connection remains valid even when the browser
-      // refuses per-tab session storage.
-    }
-  }
-
-  private forgetSessionToken(): void {
-    try {
-      window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
-    } catch {
-      // There is nothing else to clear when session storage is unavailable.
-    }
   }
 }

@@ -53,12 +53,15 @@ export class App {
   }
 
   private async connectFromAvailableSession(): Promise<void> {
-    const token =
-      consumeLaunchToken(window.location, window.history) ?? this.local.restoreSessionToken();
-    if (token === undefined) return;
+    const token = consumeLaunchToken(window.location, window.history);
+    const recover =
+      token === undefined
+        ? () => this.local.restoreBrowserSession()
+        : () => this.local.connect(token);
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const evidence = await this.local.connect(token);
+        const evidence = await recover();
+        if (evidence === undefined) return;
         this.debuggerStore.loadRun(evidence.initialRun);
         return;
       } catch (error: unknown) {

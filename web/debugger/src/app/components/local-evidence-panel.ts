@@ -29,7 +29,7 @@ import { SimulatorStore } from '../simulator.store';
           <div>
             <h1 id="local-evidence-title">Local evidence</h1>
             <p id="local-evidence-boundary">
-              Verified records stay on this machine. Access is retained only for this browser tab.
+              Verified records stay on this machine. Access lasts only for this browser session.
             </p>
           </div>
           <button
@@ -255,13 +255,13 @@ export class LocalEvidencePanel {
     }
   }
 
-  protected disconnect(): void {
+  protected async disconnect(): Promise<void> {
     // Return to the recorded camera before removing the planning run. This
     // prevents planning-only computed state from reading a run that no longer
     // exists during the same change-detection turn.
     this.simulator.selectMode('camera');
-    this.local.disconnect();
     this.store.clearRun();
+    await this.local.disconnect();
   }
 
   @HostListener('document:keydown', ['$event'])

@@ -107,9 +107,10 @@ browser, bounded assistant, and camera/3DGS/LiDAR workspace. It sends no writes
 and, in the default offline-assistant mode, makes no outbound request beyond
 this fixed loopback API.
 
-The token is kept in a private in-memory field and same-tab session storage
-after bootstrap so refresh can reconnect. It is removed by explicit disconnect
-or when the tab closes. It is never persisted to durable local storage, the
+The token is exchanged for an HttpOnly, `SameSite=Strict` browser-session
+cookie after bootstrap so refreshes and fresh local tabs can reconnect. It is
+removed by explicit disconnect or when the browser session closes. It is never
+available to JavaScript or persisted to durable local storage, the
 post-bootstrap address, a file, or an export. Privacy-reduced proposal reports
 can be exported as self-contained
 HTML, but never include the token, local paths, raw trajectories, or restricted
@@ -118,13 +119,15 @@ Camera, clears local planning evidence and sensor access, and leaves the
 workspace explicitly empty; no demo or synthetic run is substituted.
 
 Automatic bootstrap retries one transient loopback connection failure. A
-temporary API interruption does not discard the tab session; an explicit
-authentication rejection does.
+temporary API interruption does not discard the browser session; an explicit
+disconnect does.
 
 ## Fixed endpoints
 
 | Endpoint                                                           | Responsibility                                                                       |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `POST /api/v1/session`                                             | exchange the ephemeral header token for an HttpOnly browser-session cookie           |
+| `POST /api/v1/session/logout`                                      | clear browser-session access                                                         |
 | `GET /api/v1/health`                                               | authenticated readiness and active evidence mode                                     |
 | `GET /api/v1/campaign`                                             | immutable experiment-v1 status, cost, privacy, and whether a held-out comparison ran |
 | `GET /api/v1/methods`                                              | method-level aggregate comparison                                                    |
@@ -153,11 +156,12 @@ made-up finite number for display convenience.
 
 ## Data-free verification
 
-`tests/test_evidence_api.py` exercises token enforcement, explicit CORS,
-trusted hosts, no-cache headers, redaction, opaque lookup behavior, database
-hashes, manifest seals, exact table allowlists, path confinement, and rejected
-tampering. It also covers assistant allowlisting/privacy, both Gaussian binary
-paths, sensor-frame authentication, and missing-asset behavior. Synthetic
+`tests/test_evidence_api.py` exercises token enforcement, HttpOnly session
+bootstrap/logout, explicit credentialed CORS, trusted hosts, no-cache headers,
+redaction, opaque lookup behavior, database hashes, manifest seals, exact table
+allowlists, path confinement, and rejected tampering. It also covers assistant
+allowlisting/privacy, both Gaussian binary paths, sensor-frame authentication,
+and missing-asset behavior. Synthetic
 two-step traces exercise the real-response transformation without WOMD access.
 Existing analytics and rollout-record tests remain the source-contract tests
 below the API.
