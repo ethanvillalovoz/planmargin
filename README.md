@@ -127,8 +127,9 @@ remain untestable because neither method found a qualifying failure. No
 validation-backed comparison was opened after that no-go.
 
 The original Stage-0 planning replay is authentic but separate from the
-campaign. PlanMargin now also retains one separately versioned replay for the
-campaign's closest-to-failure proposal. That replay was re-executed from its
+campaign. PlanMargin now also retains five separately versioned replays: the
+overall and Bayesian closest-margin cases, a small-edit near-margin case, and
+the strongest-support Bayesian and random cases. Each was re-executed from its
 authorized WOMD source, and its tested/reference trajectory hashes, outcomes,
 interaction metrics, scenario validation, and repeated executions match the
 sealed v1 proposal. The other proposal records remain hash-and-metric evidence
