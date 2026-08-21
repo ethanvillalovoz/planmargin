@@ -19,9 +19,18 @@ from planmargin import random_search
 
 
 def test_engineer_facing_metric_labels_preserve_direction() -> None:
-    assert evidence_api.EvidenceRepository._proximity_label(1.0) == "contact boundary reached"
-    assert evidence_api.EvidenceRepository._proximity_label(0.5) == "1.00 m minimum clearance"
-    assert evidence_api.EvidenceRepository._proximity_label(0.2) == "4.00 m minimum clearance"
+    assert (
+        evidence_api.EvidenceRepository._proximity_label(1.0)
+        == "contact boundary reached"
+    )
+    assert (
+        evidence_api.EvidenceRepository._proximity_label(0.5)
+        == "1.00 m minimum clearance"
+    )
+    assert (
+        evidence_api.EvidenceRepository._proximity_label(0.2)
+        == "4.00 m minimum clearance"
+    )
     assert evidence_api.EvidenceRepository._change_size_label(0.9) == (
         "small edit · 10% of bounded range"
     )
@@ -31,6 +40,7 @@ def test_engineer_facing_metric_labels_preserve_direction() -> None:
     assert evidence_api.EvidenceRepository._change_size_label(0.2) == (
         "large edit · 80% of bounded range"
     )
+
 
 TOKEN = "data-free-test-token-000000000"
 CELL_ID = evidence_api._opaque_id("cell", "bayesian", 0, 1)
@@ -539,6 +549,48 @@ def test_real_sensor_scene_is_authenticated_and_streamed(
             client.get("/api/v1/assistant/not-allowlisted", headers=headers).status_code
             == 404
         )
+
+
+def test_gemini_failure_returns_verified_offline_explanation(
+    app_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class FailingGeminiProvider:
+        provider_id = "gemini_public_aggregate"
+        _model = evidence_assistant.DEFAULT_MODEL
+
+        def explain(self, _: evidence_assistant.ToolResult) -> None:
+            raise RuntimeError("hosted provider unavailable")
+
+    monkeypatch.setattr(
+        evidence_api.EvidenceRepository,
+        "open",
+        lambda repository: _seed_repository(repository),
+    )
+    monkeypatch.setattr(
+        evidence_assistant,
+        "GeminiProvider",
+        lambda **_: FailingGeminiProvider(),
+    )
+    app = evidence_api.create_app(
+        root=app_root,
+        token=TOKEN,
+        assistant_provider="gemini",
+        confirm_gemini_free_tier=True,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/v1/assistant/campaign_overview",
+            headers={"X-PlanMargin-Token": TOKEN},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["provider"] == {
+        "id": "offline_deterministic",
+        "model": None,
+        "role": "explanation_only",
+    }
+    assert response.json()["privacy"]["provider_input_scope"] == "none"
 
 
 def test_cors_allows_only_declared_debugger_origin(

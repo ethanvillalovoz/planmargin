@@ -74,9 +74,11 @@ uv run --frozen --extra assistant planmargin-workbench \
 ```
 
 Do not attach billing to the AI Studio project if a hard zero-cost boundary is
-required. The adapter makes one hosted request only after an explicit question,
-does not retry automatically, and sends public aggregate facts rather than local
-scenario records. See the [provider contract](docs/evidence-assistant.md).
+required. The adapter makes at most one hosted request after an explicit
+question, does not retry automatically, and sends public aggregate facts rather
+than local scenario records. A failed hosted request falls back to the labeled,
+verified deterministic explanation. See the
+[provider contract](docs/evidence-assistant.md).
 
 If the doctor reports missing licensed artifacts, use the
 [workspace reproduction runbook](docs/reproducing-the-workspace.md). For the

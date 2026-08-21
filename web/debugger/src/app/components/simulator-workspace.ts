@@ -166,13 +166,20 @@ import { SensorViewport } from './sensor-viewport';
                 <p class="evidence-boundary">
                   WOMD Motion experiment · independent of the Perception scene
                 </p>
-                <label class="field-label">Selected hypothesis</label>
+                <label class="field-label">Replay coverage</label>
                 <div class="select-control">
-                  <span>{{ debuggerStore.selectedHypothesis().label }}</span
-                  ><small>{{
-                    debuggerStore.selectedHypothesis().supported ? 'supported' : 'unsupported'
-                  }}</small>
+                  <span>{{
+                    debuggerStore.selectedHypothesis().label.replace('Validated ', '')
+                  }}</span
+                  ><small>1 replay</small>
                 </div>
+                <p class="replay-boundary">
+                  This is the only retained trajectory replay. Campaign proposals keep sealed
+                  outcomes and metrics, but their full paths were not stored.
+                </p>
+                <button type="button" class="review-records" (click)="evidenceRequested.emit()">
+                  Review candidate records
+                </button>
                 <label class="field-label">Recorded mutation</label>
                 <div class="select-control">
                   <span>{{ mutationLabel() }}</span
@@ -577,11 +584,11 @@ import { SensorViewport } from './sensor-viewport';
       position: absolute;
       z-index: 13;
       top: 1rem;
-      left: 1rem;
+      left: 50%;
       display: grid;
       grid-template-columns: 8px minmax(0, 1fr);
       align-items: start;
-      width: min(520px, calc(100% - 340px));
+      width: min(520px, calc(100% - 590px));
       gap: 0.65rem;
       padding: 0.7rem 0.8rem;
       border: 1px solid rgb(132 155 168 / 27%);
@@ -589,6 +596,7 @@ import { SensorViewport } from './sensor-viewport';
       background: rgb(5 13 20 / 94%);
       box-shadow: 0 12px 34px rgb(0 0 0 / 24%);
       backdrop-filter: blur(18px);
+      transform: translateX(-50%);
     }
     .case-banner > i {
       width: 8px;
@@ -616,7 +624,7 @@ import { SensorViewport } from './sensor-viewport';
     .scenario-controls {
       position: absolute;
       z-index: 12;
-      top: 4.1rem;
+      top: 1rem;
       left: 1rem;
       width: 240px;
       overflow: hidden;
@@ -656,6 +664,27 @@ import { SensorViewport } from './sensor-viewport';
       color: #7f929d;
       font-size: 0.58rem;
       line-height: 1.45;
+    }
+    .replay-boundary {
+      margin: 0.55rem 0.8rem 0;
+      color: #8496a1;
+      font-size: 0.57rem;
+      line-height: 1.45;
+    }
+    .review-records {
+      width: calc(100% - 1.6rem);
+      min-height: 34px;
+      margin: 0.55rem 0.8rem 0;
+      border: 1px solid rgb(53 197 211 / 42%);
+      border-radius: 6px;
+      background: rgb(53 197 211 / 8%);
+      color: #8be8ef;
+      font-size: 0.59rem;
+      font-weight: 700;
+    }
+    .review-records:hover {
+      border-color: #35c5d3;
+      background: rgb(53 197 211 / 14%);
     }
     .field-label {
       display: block;
@@ -1095,6 +1124,7 @@ import { SensorViewport } from './sensor-viewport';
         right: 0.65rem;
         left: 0.65rem;
         width: auto;
+        transform: none;
       }
       .scenario-controls,
       .view-controls {
@@ -1118,6 +1148,7 @@ export class SimulatorWorkspace {
   protected readonly local = inject(LocalEvidenceService);
   protected readonly debuggerStore = inject(DebuggerStore);
   readonly connectRequested = output<void>();
+  readonly evidenceRequested = output<void>();
   readonly embedded = input(false);
 
   protected selectMode(mode: SensorMode): void {

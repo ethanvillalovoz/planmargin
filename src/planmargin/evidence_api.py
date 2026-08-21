@@ -1548,9 +1548,18 @@ def create_app(
         question = ASSISTANT_QUESTIONS.get(query_id)
         if question is None:
             raise HTTPException(status_code=404, detail="Assistant question not found")
-        response = evidence_assistant.answer_question(
-            question, tools=assistant_tools, provider=explainer
-        )
+        try:
+            response = evidence_assistant.answer_question(
+                question, tools=assistant_tools, provider=explainer
+            )
+        except (RuntimeError, ValueError):
+            if assistant_provider != "gemini":
+                raise
+            response = evidence_assistant.answer_question(
+                question,
+                tools=assistant_tools,
+                provider=evidence_assistant.OfflineProvider(),
+            )
         return {key: value for key, value in response.items() if key != "$schema"}
 
     @app.get(

@@ -67,8 +67,10 @@ result. It receives neither the raw question nor local DuckDB rows, campaign
 records, trajectories, scenario IDs, paths, credentials, or private seals.
 Structured output is validated with Pydantic, unknown fact citations are
 rejected, numeric prose is rejected so the model cannot manufacture metrics,
-and claim-certification phrases fail closed. The client makes one request and
-does not retry automatically.
+and claim-certification phrases fail closed. The client makes at most one
+hosted request and does not retry automatically. If that request fails, the API
+returns the verified deterministic explanation with an explicit provider label
+instead of exposing a raw server error.
 
 Google's current documentation identifies `google-genai` as its Python SDK and
 supports JSON-Schema-constrained structured output through the Interactions
