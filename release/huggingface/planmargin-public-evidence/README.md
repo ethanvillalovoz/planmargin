@@ -46,8 +46,8 @@ hf download ethanvillalovoz/planmargin-public-evidence \
 python verify.py
 ```
 
-This staging directory can be uploaded only after the author has completed the
-Waymo distribution review.
+The repository's distribution-policy checks verify that this bundle contains
+aggregate records only and excludes licensed scenario-level artifacts.
 
 ## Source and attribution
 

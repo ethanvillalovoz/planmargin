@@ -3,7 +3,7 @@
   "schema_version": "1.0.0",
   "distribution_scope": "aggregate_only_no_waymo_dataset_files",
   "files": {
-    "README.md": "5cfbedd1d0b93e9cc48a21c06ef43d7ad4c4ecadfaa64ed86d92fc972eab9ee6",
+    "README.md": "89f7f564d9f7d19ef9e17f2720ae8064416e176652e618de075a336779b45c50",
     "data/campaign.jsonl": "af133e08e3aa7816cb6089a5467ba90ab469f52346e3d8536aca3b00fc4d0eae",
     "verify.py": "c0546359477f33738c5c26e5ccd665c8090139e46b9bf40876b9f0100692cd41"
   }

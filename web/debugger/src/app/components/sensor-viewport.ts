@@ -19,6 +19,7 @@ import {
   CameraBoxAnnotation,
   SensorAssetName,
   SensorSceneSummary,
+  SensorTrajectoryOverlay,
 } from '../product-evidence.types';
 import { SimulatorStore } from '../simulator.store';
 
@@ -97,7 +98,30 @@ import { SimulatorStore } from '../simulator.store';
                 <strong>{{ reconstructionViewLabel() }}</strong>
                 <span>{{ reconstructionViewDescription() }}</span>
               </div>
+              <div class="reconstruction-scenes" aria-label="Reconstructed source frame">
+                <button
+                  type="button"
+                  [class.active]="reconstructionAsset() === 'reconstruction'"
+                  (click)="setReconstructionAsset('reconstruction')"
+                >
+                  Frame 020 · moving
+                </button>
+                <button
+                  type="button"
+                  [class.active]="reconstructionAsset() === 'reconstruction_reference'"
+                  (click)="setReconstructionAsset('reconstruction_reference')"
+                >
+                  Frame 099 · stopped
+                </button>
+              </div>
               <div class="reconstruction-views" aria-label="Reconstruction viewpoint">
+                <button
+                  type="button"
+                  [class.active]="reconstructionView() === 'path'"
+                  (click)="setReconstructionView('path')"
+                >
+                  Path
+                </button>
                 <button
                   type="button"
                   [class.active]="reconstructionView() === 'source'"
@@ -120,6 +144,18 @@ import { SimulatorStore } from '../simulator.store';
                   Right
                 </button>
               </div>
+              @if (reconstructionAsset() === 'reconstruction' && trajectory()) {
+                <div class="trajectory-evidence">
+                  <strong>Calibrated 3 s ego paths</strong>
+                  <span class="recorded"><i></i>Recorded WOD pose</span>
+                  <span class="predicted"><i></i>JAX prediction</span>
+                  <span class="baseline"><i></i>Constant velocity</span>
+                  <small>
+                    JAX {{ trajectory()!.metrics.jax_ade_m.toFixed(2) }} m ADE ·
+                    {{ trajectory()!.metrics.jax_fde_m.toFixed(2) }} m FDE
+                  </small>
+                </div>
+              }
             } @else {
               <button type="button" class="reset-view" (click)="resetCamera()">Reset view</button>
             }
@@ -298,10 +334,10 @@ import { SimulatorStore } from '../simulator.store';
     .reconstruction-views {
       position: absolute;
       z-index: 4;
-      top: 4.65rem;
+      top: 8.3rem;
       right: 1rem;
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       padding: 3px;
       border: 1px solid rgb(129 159 174 / 34%);
       border-radius: 8px;
@@ -331,6 +367,20 @@ import { SimulatorStore } from '../simulator.store';
       font-size: 0.57rem;
       line-height: 1.4;
     }
+    .reconstruction-scenes {
+      position: absolute;
+      z-index: 4;
+      top: 4.65rem;
+      right: 1rem;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      padding: 3px;
+      border: 1px solid rgb(129 159 174 / 34%);
+      border-radius: 8px;
+      background: rgb(4 12 18 / 84%);
+      backdrop-filter: blur(10px);
+    }
+    .reconstruction-scenes button,
     .reconstruction-views button {
       min-height: 28px;
       padding: 0 0.65rem;
@@ -341,9 +391,55 @@ import { SimulatorStore } from '../simulator.store';
       font: inherit;
       font-size: 0.62rem;
     }
+    .reconstruction-scenes button.active,
     .reconstruction-views button.active {
       background: #123039;
       color: #55d6e2;
+    }
+    .trajectory-evidence {
+      position: absolute;
+      z-index: 4;
+      left: 1rem;
+      bottom: 1rem;
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      gap: 0.35rem 0.7rem;
+      padding: 0.6rem 0.7rem;
+      border: 1px solid rgb(129 159 174 / 28%);
+      border-radius: 8px;
+      background: rgb(4 12 18 / 86%);
+      backdrop-filter: blur(10px);
+    }
+    .trajectory-evidence strong,
+    .trajectory-evidence small {
+      grid-column: 1 / -1;
+    }
+    .trajectory-evidence strong {
+      color: #e5edef;
+      font-size: 0.65rem;
+    }
+    .trajectory-evidence span {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      color: #a6b5bd;
+      font-size: 0.56rem;
+    }
+    .trajectory-evidence i {
+      width: 14px;
+      height: 3px;
+      border-radius: 2px;
+      background: #56d98a;
+    }
+    .trajectory-evidence .predicted i {
+      background: #55d6e2;
+    }
+    .trajectory-evidence .baseline i {
+      background: #f0a33b;
+    }
+    .trajectory-evidence small {
+      color: #788b96;
+      font-size: 0.54rem;
     }
     .tracked-box {
       position: absolute;
@@ -381,8 +477,12 @@ import { SimulatorStore } from '../simulator.store';
         left: 0.65rem;
       }
       .reset-view,
-      .reconstruction-views {
+      .reconstruction-scenes {
         top: 4rem;
+        right: 0.65rem;
+      }
+      .reconstruction-views {
+        top: 7.65rem;
         right: 0.65rem;
       }
       .reconstruction-explainer {
@@ -402,12 +502,16 @@ export class SensorViewport {
   readonly connectRequested = output<void>();
   protected readonly summary = signal<SensorSceneSummary | undefined>(undefined);
   private readonly annotations = signal<CameraAnnotationBundle | undefined>(undefined);
+  protected readonly trajectory = signal<SensorTrajectoryOverlay | undefined>(undefined);
   protected readonly frameUrl = signal<string | undefined>(undefined);
   protected readonly displayedFrame = signal<number | undefined>(undefined);
   protected readonly frameLoading = signal(false);
   protected readonly splatLoading = signal(false);
   protected readonly splatReady = signal(false);
-  protected readonly reconstructionView = signal<'source' | 'left' | 'right'>('left');
+  protected readonly reconstructionView = signal<'path' | 'source' | 'left' | 'right'>('path');
+  protected readonly reconstructionAsset = signal<'reconstruction' | 'reconstruction_reference'>(
+    'reconstruction',
+  );
   protected readonly error = signal<string | undefined>(undefined);
   protected readonly visibleBoxes = signal<readonly CameraBoxAnnotation[]>([]);
   private readonly surface = viewChild.required<ElementRef<HTMLDivElement>>('surface');
@@ -419,6 +523,7 @@ export class SensorViewport {
   private controls: OrbitControls | undefined;
   private splat: SplatMesh | undefined;
   private scene: THREE.Scene | undefined;
+  private readonly sceneResources: Array<{ dispose(): void }> = [];
   private center: THREE.Vector3 | undefined;
   private distance = 10;
   private frameRequest = 0;
@@ -466,7 +571,7 @@ export class SensorViewport {
         this.disposeSplat();
         void this.loadFrame(frame);
       } else if (mode === 'reconstruction' || mode === 'lidar') {
-        void this.loadSplat(mode === 'reconstruction' ? 'reconstruction' : 'lidar');
+        void this.loadSplat(mode === 'reconstruction' ? this.reconstructionAsset() : 'lidar');
       } else {
         this.disposeSplat();
       }
@@ -499,12 +604,14 @@ export class SensorViewport {
 
   private async initializeScene(): Promise<void> {
     try {
-      const [summary, annotations] = await Promise.all([
+      const [summary, annotations, trajectory] = await Promise.all([
         this.local.sensorScene(),
         this.local.sensorAnnotations(),
+        this.local.sensorTrajectory(),
       ]);
       this.summary.set(summary);
       this.annotations.set(annotations);
+      this.trajectory.set(trajectory);
       this.simulator.configureScene(
         summary.frame_count,
         summary.frame_rate_hz,
@@ -603,11 +710,12 @@ export class SensorViewport {
     const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setClearColor(name === 'reconstruction' ? 0x071018 : 0x05090f, 1);
+    const isReconstruction = name !== 'lidar';
+    renderer.setClearColor(isReconstruction ? 0x071018 : 0x05090f, 1);
     renderer.domElement.setAttribute('aria-hidden', 'true');
     host.replaceChildren(renderer.domElement);
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(name === 'reconstruction' ? 0x071018 : 0x05090f);
+    scene.background = new THREE.Color(isReconstruction ? 0x071018 : 0x05090f);
     const camera = new THREE.PerspectiveCamera(48, 1, 0.01, 1000);
     const spark = new SparkRenderer({ renderer });
     scene.add(spark);
@@ -619,7 +727,7 @@ export class SensorViewport {
       return;
     }
     scene.add(splat);
-    if (name === 'reconstruction') {
+    if (isReconstruction) {
       // SHARP exports OpenCV coordinates: +x right, +y down, +z forward.
       // Three.js cameras look down -z with +y up, so mirror y/z once at the
       // model boundary. The embedded SHARP camera is identity with 1600 px
@@ -644,7 +752,7 @@ export class SensorViewport {
       camera.lookAt(center);
     }
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.copy(name === 'reconstruction' ? reconstructionTarget : center);
+    controls.target.copy(isReconstruction ? reconstructionTarget : center);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.update();
@@ -653,16 +761,23 @@ export class SensorViewport {
       grid.rotation.x = Math.PI / 2;
       grid.position.z = bounds.min.z - 0.25;
       scene.add(grid);
+      this.trackSceneObject(grid);
+    }
+    if (name === 'reconstruction') {
+      const pathGrid = new THREE.GridHelper(12, 24, 0x2d808a, 0x173640);
+      pathGrid.position.set(0, -2.11, -3);
+      scene.add(pathGrid);
+      this.trackSceneObject(pathGrid);
+      this.addTrajectoryOverlay(scene, THREE);
     }
     this.renderer = renderer;
     this.camera = camera;
     this.controls = controls;
     this.splat = splat;
     this.scene = scene;
-    this.center = name === 'reconstruction' ? reconstructionTarget : center;
+    this.center = isReconstruction ? reconstructionTarget : center;
     this.distance = distance;
-    if (name === 'reconstruction')
-      this.applyReconstructionView(camera, controls, reconstructionTarget);
+    if (isReconstruction) this.applyReconstructionView(camera, controls, reconstructionTarget);
     this.resizeSplat();
     renderer.setAnimationLoop(() => {
       controls.update();
@@ -689,11 +804,72 @@ export class SensorViewport {
     this.controls.update();
   }
 
-  protected setReconstructionView(view: 'source' | 'left' | 'right'): void {
+  protected setReconstructionView(view: 'path' | 'source' | 'left' | 'right'): void {
     this.reconstructionView.set(view);
     if (this.camera === undefined || this.controls === undefined || this.center === undefined)
       return;
     this.applyReconstructionView(this.camera, this.controls, this.center);
+  }
+
+  protected setReconstructionAsset(asset: 'reconstruction' | 'reconstruction_reference'): void {
+    if (asset === this.reconstructionAsset()) return;
+    this.reconstructionAsset.set(asset);
+    this.reconstructionView.set(asset === 'reconstruction' ? 'path' : 'source');
+    const source =
+      asset === 'reconstruction'
+        ? this.summary()?.reconstruction
+        : this.summary()?.reconstruction_reference;
+    if (source !== undefined) this.simulator.setSpatialSourceFrame(source.source_frame_index);
+    void this.loadSplat(asset);
+  }
+
+  private addTrajectoryOverlay(scene: THREE.Scene, THREE: typeof import('three')): void {
+    const overlay = this.trajectory();
+    if (overlay === undefined) return;
+    const paths: Array<{
+      points: readonly { x: number; y: number; z: number }[];
+      color: number;
+      radius: number;
+    }> = [
+      { points: overlay.paths.constant_velocity, color: 0xf0a33b, radius: 0.025 },
+      { points: overlay.paths.jax_prediction, color: 0x55d6e2, radius: 0.04 },
+      { points: overlay.paths.recorded, color: 0x56d98a, radius: 0.055 },
+    ];
+    for (const path of paths) {
+      const points = path.points
+        .filter((point) => point.z > 0.25)
+        .map((point) => new THREE.Vector3(point.x, -point.y + 0.14, -point.z));
+      if (points.length < 2) continue;
+      const curve = new THREE.CatmullRomCurve3(points);
+      const geometry = new THREE.TubeGeometry(
+        curve,
+        Math.max(16, points.length * 2),
+        path.radius,
+        7,
+        false,
+      );
+      const material = new THREE.MeshBasicMaterial({ color: path.color });
+      const tube = new THREE.Mesh(geometry, material);
+      scene.add(tube);
+      this.trackSceneObject(tube);
+      const endpoint = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 12, 8),
+        new THREE.MeshBasicMaterial({ color: path.color }),
+      );
+      endpoint.position.copy(points.at(-1)!);
+      scene.add(endpoint);
+      this.trackSceneObject(endpoint);
+    }
+  }
+
+  private trackSceneObject(object: {
+    geometry: { dispose(): void };
+    material: { dispose(): void } | { dispose(): void }[];
+  }): void {
+    this.sceneResources.push(object.geometry);
+    this.sceneResources.push(
+      ...(Array.isArray(object.material) ? object.material : [object.material]),
+    );
   }
 
   private applyReconstructionView(
@@ -703,7 +879,10 @@ export class SensorViewport {
   ): void {
     camera.up.set(0, 1, 0);
     const view = this.reconstructionView();
-    if (view === 'source') {
+    if (view === 'path') {
+      camera.position.set(0, 0.8, 0.5);
+      controls.target.set(0, -1.7, -5);
+    } else if (view === 'source') {
       camera.position.set(0, 0, 0);
       controls.target.set(0, 0, target.z);
     } else {
@@ -720,6 +899,7 @@ export class SensorViewport {
 
   protected reconstructionViewLabel(): string {
     return {
+      path: 'Trajectory inspection view',
       source: 'Source camera match',
       left: 'Left novel viewpoint',
       right: 'Right novel viewpoint',
@@ -727,8 +907,11 @@ export class SensorViewport {
   }
 
   protected reconstructionViewDescription(): string {
+    if (this.reconstructionView() === 'path') {
+      return 'Camera pitched toward the calibrated 3 s paths on the reconstructed road';
+    }
     return this.reconstructionView() === 'source'
-      ? 'Expected to resemble Camera at frame 099'
+      ? `Expected to resemble Camera at frame ${this.simulator.sourceFrameIndex().toString().padStart(3, '0')}`
       : 'A conservative camera move rendered from the same 1.18M reconstructed Gaussians';
   }
 
@@ -744,6 +927,7 @@ export class SensorViewport {
     this.camera.aspect = Math.max(1, host.clientWidth) / Math.max(1, host.clientHeight);
     if (
       this.currentAsset === 'reconstruction' ||
+      this.currentAsset === 'reconstruction_reference' ||
       this.simulator.sensorMode() === 'reconstruction'
     ) {
       const sourceAspect = 1920 / 1280;
@@ -815,6 +999,7 @@ export class SensorViewport {
     this.renderer?.setAnimationLoop(null);
     this.controls?.dispose();
     this.splat?.dispose();
+    for (const resource of this.sceneResources.splice(0)) resource.dispose();
     this.renderer?.dispose();
     this.splatViewport()?.nativeElement.replaceChildren();
     this.renderer = undefined;

@@ -29,8 +29,10 @@ WOD_BUCKET = "gs://waymo_open_dataset_v_2_0_1/training"
 WOD_COMPONENTS = (
     "camera_image",
     "camera_box",
+    "camera_calibration",
     "lidar",
     "lidar_calibration",
+    "vehicle_pose",
 )
 SHARP_REVISION = "1eaa046834b81852261262b41b0919f5c1efdd2e"
 SHARP_ARCHIVE = f"https://github.com/apple/ml-sharp/archive/{SHARP_REVISION}.tar.gz"
@@ -134,7 +136,9 @@ def _sensor_ready(root: Path) -> tuple[bool, str]:
             repository.sensor_frame(frame_index)
         repository.sensor_annotations()
         repository.sensor_asset("reconstruction")
+        repository.sensor_asset("reconstruction_reference")
         repository.sensor_asset("lidar")
+        repository.sensor_trajectory()
     except (FileNotFoundError, NotADirectoryError, ValueError, OSError) as error:
         return False, str(error)
     return (
@@ -174,7 +178,12 @@ def _beam_study_ready(root: Path) -> tuple[bool, str]:
                 continue
             try:
                 manifest = beam_features.audit(output)
-            except (FileNotFoundError, NotADirectoryError, ValueError, OSError) as error:
+            except (
+                FileNotFoundError,
+                NotADirectoryError,
+                ValueError,
+                OSError,
+            ) as error:
                 failures.append(f"{output.name}: {error}")
             else:
                 break
@@ -201,17 +210,22 @@ def _rl_study_ready(root: Path) -> tuple[bool, str]:
     checkpoint_path = directory / "controller.pmzip"
     try:
         if not _regular_files((report_path, checkpoint_path)):
-            raise FileNotFoundError("The RL qualification report or checkpoint is missing")
+            raise FileNotFoundError(
+                "The RL qualification report or checkpoint is missing"
+            )
         report = json.loads(report_path.read_text(encoding="utf-8"))
         schema = json.loads(
-            (root / "schemas" / "rl-controller-training-report-v1.schema.json").read_text(
-                encoding="utf-8"
-            )
+            (
+                root / "schemas" / "rl-controller-training-report-v1.schema.json"
+            ).read_text(encoding="utf-8")
         )
         jsonschema.Draft202012Validator(schema).validate(report)
         sealed = dict(report)
         expected_seal = sealed.pop("report_sha256")
-        if rl_controller._sha256(rl_controller._canonical_json(sealed)) != expected_seal:
+        if (
+            rl_controller._sha256(rl_controller._canonical_json(sealed))
+            != expected_seal
+        ):
             raise ValueError("The RL qualification report seal is invalid")
         checkpoint = checkpoint_path.read_bytes()
         if len(checkpoint) != report["checkpoint_bytes"]:
@@ -244,6 +258,51 @@ def _rl_study_ready(root: Path) -> tuple[bool, str]:
     )
 
 
+def _trajectory_model_ready(root: Path) -> tuple[bool, str]:
+    from planmargin import trajectory_model
+
+    directory = root / trajectory_model.DEFAULT_OUTPUT_DIR
+    report_path = directory / "training-report.json"
+    model_path = directory / "trajectory-model.pmzip"
+    try:
+        if not _regular_files((report_path, model_path)):
+            raise FileNotFoundError("The real WOMD trajectory model is missing")
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        sealed = dict(report)
+        expected_seal = sealed.pop("report_sha256")
+        if (
+            trajectory_model._sha256(trajectory_model._canonical_json(sealed))
+            != expected_seal
+        ):
+            raise ValueError("The trajectory-model report seal is invalid")
+        payload = model_path.read_bytes()
+        if (
+            len(payload) != report["model_bytes"]
+            or trajectory_model._sha256(payload) != report["model_sha256"]
+        ):
+            raise ValueError("The trajectory-model artifact does not match its report")
+        trajectory_model.load_model(payload)
+        if (
+            report.get("synthetic") is not False
+            or report.get("status") != "visualization_qualified"
+        ):
+            raise ValueError("The real-data model is not visualization-qualified")
+    except (
+        FileNotFoundError,
+        ValueError,
+        OSError,
+        json.JSONDecodeError,
+        KeyError,
+    ) as error:
+        return False, str(error)
+    metrics = report["metrics"]["test"]
+    return (
+        True,
+        "The real WOMD JAX model verified with scenario-level holdout "
+        f"({metrics['ade_m']:.3f} m ADE, {metrics['fde_m']:.3f} m FDE; no baseline-superiority claim).",
+    )
+
+
 def inspect_workspace(root: Path) -> ReadinessReport:
     """Return the exact public, private-evidence, and sensor readiness state."""
     root = root.resolve(strict=True)
@@ -255,7 +314,8 @@ def inspect_workspace(root: Path) -> ReadinessReport:
     gaussian_ready, gaussian_detail = _gaussian_study_ready(root)
     beam_ready, beam_detail = _beam_study_ready(root)
     rl_ready, rl_detail = _rl_study_ready(root)
-    research_program_ready = gaussian_ready and beam_ready and rl_ready
+    trajectory_model_ready, trajectory_model_detail = _trajectory_model_ready(root)
+    research_program_ready = gaussian_ready and beam_ready and trajectory_model_ready
     raw_directory = root / "data" / "raw" / "perception" / SEGMENT_ID
     raw_ready = _regular_files(
         tuple(raw_directory / f"{component}.parquet" for component in WOD_COMPONENTS)
@@ -301,7 +361,7 @@ def inspect_workspace(root: Path) -> ReadinessReport:
             raw_ready,
             "authorized local",
             (
-                "The four pinned WOD v2 Perception Parquet components are present."
+                "The six pinned WOD v2 Perception Parquet components are present."
                 if raw_ready
                 else "The pinned WOD v2 Perception components are not all present."
             ),
@@ -340,11 +400,18 @@ def inspect_workspace(root: Path) -> ReadinessReport:
             "uv run --frozen planmargin-build-beam-features",
         ),
         Capability(
-            "JAX RL qualification",
+            "Historical synthetic JAX RL qualification",
             rl_ready,
-            "local research",
+            "local research record",
             rl_detail,
             "uv run --frozen planmargin-train-rl-controller",
+        ),
+        Capability(
+            "Real WOMD JAX trajectory model",
+            trajectory_model_ready,
+            "authorized local research",
+            trajectory_model_detail,
+            "uv run --frozen planmargin-train-trajectory-model --epochs 64",
         ),
         Capability(
             "Gemini explanation adapter",

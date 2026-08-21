@@ -180,10 +180,21 @@ def _seed_gaussian(root: Path) -> bytes:
     return field
 
 
-def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes]:
+def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes, bytes, bytes]:
     frame = b"\xff\xd8real-waymo-frame\xff\xd9"
     reconstruction = b"ply\nformat ascii 1.0\nelement vertex 1\nend_header\n"
+    reconstruction_reference = (
+        b"ply\nformat ascii 1.0\nelement vertex 1\nend_header\nreference"
+    )
     lidar = b"ply\nformat ascii 1.0\nelement vertex 2\nend_header\n"
+    trajectory = json.dumps(
+        {
+            "record_type": "planmargin.calibrated_sensor_trajectory",
+            "schema_version": "1.0.0",
+            "source_frame_index": 0,
+            "paths": {"recorded": [], "jax_prediction": [], "constant_velocity": []},
+        }
+    ).encode()
     annotations = json.dumps(
         {
             "record_type": "planmargin.sensor_frame_annotations",
@@ -215,12 +226,16 @@ def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes]:
     reconstruction_path = root / "artifacts" / "real-3dgs" / "scene.ply"
     reconstruction_path.parent.mkdir(parents=True)
     reconstruction_path.write_bytes(reconstruction)
+    reference_path = root / "artifacts" / "real-3dgs" / "scene-reference.ply"
+    reference_path.write_bytes(reconstruction_reference)
     sensor_directory = root / evidence_api.DEFAULT_SENSOR_SCENE
     sensor_directory.mkdir(parents=True)
     lidar_path = sensor_directory / "lidar.ply"
     lidar_path.write_bytes(lidar)
     annotations_path = sensor_directory / "front-camera-boxes.json"
     annotations_path.write_bytes(annotations)
+    trajectory_path = sensor_directory / "trajectory.json"
+    trajectory_path.write_bytes(trajectory)
     (sensor_directory / "manifest.json").write_text(
         json.dumps(
             {
@@ -258,6 +273,14 @@ def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes]:
                     "bytes": len(reconstruction),
                     "sha256": hashlib.sha256(reconstruction).hexdigest(),
                 },
+                "reconstruction_reference": {
+                    "representation": "apple_sharp_3d_gaussian_splatting",
+                    "source_frame_index": 0,
+                    "primitive_count": 1,
+                    "file": "artifacts/real-3dgs/scene-reference.ply",
+                    "bytes": len(reconstruction_reference),
+                    "sha256": hashlib.sha256(reconstruction_reference).hexdigest(),
+                },
                 "lidar": {
                     "representation": "same_frame_lidar_gaussian_field",
                     "source_frame_index": 0,
@@ -266,11 +289,28 @@ def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes]:
                     "bytes": len(lidar),
                     "sha256": hashlib.sha256(lidar).hexdigest(),
                 },
+                "trajectory": {
+                    "representation": "calibrated_recorded_and_jax_predicted_ego_paths",
+                    "source_frame_index": 0,
+                    "file": str(trajectory_path.relative_to(root)),
+                    "bytes": len(trajectory),
+                    "sha256": hashlib.sha256(trajectory).hexdigest(),
+                    "future_steps": 30,
+                    "step_seconds": 0.1,
+                    "model_status": "visualization_qualified",
+                },
             }
         ),
         encoding="utf-8",
     )
-    return frame, reconstruction, lidar, annotations
+    return (
+        frame,
+        reconstruction,
+        reconstruction_reference,
+        lidar,
+        annotations,
+        trajectory,
+    )
 
 
 def _fake_query(sql: str) -> list[dict[str, Any]]:
@@ -514,7 +554,9 @@ def test_assistant_and_gaussian_workspaces_are_authenticated(
 def test_real_sensor_scene_is_authenticated_and_streamed(
     app_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    frame, reconstruction, lidar, annotations = _seed_sensor_scene(app_root)
+    frame, reconstruction, reconstruction_reference, lidar, annotations, trajectory = (
+        _seed_sensor_scene(app_root)
+    )
 
     def open_repository(repository: evidence_api.EvidenceRepository) -> None:
         _seed_repository(repository)
@@ -530,16 +572,25 @@ def test_real_sensor_scene_is_authenticated_and_streamed(
             "/api/v1/sensor-scene/front/annotations.json", headers=headers
         )
         sharp = client.get("/api/v1/sensor-scene/reconstruction.ply", headers=headers)
+        reference = client.get(
+            "/api/v1/sensor-scene/reconstruction_reference.ply", headers=headers
+        )
         point_field = client.get("/api/v1/sensor-scene/lidar.ply", headers=headers)
+        path_overlay = client.get(
+            "/api/v1/sensor-scene/trajectory.json", headers=headers
+        )
 
         assert summary.status_code == 200
         assert summary.json()["evidence_mode"] == "real_local_sensor"
         assert summary.json()["reconstruction"]["primitive_count"] == 1
+        assert summary.json()["trajectory"]["model_status"] == "visualization_qualified"
         assert summary.json()["annotations"]["box_count"] == 1
         assert front.content == frame
         assert boxes.content == annotations
         assert sharp.content == reconstruction
+        assert reference.content == reconstruction_reference
         assert point_field.content == lidar
+        assert path_overlay.content == trajectory
         assert client.get("/api/v1/sensor-scene").status_code == 401
         assert (
             client.get("/api/v1/sensor-scene/front/99.jpg", headers=headers).status_code
@@ -638,9 +689,7 @@ def test_browser_session_cookie_authenticates_fresh_requests_and_logout(
     with TestClient(app) as client:
         assert client.get("/api/v1/health").status_code == 401
 
-        session = client.post(
-            "/api/v1/session", headers={"X-PlanMargin-Token": TOKEN}
-        )
+        session = client.post("/api/v1/session", headers={"X-PlanMargin-Token": TOKEN})
         assert session.status_code == 204
         cookie = session.headers["set-cookie"]
         assert f"{evidence_api.SESSION_COOKIE_NAME}=" in cookie

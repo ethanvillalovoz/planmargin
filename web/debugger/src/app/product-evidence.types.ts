@@ -144,10 +144,53 @@ export interface SensorSceneSummary {
     readonly bytes: number;
   };
   readonly reconstruction: SensorAssetSummary;
+  readonly reconstruction_reference?: SensorAssetSummary;
   readonly lidar: SensorAssetSummary;
+  readonly trajectory?: SensorTrajectoryAssetSummary;
 }
 
-export type SensorAssetName = 'reconstruction' | 'lidar';
+export interface SensorTrajectoryAssetSummary {
+  readonly representation: 'calibrated_recorded_and_jax_predicted_ego_paths';
+  readonly source_frame_index: number;
+  readonly bytes: number;
+  readonly future_steps: number;
+  readonly step_seconds: number;
+  readonly model_status: 'visualization_qualified';
+}
+
+export interface SensorTrajectoryPoint {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+export interface SensorTrajectoryOverlay {
+  readonly record_type: 'planmargin.calibrated_sensor_trajectory';
+  readonly schema_version: '1.0.0';
+  readonly source_frame_index: number;
+  readonly step_seconds: number;
+  readonly future_steps: number;
+  readonly coordinate_system: 'apple_sharp_source_camera_opencv';
+  readonly paths: {
+    readonly recorded: readonly SensorTrajectoryPoint[];
+    readonly jax_prediction: readonly SensorTrajectoryPoint[];
+    readonly constant_velocity: readonly SensorTrajectoryPoint[];
+  };
+  readonly metrics: {
+    readonly jax_ade_m: number;
+    readonly jax_fde_m: number;
+    readonly constant_velocity_ade_m: number;
+    readonly constant_velocity_fde_m: number;
+  };
+  readonly model: {
+    readonly framework: 'JAX';
+    readonly status: 'visualization_qualified';
+    readonly superiority_claim_supported: false;
+  };
+  readonly claim_boundary: string;
+}
+
+export type SensorAssetName = 'reconstruction' | 'reconstruction_reference' | 'lidar';
 
 export interface SensorAssetBundle {
   readonly summary: SensorSceneSummary;

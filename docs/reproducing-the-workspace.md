@@ -111,12 +111,14 @@ for redistribution.
 
 ## 5. Reproduce the Sensor Lab
 
-This command downloads only the four pinned WOD v2 Perception Parquet
-components, installs Apple SHARP at a pinned revision, predicts the source-frame
-3DGS using MPS/CUDA/CPU, and generates the camera, annotation, and LiDAR
-manifests:
+Train the real WOMD trajectory model first, then bootstrap the Sensor Lab. The
+bootstrap downloads only the six pinned WOD v2 Perception Parquet components,
+installs Apple SHARP at a pinned revision, predicts both source-frame 3DGS
+assets using MPS/CUDA/CPU, and generates the camera, annotation, LiDAR, and
+calibrated-trajectory manifests:
 
 ```bash
+uv run --frozen planmargin-train-trajectory-model --epochs 64
 uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms
 ```
 
