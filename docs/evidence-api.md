@@ -107,9 +107,11 @@ browser, bounded assistant, and camera/3DGS/LiDAR workspace. It sends no writes
 and, in the default offline-assistant mode, makes no outbound request beyond
 this fixed loopback API.
 
-The token is kept in a private in-memory field after bootstrap. It is never
-persisted to local/session storage, the post-bootstrap address, a file, or an
-export. Privacy-reduced proposal reports can be exported as self-contained
+The token is kept in a private in-memory field and same-tab session storage
+after bootstrap so refresh can reconnect. It is removed by explicit disconnect
+or when the tab closes. It is never persisted to durable local storage, the
+post-bootstrap address, a file, or an export. Privacy-reduced proposal reports
+can be exported as self-contained
 HTML, but never include the token, local paths, raw trajectories, or restricted
 provenance. Disconnecting returns to
 Camera, clears local planning evidence and sensor access, and leaves the

@@ -33,6 +33,7 @@ import {
 } from './product-evidence.types';
 
 const API_ROOT = 'http://127.0.0.1:8765/api/v1';
+const SESSION_TOKEN_KEY = 'planmargin.local-evidence-token.v1';
 
 @Injectable({ providedIn: 'root' })
 export class LocalEvidenceService {
@@ -55,6 +56,18 @@ export class LocalEvidenceService {
   readonly selectedProposal = computed(() =>
     this.proposals().find((proposal) => proposal.proposalNumber === this.selectedProposalNumber()),
   );
+
+  restoreSessionToken(): string | undefined {
+    try {
+      const token = window.sessionStorage.getItem(SESSION_TOKEN_KEY)?.trim();
+      if (token && token.length >= 16) return token;
+      window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    } catch {
+      // The workbench remains usable through the manual connection dialog when
+      // browser session storage is unavailable.
+    }
+    return undefined;
+  }
 
   async connect(candidateToken: string): Promise<LocalEvidenceSnapshot> {
     const token = candidateToken.trim();
@@ -90,10 +103,12 @@ export class LocalEvidenceService {
       this.investigation.set(investigation);
       this.state.set('connected');
       await this.selectCell(campaign.cells[0].cellId);
+      this.rememberSessionToken(token);
       return snapshot(campaign.campaign, campaign.cells, runs, initialRun);
     } catch (error: unknown) {
       if (generation === this.requestGeneration) {
         this.token = undefined;
+        this.forgetSessionToken();
         this.state.set('error');
         this.error.set(this.safeMessage(error));
       }
@@ -210,6 +225,7 @@ export class LocalEvidenceService {
   disconnect(): void {
     this.requestGeneration++;
     this.token = undefined;
+    this.forgetSessionToken();
     this.state.set('disconnected');
     this.error.set(undefined);
     this.campaign.set(CAMPAIGN_EVIDENCE);
@@ -280,5 +296,22 @@ export class LocalEvidenceService {
       return 'Local API unavailable. Start it on 127.0.0.1:8765 and retry.';
     }
     return error.message.replaceAll(API_ROOT, 'local API');
+  }
+
+  private rememberSessionToken(token: string): void {
+    try {
+      window.sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    } catch {
+      // The verified in-memory connection remains valid even when the browser
+      // refuses per-tab session storage.
+    }
+  }
+
+  private forgetSessionToken(): void {
+    try {
+      window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    } catch {
+      // There is nothing else to clear when session storage is unavailable.
+    }
   }
 }

@@ -29,7 +29,7 @@ import { SimulatorStore } from '../simulator.store';
           <div>
             <h1 id="local-evidence-title">Local evidence</h1>
             <p id="local-evidence-boundary">
-              Verified records stay on this machine. The token is held in memory only.
+              Verified records stay on this machine. Access is retained only for this browser tab.
             </p>
           </div>
           <button

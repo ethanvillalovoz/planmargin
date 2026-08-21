@@ -23,6 +23,7 @@ describe('LocalEvidenceService', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    window.sessionStorage.clear();
     fetchMock = vi.fn((input: string | URL | Request) => {
       const url = String(input);
       if (url.endsWith('/health')) {
@@ -159,6 +160,7 @@ describe('LocalEvidenceService', () => {
     const evidence = await service.connect('0123456789abcdef');
 
     expect(service.state()).toBe('connected');
+    expect(service.restoreSessionToken()).toBe('0123456789abcdef');
     expect(evidence.initialRun.synthetic).toBe(false);
     expect(service.proposals()[0].proposalNumber).toBe(1);
     expect((await service.proposalAnalysis('cell_opaque', 1)).decisiveGate).toBe(
@@ -177,6 +179,7 @@ describe('LocalEvidenceService', () => {
 
     service.disconnect();
     expect(service.state()).toBe('disconnected');
+    expect(service.restoreSessionToken()).toBeUndefined();
     expect(service.cells()).toEqual([]);
     expect(service.campaign().mode).toBe('published-aggregate');
   });
@@ -187,11 +190,13 @@ describe('LocalEvidenceService', () => {
   });
 
   it('redacts connection failures and clears authorization state', async () => {
+    window.sessionStorage.setItem('planmargin.local-evidence-token.v1', 'fedcba9876543210');
     fetchMock.mockRejectedValueOnce(new TypeError('network failed with sensitive details'));
 
     await expect(service.connect('0123456789abcdef')).rejects.toThrow();
     expect(service.state()).toBe('error');
     expect(service.error()).toContain('127.0.0.1:8765');
+    expect(service.restoreSessionToken()).toBeUndefined();
     await expect(service.loadRun('run_opaque')).rejects.toThrow('not connected');
   });
 
