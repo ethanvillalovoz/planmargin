@@ -30,6 +30,7 @@ import {
   SensorAssetBundle,
   SensorAssetName,
   SensorSceneSummary,
+  SensorTrajectoryOverlay,
 } from './product-evidence.types';
 
 const API_HOST = window.location.hostname === 'localhost' ? 'localhost' : '127.0.0.1';
@@ -189,6 +190,10 @@ export class LocalEvidenceService {
     return this.authorizedGet(
       '/sensor-scene/front/annotations.json',
     ) as Promise<CameraAnnotationBundle>;
+  }
+
+  async sensorTrajectory(): Promise<SensorTrajectoryOverlay> {
+    return this.authorizedGet('/sensor-scene/trajectory.json') as Promise<SensorTrajectoryOverlay>;
   }
 
   async sensorAsset(name: SensorAssetName): Promise<SensorAssetBundle> {

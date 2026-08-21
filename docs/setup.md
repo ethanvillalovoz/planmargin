@@ -111,12 +111,14 @@ That override is not part of the reproduction workflow.
 
 ## Build the local Perception Sensor Lab
 
-The product bootstrap downloads only the four pinned WOD v2 Perception
+The product bootstrap downloads only the six pinned WOD v2 Perception
 components needed by the visual scene, installs Apple SHARP at a pinned
-revision, generates the source-frame 3DGS on MPS/CUDA/CPU, and prepares the
-camera, native annotation, and LiDAR manifests:
+revision, generates both source-frame 3DGS assets on MPS/CUDA/CPU, and prepares
+the camera, native annotation, LiDAR, and calibrated-trajectory manifests. The
+trajectory model must be trained first from the authorized WOMD inputs:
 
 ```bash
+uv run --frozen planmargin-train-trajectory-model --epochs 64
 uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms
 ```
 

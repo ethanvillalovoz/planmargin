@@ -369,6 +369,15 @@ class SensorAssetEvidence(EvidenceModel):
     bytes: int
 
 
+class SensorTrajectoryAssetEvidence(EvidenceModel):
+    representation: Literal["calibrated_recorded_and_jax_predicted_ego_paths"]
+    source_frame_index: int
+    bytes: int
+    future_steps: int
+    step_seconds: float
+    model_status: Literal["visualization_qualified"]
+
+
 class SensorAnnotationEvidence(EvidenceModel):
     representation: Literal["native_tracked_camera_boxes"]
     frame_count: int
@@ -386,7 +395,9 @@ class SensorSceneEvidence(EvidenceModel):
     frame_rate_hz: int
     annotations: SensorAnnotationEvidence
     reconstruction: SensorAssetEvidence
+    reconstruction_reference: SensorAssetEvidence | None = None
     lidar: SensorAssetEvidence
+    trajectory: SensorTrajectoryAssetEvidence | None = None
 
 
 @dataclass(frozen=True)
@@ -1334,7 +1345,9 @@ class EvidenceRepository:
         frames = manifest.get("frames")
         annotations = manifest.get("annotations")
         reconstruction = manifest.get("reconstruction")
+        reconstruction_reference = manifest.get("reconstruction_reference")
         lidar = manifest.get("lidar")
+        trajectory = manifest.get("trajectory")
         if (
             not isinstance(frames, list)
             or not frames
@@ -1358,7 +1371,12 @@ class EvidenceRepository:
             or annotations.get("frame_count") != len(frames)
         ):
             raise ValueError("Sensor frame annotations failed local validation")
-        for asset in (reconstruction, lidar):
+        assets = [reconstruction, lidar]
+        if reconstruction_reference is not None:
+            if not isinstance(reconstruction_reference, dict):
+                raise ValueError("Reference reconstruction is invalid")
+            assets.append(reconstruction_reference)
+        for asset in assets:
             relative = asset.get("file")
             if not isinstance(relative, str):
                 raise ValueError("Sensor scene asset path is invalid")
@@ -1370,6 +1388,19 @@ class EvidenceRepository:
                 or path.stat().st_size != asset.get("bytes")
             ):
                 raise ValueError("Sensor scene asset failed local validation")
+        if trajectory is not None:
+            if not isinstance(trajectory, dict):
+                raise ValueError("Sensor trajectory manifest is invalid")
+            trajectory_path = (self.paths.root / trajectory.get("file", "")).resolve()
+            if (
+                not trajectory_path.is_relative_to(self.paths.root)
+                or trajectory_path.is_symlink()
+                or not trajectory_path.is_file()
+                or trajectory_path.stat().st_size != trajectory.get("bytes")
+                or random_search._file_sha256(trajectory_path)
+                != trajectory.get("sha256")
+            ):
+                raise ValueError("Sensor trajectory failed local validation")
         summary = {
             "schema_version": "1.0.0",
             "evidence_mode": "real_local_sensor",
@@ -1401,6 +1432,28 @@ class EvidenceRepository:
                 )
             },
         }
+        if reconstruction_reference is not None:
+            summary["reconstruction_reference"] = {
+                key: reconstruction_reference[key]
+                for key in (
+                    "representation",
+                    "source_frame_index",
+                    "primitive_count",
+                    "bytes",
+                )
+            }
+        if trajectory is not None:
+            summary["trajectory"] = {
+                key: trajectory[key]
+                for key in (
+                    "representation",
+                    "source_frame_index",
+                    "bytes",
+                    "future_steps",
+                    "step_seconds",
+                    "model_status",
+                )
+            }
         return summary, manifest
 
     def sensor_frame(self, frame_index: int) -> Path:
@@ -1422,7 +1475,9 @@ class EvidenceRepository:
             raise ValueError("Sensor frame failed local validation")
         return path
 
-    def sensor_asset(self, name: Literal["reconstruction", "lidar"]) -> Path:
+    def sensor_asset(
+        self, name: Literal["reconstruction", "reconstruction_reference", "lidar"]
+    ) -> Path:
         """Return one validated binary sensor representation."""
         _, manifest = self.sensor_scene()
         asset = manifest[name]
@@ -1436,6 +1491,14 @@ class EvidenceRepository:
         _, manifest = self.sensor_scene()
         annotation = manifest["annotations"]
         return (self.paths.root / annotation["file"]).resolve(strict=True)
+
+    def sensor_trajectory(self) -> Path:
+        """Return the calibrated recorded/model trajectory overlay."""
+        _, manifest = self.sensor_scene()
+        trajectory = manifest.get("trajectory")
+        if not isinstance(trajectory, dict):
+            raise FileNotFoundError("Sensor trajectory is unavailable")
+        return (self.paths.root / trajectory["file"]).resolve(strict=True)
 
     @staticmethod
     def _require(value: Any) -> Any:
@@ -1846,6 +1909,23 @@ def create_app(
         )
 
     @app.get(
+        "/api/v1/sensor-scene/trajectory.json",
+        dependencies=[auth],
+        response_class=FileResponse,
+        responses={200: {"content": {"application/json": {}}}},
+    )
+    def sensor_trajectory() -> FileResponse:
+        try:
+            path = repository.sensor_trajectory()
+        except FileNotFoundError as error:
+            raise HTTPException(
+                status_code=404, detail="Sensor trajectory not found"
+            ) from error
+        return FileResponse(
+            path, media_type="application/json", content_disposition_type="inline"
+        )
+
+    @app.get(
         "/api/v1/sensor-scene/front/{frame_index}.jpg",
         dependencies=[auth],
         response_class=FileResponse,
@@ -1868,7 +1948,9 @@ def create_app(
         response_class=FileResponse,
         responses={200: {"content": {"application/octet-stream": {}}}},
     )
-    def sensor_asset(asset: Literal["reconstruction", "lidar"]) -> FileResponse:
+    def sensor_asset(
+        asset: Literal["reconstruction", "reconstruction_reference", "lidar"],
+    ) -> FileResponse:
         try:
             path = repository.sensor_asset(asset)
         except FileNotFoundError as error:

@@ -95,7 +95,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
               <p>Candidate review</p>
               <h1>Review planner regressions by the reason they stopped.</h1>
             </div>
-            <div class="page-status">
+            <div class="page-status" [class.connected]="local.connected()">
               <i></i
               >{{ local.connected() ? 'Sealed local records verified' : 'Local records required' }}
             </div>
@@ -103,26 +103,103 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
 
           @if (!local.connected()) {
             <section class="public-workbench">
-              <div class="public-result">
+              <header class="public-result">
                 <div>
-                  <span>Licensed evidence boundary</span>
-                  <h2>Open the local workspace to review candidate cases.</h2>
+                  <span>Published aggregate evidence · verified campaign</span>
+                  <h2>3,200 counterfactual proposals. Zero qualifying regressions.</h2>
                   <p>
-                    Per-scenario records remain on the engineer's machine. PlanMargin does not fill
-                    this workspace with invented examples when those records are unavailable.
+                    Explore the real experiment summary below. Per-scenario WOMD records stay local,
+                    so this public surface reports only sealed campaign aggregates—never substitute
+                    or synthetic cases.
                   </p>
                 </div>
                 <button class="primary" type="button" (click)="connectRequested.emit()">
-                  Open local workspace
+                  Open licensed local evidence
                 </button>
+              </header>
+              <div class="public-kpis" aria-label="Published campaign totals">
+                <div>
+                  <strong>{{ local.campaign().cells }}</strong
+                  ><span>matched cells</span>
+                </div>
+                <div>
+                  <strong>{{ local.campaign().proposals.toLocaleString() }}</strong
+                  ><span>proposals</span>
+                </div>
+                <div>
+                  <strong>{{ local.campaign().physicalRollouts.toLocaleString() }}</strong
+                  ><span>physical rollouts</span>
+                </div>
+                <div>
+                  <strong>{{ local.campaign().rolloutSteps.toLocaleString() }}</strong
+                  ><span>Waymax steps</span>
+                </div>
               </div>
-              <div class="public-boundary">
-                <strong>What opens locally</strong>
-                <p>
-                  Ranked candidate cases, gate-by-gate decisions, sealed replay evidence, camera
-                  annotations, LiDAR, and 3D reconstruction—without uploading source records.
-                </p>
+              <div class="public-analysis">
+                <section class="method-card" aria-labelledby="public-method-title">
+                  <header>
+                    <div>
+                      <span>Method comparison</span>
+                      <h3 id="public-method-title">Feasible proposal yield</h3>
+                    </div>
+                    <small>same 50 scenario × seed cells per method</small>
+                  </header>
+                  <div class="method-row random">
+                    <div><strong>Random</strong><span>1,600 proposals</span></div>
+                    <div class="bar">
+                      <i [style.width.%]="local.campaign().methods.random.validRatePercent"></i>
+                    </div>
+                    <b>{{ local.campaign().methods.random.validRatePercent.toFixed(2) }}%</b>
+                  </div>
+                  <div class="method-row bayesian">
+                    <div><strong>Constrained Bayesian</strong><span>1,600 proposals</span></div>
+                    <div class="bar">
+                      <i [style.width.%]="local.campaign().methods.bayesian.validRatePercent"></i>
+                    </div>
+                    <b>{{ local.campaign().methods.bayesian.validRatePercent.toFixed(2) }}%</b>
+                  </div>
+                  <p class="method-finding">
+                    Bayesian search improved support-and-pipeline-valid yield by
+                    <strong>{{ publicValidRateDelta().toFixed(2) }} percentage points</strong>. Both
+                    methods found zero policy-specific avoidable failures, so efficiency and
+                    minimality were not testable.
+                  </p>
+                </section>
+                <section class="decision-card" aria-labelledby="public-decision-title">
+                  <header>
+                    <span>Frozen hypothesis decisions</span>
+                    <h3 id="public-decision-title">What the evidence supports</h3>
+                  </header>
+                  <dl>
+                    <div>
+                      <dt>H1 · efficiency</dt>
+                      <dd class="neutral">{{ local.campaign().hypotheses.efficiency }}</dd>
+                    </div>
+                    <div>
+                      <dt>H2 · minimality</dt>
+                      <dd class="neutral">{{ local.campaign().hypotheses.minimality }}</dd>
+                    </div>
+                    <div>
+                      <dt>H3 · validity</dt>
+                      <dd class="supported">{{ local.campaign().hypotheses.validity }}</dd>
+                    </div>
+                    <div>
+                      <dt>Held-out comparison</dt>
+                      <dd class="neutral">Not run</dd>
+                    </div>
+                  </dl>
+                </section>
               </div>
+              <footer class="public-boundary">
+                <div>
+                  <strong>Public and reproducible</strong>
+                  <p>Campaign totals, method aggregates, decisions, hashes, and bundle verifier.</p>
+                </div>
+                <div>
+                  <strong>Licensed local only</strong>
+                  <p>Scenario paths, proposal records, camera imagery, LiDAR, and 3DGS assets.</p>
+                </div>
+              </footer>
             </section>
           } @else {
             @if (local.investigation(); as campaign) {
@@ -528,6 +605,45 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
             </section>
           }
         </main>
+      } @else if (!local.connected()) {
+        <main class="locked-workspace">
+          <div>
+            <span>{{
+              view() === 'sensor' ? 'Recorded sensor lab' : 'Planning replay workbench'
+            }}</span>
+            <h1>
+              {{
+                view() === 'sensor'
+                  ? 'Inspect real camera, LiDAR, and 3DGS locally.'
+                  : 'Replay sealed planner evidence locally.'
+              }}
+            </h1>
+            <p>
+              This surface requires the licensed records on the engineer's machine. The public
+              campaign analysis remains available without them.
+            </p>
+            <div>
+              <button class="primary" type="button" (click)="connectRequested.emit()">
+                Open local workspace
+              </button>
+              <button type="button" (click)="setView('investigate')">Review public evidence</button>
+            </div>
+          </div>
+          <dl>
+            <div>
+              <dt>Public proposals</dt>
+              <dd>{{ local.campaign().proposals.toLocaleString() }}</dd>
+            </div>
+            <div>
+              <dt>Physical rollouts</dt>
+              <dd>{{ local.campaign().physicalRollouts.toLocaleString() }}</dd>
+            </div>
+            <div>
+              <dt>Synthetic substitutes</dt>
+              <dd>None</dd>
+            </div>
+          </dl>
+        </main>
       } @else {
         <app-simulator-workspace
           class="embedded-simulator"
@@ -655,7 +771,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       color: #9be4b8;
     }
     .connection.connected i,
-    .page-status i {
+    .page-status.connected i {
       background: var(--success);
     }
     .connection.connecting i {
@@ -733,6 +849,226 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .public-workbench {
       border: 1px solid var(--divider);
       background: var(--surface);
+    }
+    .public-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-bottom: 1px solid var(--divider);
+    }
+    .public-kpis div {
+      display: grid;
+      gap: 0.28rem;
+      padding: 1.2rem 1.5rem;
+      border-right: 1px solid var(--divider);
+    }
+    .public-kpis div:last-child {
+      border-right: 0;
+    }
+    .public-kpis strong {
+      font-size: 1.3rem;
+      font-weight: 560;
+      letter-spacing: -0.035em;
+    }
+    .public-kpis span,
+    .method-card small {
+      color: var(--secondary);
+      font-size: 0.58rem;
+    }
+    .public-analysis {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(310px, 0.8fr);
+    }
+    .method-card,
+    .decision-card {
+      padding: 1.5rem;
+    }
+    .method-card {
+      border-right: 1px solid var(--divider);
+    }
+    .method-card > header,
+    .decision-card > header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .method-card header span,
+    .decision-card header span {
+      color: var(--reference);
+      font-size: 0.56rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .method-card h3,
+    .decision-card h3 {
+      margin: 0.3rem 0 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .method-row {
+      display: grid;
+      grid-template-columns: 145px minmax(100px, 1fr) 62px;
+      align-items: center;
+      gap: 0.8rem;
+      min-height: 56px;
+      border-top: 1px solid var(--divider);
+    }
+    .method-row > div:first-child {
+      display: grid;
+      gap: 0.18rem;
+    }
+    .method-row strong,
+    .method-row b {
+      font-size: 0.68rem;
+    }
+    .method-row span {
+      color: var(--secondary);
+      font-size: 0.55rem;
+    }
+    .method-row b {
+      text-align: right;
+    }
+    .method-row .bar {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 1px;
+      background: #14232d;
+    }
+    .method-row .bar i {
+      display: block;
+      height: 100%;
+      background: #7b8c96;
+    }
+    .method-row.bayesian .bar i {
+      background: var(--reference);
+    }
+    .method-finding {
+      margin: 0.9rem 0 0;
+      padding: 0.8rem;
+      border-left: 2px solid var(--reference);
+      background: rgb(53 197 211 / 6%);
+      color: var(--secondary);
+      font-size: 0.63rem;
+      line-height: 1.55;
+    }
+    .method-finding strong {
+      color: var(--primary);
+    }
+    .decision-card dl {
+      margin: 0;
+      border: 1px solid var(--divider);
+    }
+    .decision-card dl div {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 48px;
+      padding: 0 0.8rem;
+      border-bottom: 1px solid var(--divider);
+    }
+    .decision-card dl div:last-child {
+      border-bottom: 0;
+    }
+    .decision-card dt,
+    .decision-card dd {
+      font-size: 0.62rem;
+    }
+    .decision-card dd {
+      margin: 0;
+      padding: 0.22rem 0.45rem;
+      border-radius: 3px;
+    }
+    .decision-card dd.neutral {
+      background: #202a31;
+      color: #aab6bd;
+    }
+    .decision-card dd.supported {
+      background: rgb(86 217 138 / 12%);
+      color: #7be5a6;
+    }
+    .public-boundary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      border-top: 1px solid var(--divider);
+    }
+    .public-boundary div {
+      padding: 1rem 1.5rem;
+    }
+    .public-boundary div:first-child {
+      border-right: 1px solid var(--divider);
+    }
+    .locked-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      align-items: center;
+      min-height: calc(100dvh - 64px);
+      gap: 4rem;
+      padding: clamp(2rem, 8vw, 8rem);
+      background:
+        linear-gradient(120deg, rgb(7 16 24 / 96%), rgb(7 16 24 / 82%)),
+        radial-gradient(circle at 75% 40%, rgb(53 197 211 / 16%), transparent 36%);
+    }
+    .locked-workspace > div > span {
+      color: var(--reference);
+      font-size: 0.6rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .locked-workspace h1 {
+      max-width: 760px;
+      margin: 0.7rem 0;
+      font-size: clamp(2rem, 5vw, 4.4rem);
+      font-weight: 520;
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+    .locked-workspace p {
+      max-width: 620px;
+      color: var(--secondary);
+      font-size: 0.72rem;
+      line-height: 1.7;
+    }
+    .locked-workspace > div > div {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 1.4rem;
+    }
+    .locked-workspace > div > div > button:not(.primary) {
+      min-height: 42px;
+      padding: 0 1rem;
+      border: 1px solid var(--divider-strong);
+      border-radius: 5px;
+      background: transparent;
+      color: var(--primary);
+      font-size: 0.69rem;
+    }
+    .locked-workspace > dl {
+      margin: 0;
+      border: 1px solid var(--divider);
+      background: rgb(9 20 29 / 80%);
+    }
+    .locked-workspace > dl div {
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem;
+      border-bottom: 1px solid var(--divider);
+    }
+    .locked-workspace > dl div:last-child {
+      border-bottom: 0;
+    }
+    .locked-workspace dt,
+    .locked-workspace dd {
+      font-size: 0.65rem;
+    }
+    .locked-workspace dt {
+      color: var(--secondary);
+    }
+    .locked-workspace dd {
+      margin: 0;
+      font-weight: 650;
     }
     .public-result {
       display: flex;
@@ -1402,6 +1738,23 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       .proposal-layout {
         grid-template-columns: 240px minmax(0, 1fr);
       }
+      .public-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .public-kpis div:nth-child(2) {
+        border-right: 0;
+      }
+      .public-kpis div:nth-child(-n + 2) {
+        border-bottom: 1px solid var(--divider);
+      }
+      .public-analysis,
+      .locked-workspace {
+        grid-template-columns: 1fr;
+      }
+      .method-card {
+        border-right: 0;
+        border-bottom: 1px solid var(--divider);
+      }
     }
     @media (max-width: 680px) {
       .product-header {
@@ -1446,6 +1799,18 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       }
       .public-boundary {
         grid-template-columns: 1fr;
+      }
+      .public-boundary div:first-child {
+        border-right: 0;
+        border-bottom: 1px solid var(--divider);
+      }
+      .method-row {
+        grid-template-columns: 120px minmax(80px, 1fr) 55px;
+      }
+      .locked-workspace {
+        min-height: calc(100dvh - 112px);
+        gap: 2rem;
+        padding: 2rem 1rem;
       }
       .rank-tabs {
         width: 100%;
@@ -1575,6 +1940,12 @@ export class ProductShell {
     if (view === 'replay') this.simulator.selectMode('planning');
     if (view === 'sensor') this.simulator.selectMode('camera');
     this.view.set(view);
+  }
+  protected publicValidRateDelta(): number {
+    return (
+      this.local.campaign().methods.bayesian.validRatePercent -
+      this.local.campaign().methods.random.validRatePercent
+    );
   }
   protected toggleAssistant(): void {
     const opening = this.view() !== 'replay' || !this.simulator.assistantOpen();

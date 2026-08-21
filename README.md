@@ -13,12 +13,13 @@ specific to the tested planner.
 It is an engineering workbench, not a benchmark leaderboard or a Waymo Driver
 evaluation.
 
-![PlanMargin public workbench showing its licensed-evidence boundary](docs/assets/planmargin-public-workbench.jpg)
+![PlanMargin public aggregate evidence workbench](docs/assets/planmargin-public-workbench-v1.1.png)
 
-The public clone opens as the real product shell and fails closed when licensed
-records are absent. An authorized local launch unlocks the exact proposal replay,
-candidate investigation, recorded camera annotations, LiDAR, and 3D Gaussian
-reconstruction without uploading those artifacts.
+The public clone opens a useful aggregate analysis surface over the sealed
+3,200-proposal campaign. It fails closed only for licensed per-scenario data. An
+authorized local launch adds exact proposal replay, candidate investigation,
+recorded camera annotations, LiDAR, two 3D Gaussian reconstructions, and a
+calibrated real-data JAX trajectory overlay without uploading those artifacts.
 
 ## The engineering workflow
 
@@ -35,6 +36,8 @@ Evidence view, behind the workflow they support. Scores are paired with plain
 language such as **tested planner still succeeds**, **outside recorded
 behavior**, and **reference planner failed**.
 
+![PlanMargin real SHARP 3DGS scene with calibrated recorded, JAX, and baseline paths](docs/assets/planmargin-sensor-trajectory-v1.1.png)
+
 ## Run it
 
 ### Inspect the public application
@@ -49,8 +52,9 @@ npm ci
 npm start
 ```
 
-Open `http://127.0.0.1:4200`. The workbench shows the licensed-data boundary
-until an authorized local evidence service is available.
+Open `http://127.0.0.1:4200`. Evidence provides the real aggregate campaign
+dashboard immediately. Workbench and Sensors explain exactly which licensed
+local capabilities become available after an authenticated launch.
 
 ### Open the complete local workbench
 
@@ -95,6 +99,7 @@ If the doctor reports missing licensed artifacts, use the
 camera, LiDAR, and 3DGS track, an authorized Waymo Open Dataset account can run:
 
 ```bash
+uv run --frozen planmargin-train-trajectory-model --epochs 64
 uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms
 ```
 
@@ -135,9 +140,14 @@ interaction metrics, scenario validation, and repeated executions match the
 sealed v1 proposal. The other proposal records remain hash-and-metric evidence
 unless they are deliberately re-executed through the same verifier.
 
-The WOD Perception camera, LiDAR, and Apple SHARP reconstruction remain a
-separate visual track. The UI labels those boundaries instead of implying
-synchronization that does not exist.
+The WOD Perception camera and LiDAR remain separate from the WOMD/Waymax
+counterfactual experiment. The Sensor Lab now contains SHARP reconstructions
+for moving frame 20 and stopped frame 99. At frame 20 it registers the recorded
+three-second ego path, a real-WOMD-trained JAX prediction, and a constant-
+velocity baseline into the SHARP source-camera coordinate system. The model is
+held out by scenario and meets its absolute visualization error gates, but does
+not beat constant velocity on its test scenario; the UI and report state that
+negative comparison rather than claiming model superiority.
 
 Read the [aggregate result](docs/natural-development-results.md) and
 [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md) for the
@@ -154,9 +164,13 @@ flowchart LR
     C --> E
     E --> D["Beam · Parquet · DuckDB"]
     E --> A["Loopback FastAPI"]
-    P["WOD Perception"] --> V["Camera · SHARP 3DGS · LiDAR"]
+    M["Real WOMD tracks"] --> J["JAX trajectory predictor"]
+    P["WOD Perception"] --> V["Camera · two SHARP 3DGS scenes · LiDAR"]
+    P --> R["Calibrated recorded ego path"]
+    J --> R
     A --> U["Angular workbench"]
     V --> U
+    R --> U
 ```
 
 | Responsibility   | Implementation                       | Verification                                            |
@@ -168,6 +182,7 @@ flowchart LR
 | Evidence service | FastAPI                              | loopback auth, closed response models, path confinement |
 | Product          | Angular, TypeScript, Three.js, Spark | strict types, component tests, production build         |
 | Reconstruction   | Apple SHARP                          | pinned source, model hash, MPS/CUDA/CPU execution       |
+| Trajectory model | JAX, Optax, real WOMD tracks         | scenario holdout, baseline comparison, sealed checkpoint |
 | Assistant        | deterministic tools, optional Gemini | allowlisted evidence and sealed citations               |
 | Replay retention | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching      |
 

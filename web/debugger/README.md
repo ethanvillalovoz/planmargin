@@ -6,8 +6,10 @@ responsibilities:
 
 - replay 199 recorded FRONT-camera frames with native per-frame tracked 2D
   boxes from the same local Waymo Open Dataset Perception segment;
-- orbit a 1,179,648-primitive Apple SHARP 3D Gaussian reconstruction of frame
-  99 and a 50,241-primitive same-frame LiDAR Gaussian field;
+- switch between 1,179,648-primitive Apple SHARP 3D Gaussian reconstructions
+  of moving frame 20 and stopped frame 99, plus a 50,241-primitive LiDAR field;
+- compare the calibrated recorded ego path, a real-WOMD-trained JAX prediction,
+  and a constant-velocity baseline inside the moving-frame reconstruction;
 - replay the sealed WOMD planning trajectories on their own timeline, separate
   from the 199-frame Camera timeline and source-frame 3DGS/LiDAR assets; and
 - query the authenticated evidence assistant without exporting local records.
@@ -19,11 +21,13 @@ evidence, and PlanMargin does not inspect the production Waymo Driver.
 
 ## Prepare the ignored local sensor scene
 
-From the repository root, the authorized bootstrap downloads the four pinned
+From the repository root, the authorized bootstrap downloads the six pinned
 WOD components, installs the pinned SHARP tool, generates the source-frame
-3DGS, and writes only ignored `data/` and `artifacts/` outputs:
+3DGS assets, and writes only ignored `data/` and `artifacts/` outputs. Generate
+the real WOMD model before building the calibrated trajectory overlay:
 
 ```bash
+uv run --frozen planmargin-train-trajectory-model --epochs 64
 uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms
 ```
 

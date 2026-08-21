@@ -85,9 +85,15 @@ test('public clone stays honest, usable, and accessible without licensed records
   await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeHidden();
   await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Open the local workspace to review candidate cases.' }),
+    page.getByRole('heading', {
+      name: '3,200 counterfactual proposals. Zero qualifying regressions.',
+    }),
   ).toBeVisible();
-  await expect(page.getByText('invented examples')).toBeVisible();
+  await expect(page.getByLabel('Published campaign totals')).toContainText('14,110');
+  await expect(page.getByRole('heading', { name: 'Feasible proposal yield' })).toBeVisible();
+  await expect(page.getByText('14.81 percentage points')).toBeVisible();
+  await expect(page.getByText('never substitute or synthetic cases')).toBeVisible();
+  await expect(page.getByText('Licensed local only')).toBeVisible();
 
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(accessibility.violations).toEqual([]);

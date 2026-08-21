@@ -61,6 +61,11 @@ export class SimulatorStore {
     this.applyFrame(sourceFrameIndex);
   }
 
+  setSpatialSourceFrame(sourceFrameIndex: number): void {
+    this.sourceFrameIndex.set(sourceFrameIndex);
+    this.applyFrame(sourceFrameIndex);
+  }
+
   selectMode(mode: SensorMode): void {
     if (this.stressStatus() === 'running') this.cancelStressReplay();
     this.stop();

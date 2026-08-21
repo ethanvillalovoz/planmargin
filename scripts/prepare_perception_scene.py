@@ -22,9 +22,12 @@ import numpy as np
 from scipy.spatial import cKDTree
 from scipy.spatial.transform import Rotation
 
+from planmargin import trajectory_model
+
 SEGMENT_ID = "10023947602400723454_1120_000_1140_000"
 FRONT_CAMERA_NAME = 1
 SOURCE_FRAME_INDEX = 99
+MOVING_SOURCE_FRAME_INDEX = 20
 EXPECTED_FRAME_COUNT = 199
 EXPECTED_GAUSSIANS = 1_179_648
 MAX_LIDAR_PRIMITIVES = 75_000
@@ -284,6 +287,148 @@ def _prepare_camera_annotations(
     return {"frame_count": len(frames), "box_count": sum(map(len, frames))}
 
 
+def _yaw_from_pose(matrix: np.ndarray) -> float:
+    return float(math.atan2(matrix[1, 0], matrix[0, 0]))
+
+
+def _trajectory_window(
+    poses: list[np.ndarray], source_index: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    positions = np.asarray([pose[:2, 3] for pose in poses], dtype=np.float32)
+    yaw = np.asarray([_yaw_from_pose(pose) for pose in poses], dtype=np.float32)
+    velocity = np.gradient(positions, 0.1, axis=0).astype(np.float32)
+    start = source_index - trajectory_model.HISTORY_STEPS + 1
+    stop = source_index + trajectory_model.FUTURE_STEPS + 1
+    origin = positions[source_index]
+    heading = float(yaw[source_index])
+    past_xy = trajectory_model._local_xy(
+        positions[start : source_index + 1], origin, heading
+    )
+    past_velocity = trajectory_model._local_xy(
+        velocity[start : source_index + 1], np.zeros(2), heading
+    )
+    relative_yaw = trajectory_model._wrap_angle(yaw[start : source_index + 1] - heading)
+    recorded = trajectory_model._local_xy(
+        positions[source_index + 1 : stop], origin, heading
+    ).astype(np.float32)
+    times = (
+        np.arange(1, trajectory_model.FUTURE_STEPS + 1, dtype=np.float32)[:, None]
+        * trajectory_model.STEP_SECONDS
+    )
+    baseline = times * past_velocity[-1]
+    features = np.concatenate(
+        (
+            past_xy.reshape(-1),
+            past_velocity.reshape(-1),
+            np.sin(relative_yaw),
+            np.cos(relative_yaw),
+        )
+    ).astype(np.float32)[None, :]
+    return features, baseline[None, :].reshape(1, -1), recorded
+
+
+def _opencv_points(
+    local_xy: np.ndarray, camera_extrinsic: np.ndarray
+) -> list[dict[str, float]]:
+    camera_from_vehicle = np.linalg.inv(camera_extrinsic)
+    homogeneous = np.column_stack(
+        (local_xy, np.zeros(len(local_xy)), np.ones(len(local_xy)))
+    )
+    camera_waymo = (camera_from_vehicle @ homogeneous.T).T[:, :3]
+    opencv = np.column_stack(
+        (-camera_waymo[:, 1], -camera_waymo[:, 2], camera_waymo[:, 0])
+    )
+    return [
+        {
+            "x": round(float(point[0]), 5),
+            "y": round(float(point[1]), 5),
+            "z": round(float(point[2]), 5),
+        }
+        for point in opencv
+    ]
+
+
+def _prepare_trajectory_overlay(
+    root: Path, data_directory: Path, output: Path
+) -> dict[str, Any]:
+    model_directory = root / trajectory_model.DEFAULT_OUTPUT_DIR
+    model_path = model_directory / "trajectory-model.pmzip"
+    report_path = model_directory / "training-report.json"
+    if not model_path.is_file() or not report_path.is_file():
+        raise ValueError(
+            "Run planmargin-train-trajectory-model before preparing the scene"
+        )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    if report.get("status") != "visualization_qualified":
+        raise ValueError(
+            "The real WOMD trajectory model is not visualization-qualified"
+        )
+    if _sha256(model_path) != report.get("model_sha256"):
+        raise ValueError("Trajectory model hash does not match its report")
+    connection = duckdb.connect()
+    try:
+        pose_rows = connection.execute(
+            """
+            SELECT "key.frame_timestamp_micros",
+                   "[VehiclePoseComponent].world_from_vehicle.transform"
+            FROM read_parquet(?) ORDER BY "key.frame_timestamp_micros"
+            """,
+            [str(data_directory / "vehicle_pose.parquet")],
+        ).fetchall()
+        camera_extrinsic = connection.execute(
+            """
+            SELECT "[CameraCalibrationComponent].extrinsic.transform"
+            FROM read_parquet(?) WHERE "key.camera_name" = ?
+            """,
+            [str(data_directory / "camera_calibration.parquet"), FRONT_CAMERA_NAME],
+        ).fetchone()[0]
+    finally:
+        connection.close()
+    if len(pose_rows) != EXPECTED_FRAME_COUNT:
+        raise ValueError("Vehicle-pose timeline is incomplete")
+    poses = [np.asarray(row[1], dtype=np.float64).reshape(4, 4) for row in pose_rows]
+    features, baseline, recorded = _trajectory_window(poses, MOVING_SOURCE_FRAME_INDEX)
+    parameters = trajectory_model.load_model(model_path.read_bytes())
+    predicted = trajectory_model.predict(parameters, features, baseline).reshape(-1, 2)
+    baseline_xy = baseline.reshape(-1, 2)
+    prediction_error = np.linalg.norm(predicted - recorded, axis=1)
+    baseline_error = np.linalg.norm(baseline_xy - recorded, axis=1)
+    extrinsic = np.asarray(camera_extrinsic, dtype=np.float64).reshape(4, 4)
+    payload = {
+        "record_type": "planmargin.calibrated_sensor_trajectory",
+        "schema_version": "1.0.0",
+        "source_frame_index": MOVING_SOURCE_FRAME_INDEX,
+        "step_seconds": trajectory_model.STEP_SECONDS,
+        "history_steps": trajectory_model.HISTORY_STEPS,
+        "future_steps": trajectory_model.FUTURE_STEPS,
+        "coordinate_system": "apple_sharp_source_camera_opencv",
+        "paths": {
+            "recorded": _opencv_points(recorded, extrinsic),
+            "jax_prediction": _opencv_points(predicted, extrinsic),
+            "constant_velocity": _opencv_points(baseline_xy, extrinsic),
+        },
+        "metrics": {
+            "jax_ade_m": round(float(prediction_error.mean()), 6),
+            "jax_fde_m": round(float(prediction_error[-1]), 6),
+            "constant_velocity_ade_m": round(float(baseline_error.mean()), 6),
+            "constant_velocity_fde_m": round(float(baseline_error[-1]), 6),
+        },
+        "model": {
+            "framework": "JAX",
+            "training_source": report["source"],
+            "status": report["status"],
+            "report_sha256": report["report_sha256"],
+            "model_sha256": report["model_sha256"],
+            "superiority_claim_supported": False,
+        },
+        "claim_boundary": "The overlay registers a research predictor and recorded ego poses into one WOD Perception frame; it is not a Waymo Driver trajectory or safety claim.",
+    }
+    output.write_text(
+        json.dumps(payload, separators=(",", ":")) + "\n", encoding="utf-8"
+    )
+    return payload
+
+
 def prepare(
     root: Path,
     *,
@@ -299,11 +444,20 @@ def prepare(
     gaussian_path = (
         root / "artifacts" / "real-3dgs" / "waymo-front" / "099-1552440205262596.ply"
     )
+    moving_gaussian_path = (
+        root
+        / "artifacts"
+        / "real-3dgs"
+        / "waymo-front-moving"
+        / "020-1552440197361693.ply"
+    )
     for source in (
         camera_parquet,
         camera_box_parquet,
         data_directory / "lidar.parquet",
         data_directory / "lidar_calibration.parquet",
+        data_directory / "vehicle_pose.parquet",
+        data_directory / "camera_calibration.parquet",
     ):
         if source.is_symlink() or not source.is_file():
             raise ValueError(f"Required local scene input is missing: {source}")
@@ -366,6 +520,29 @@ def prepare(
             ],
             check=True,
         )
+    if not moving_gaussian_path.is_file() and generate_sharp:
+        if sharp_command is None or not sharp_command.is_file():
+            raise ValueError("The Apple SHARP command is unavailable")
+        moving_gaussian_path.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                str(sharp_command),
+                "predict",
+                "--input-path",
+                str(frames_directory / frames[MOVING_SOURCE_FRAME_INDEX]["file"]),
+                "--output-path",
+                str(moving_gaussian_path.parent),
+                "--device",
+                device,
+                "--no-render",
+                *(
+                    ["--checkpoint-path", str(sharp_checkpoint)]
+                    if sharp_checkpoint is not None
+                    else []
+                ),
+            ],
+            check=True,
+        )
     if gaussian_path.is_symlink() or not gaussian_path.is_file():
         raise ValueError(
             "Required SHARP reconstruction is missing; rerun with --generate-sharp"
@@ -373,6 +550,12 @@ def prepare(
     if _vertex_count(gaussian_path) != EXPECTED_GAUSSIANS:
         raise ValueError(
             "The SHARP reconstruction does not have the expected Gaussian count"
+        )
+    if moving_gaussian_path.is_symlink() or not moving_gaussian_path.is_file():
+        raise ValueError("Required moving-frame SHARP reconstruction is missing")
+    if _vertex_count(moving_gaussian_path) != EXPECTED_GAUSSIANS:
+        raise ValueError(
+            "The moving-frame SHARP reconstruction has an unexpected count"
         )
 
     output_directory = root / "artifacts" / "sensor-scene" / "waymo-front"
@@ -384,6 +567,8 @@ def prepare(
     annotation_counts = _prepare_camera_annotations(
         camera_box_parquet, [int(row[0]) for row in rows], annotations_path
     )
+    trajectory_path = output_directory / "020-calibrated-trajectory.json"
+    trajectory = _prepare_trajectory_overlay(root, data_directory, trajectory_path)
     manifest = {
         "record_type": "planmargin.sensor_scene_manifest",
         "schema_version": "1.0.0",
@@ -404,6 +589,14 @@ def prepare(
         },
         "reconstruction": {
             "representation": "apple_sharp_3d_gaussian_splatting",
+            "source_frame_index": MOVING_SOURCE_FRAME_INDEX,
+            "primitive_count": EXPECTED_GAUSSIANS,
+            "file": str(moving_gaussian_path.relative_to(root)),
+            "bytes": moving_gaussian_path.stat().st_size,
+            "sha256": _sha256(moving_gaussian_path),
+        },
+        "reconstruction_reference": {
+            "representation": "apple_sharp_3d_gaussian_splatting",
             "source_frame_index": SOURCE_FRAME_INDEX,
             "primitive_count": EXPECTED_GAUSSIANS,
             "file": str(gaussian_path.relative_to(root)),
@@ -417,6 +610,16 @@ def prepare(
             "file": str(lidar_path.relative_to(root)),
             "bytes": lidar_path.stat().st_size,
             "sha256": _sha256(lidar_path),
+        },
+        "trajectory": {
+            "representation": "calibrated_recorded_and_jax_predicted_ego_paths",
+            "source_frame_index": MOVING_SOURCE_FRAME_INDEX,
+            "file": str(trajectory_path.relative_to(root)),
+            "bytes": trajectory_path.stat().st_size,
+            "sha256": _sha256(trajectory_path),
+            "future_steps": trajectory["future_steps"],
+            "step_seconds": trajectory["step_seconds"],
+            "model_status": trajectory["model"]["status"],
         },
     }
     encoded = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
