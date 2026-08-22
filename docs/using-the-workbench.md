@@ -12,6 +12,15 @@ uv run --frozen planmargin-doctor --require full
 uv run --frozen planmargin-workbench
 ```
 
+If the doctor is not yet green, resume every required real-data phase with:
+
+```bash
+uv run --frozen planmargin-bootstrap-workbench --accept-waymo-terms
+```
+
+The bootstrap skips already verified capabilities and ends by rerunning the
+full doctor. It never substitutes synthetic records for missing WOD access.
+
 The launcher starts the local API and web application, then opens an ephemeral
 authenticated URL. The token is exchanged once for an HttpOnly same-site
 browser-session cookie and removed from the address bar. Refreshes and fresh

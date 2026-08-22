@@ -1,4 +1,9 @@
-# PlanMargin scenario simulator
+# PlanMargin campaign workbench
+
+The hosted Space is the aggregate-only public application. It contains no WOD
+frames, point clouds, scenario paths, proposal records, or local credentials.
+Clone the [GitHub repository](https://github.com/ethanvillalovoz/planmargin) for
+the authenticated local Workbench and Sensors surfaces.
 
 This Angular, TypeScript, Three.js, and Spark application is PlanMargin's local
 counterfactual-driving workbench. Its default workspace combines four visible
@@ -52,9 +57,10 @@ npm ci
 npm start
 ```
 
-Open `http://127.0.0.1:4200`, choose **Connect local evidence**, and paste the
-ephemeral token printed by the API. The token stays in memory only. It is not
-placed in browser storage, URLs, logs, or exports.
+The recommended launcher is `uv run --frozen planmargin-workbench`; it opens an
+authenticated URL automatically and removes the launch token after exchanging
+it for an HttpOnly browser-session cookie. Use the manual connection dialog
+only to recover a separately opened local browser.
 
 The deterministic local assistant is the default and costs nothing. If the API
 is deliberately started with the repository's optional Gemini provider, the

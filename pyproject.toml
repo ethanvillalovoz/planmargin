@@ -46,6 +46,7 @@ planmargin-qualify-active-risk = "planmargin.active_mining:main"
 planmargin-qualify-active-risk-v6 = "planmargin.active_mining:v6_main"
 planmargin-train-interaction-trajectory = "planmargin.interaction_trajectory_model:main"
 planmargin-doctor = "planmargin.workspace:doctor_main"
+planmargin-bootstrap-workbench = "planmargin.workspace:bootstrap_workbench_main"
 planmargin-bootstrap-sensor = "planmargin.workspace:bootstrap_sensor_main"
 planmargin-workbench = "planmargin.debugger_launcher:main"
 

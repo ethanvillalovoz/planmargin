@@ -204,3 +204,28 @@ def test_public_claims_do_not_repeat_disproven_pristine_holdout_language() -> No
             (relative, phrase) for phrase in prohibited if phrase in content
         )
     assert violations == []
+
+
+def test_static_space_contract_builds_only_the_public_frontend() -> None:
+    readme = (
+        REPOSITORY_ROOT / "deploy" / "huggingface-space" / "README.md"
+    ).read_text(encoding="utf-8")
+    _, metadata, body = readme.split("---", maxsplit=2)
+    configuration = {
+        key.strip(): value.strip()
+        for key, value in (
+            line.split(":", maxsplit=1)
+            for line in metadata.strip().splitlines()
+            if ":" in line
+        )
+    }
+
+    assert configuration["sdk"] == "static"
+    assert configuration["app_file"] == "index.html"
+    assert "app_build_command" not in configuration
+    assert configuration["license"] == "apache-2.0"
+    assert len(configuration["short_description"]) <= 60
+    assert "aggregate-only public application" in body
+    assert "ethanvillalovoz-planmargin.static.hf.space" in (
+        REPOSITORY_ROOT / "README.md"
+    ).read_text(encoding="utf-8")

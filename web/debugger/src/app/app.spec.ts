@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { App, consumeLaunchToken } from './app';
+import { App, consumeLaunchToken, isLoopbackHostname } from './app';
 import { DebuggerStore } from './debugger.store';
 import { LocalEvidenceService } from './local-evidence.service';
 
@@ -22,6 +22,15 @@ describe('launch session bootstrap', () => {
     window.history.replaceState(null, '', '/#view=planning');
     expect(consumeLaunchToken(window.location, window.history)).toBeUndefined();
     expect(window.location.hash).toBe('#view=planning');
+  });
+
+  it('limits automatic session recovery to loopback hosts', () => {
+    expect(isLoopbackHostname('localhost')).toBe(true);
+    expect(isLoopbackHostname('127.0.0.1')).toBe(true);
+    expect(isLoopbackHostname('[::1]')).toBe(true);
+    expect(isLoopbackHostname('ethanvillalovoz-planmargin.static.hf.space')).toBe(
+      false,
+    );
   });
 
   it('loads the initial planning run after an automatic launch connection', async () => {

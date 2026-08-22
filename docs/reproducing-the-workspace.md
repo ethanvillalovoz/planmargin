@@ -14,6 +14,18 @@ Beam reconciliation, planning-linked Gaussian decision, and JAX controller
 decision. `--require full` exits nonzero unless the complete local workbench
 and research program are ready.
 
+After installing the locked environment and authorizing WOD access, the entire
+runbook below is available as one resumable command:
+
+```bash
+uv run --frozen planmargin-bootstrap-workbench --accept-waymo-terms
+```
+
+Pass `--plan` to inspect every phase without running it, or `--device mps`,
+`--device cuda`, or `--device cpu` to require the reconstruction backend. The
+command reuses capabilities that already pass the doctor and stops at the first
+failed deterministic phase.
+
 ## 1. Install the locked environments
 
 ```bash
