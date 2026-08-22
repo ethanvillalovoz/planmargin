@@ -8,6 +8,7 @@ a free Colab GPU runtime using the companion notebook.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import platform
@@ -63,6 +64,21 @@ def _supports_fast_fp16(builder: Any) -> bool:
     return bool(getattr(builder, "platform_has_fast_fp16", True))
 
 
+def _enable_legacy_fp16(trt: Any, builder: Any, config: Any) -> bool:
+    """Enable weakly typed FP16 on TensorRT 10 and earlier.
+
+    TensorRT 11 removed the builder flag. On that runtime the parsed ONNX graph
+    must already be typed as FP16, which ``qualify`` exports explicitly.
+    """
+    fp16_flag = getattr(trt.BuilderFlag, "FP16", None)
+    if fp16_flag is None:
+        return False
+    if not _supports_fast_fp16(builder):
+        raise RuntimeError("The selected NVIDIA GPU has no fast FP16 support")
+    config.set_flag(fp16_flag)
+    return True
+
+
 def build_engine(
     onnx_path: Path,
     engine_path: Path,
@@ -84,9 +100,7 @@ def build_engine(
         trt.MemoryPoolType.WORKSPACE, workspace_gib * 1024 * 1024 * 1024
     )
     if fp16:
-        if not _supports_fast_fp16(builder):
-            raise RuntimeError("The selected NVIDIA GPU has no fast FP16 support")
-        config.set_flag(trt.BuilderFlag.FP16)
+        _enable_legacy_fp16(trt, builder, config)
     profile = builder.create_optimization_profile()
     profile.set_shape("features", (1, 66), (min(8, max_batch), 66), (max_batch, 66))
     profile.set_shape(
@@ -137,10 +151,11 @@ def _cuda_benchmark(
     features: torch.Tensor,
     baseline: torch.Tensor,
     *,
+    dtype: torch.dtype,
     warmup: int,
     iterations: int,
 ) -> tuple[dict[str, float], torch.Tensor]:
-    output = torch.empty((len(features), 60), device="cuda", dtype=torch.float32)
+    output = torch.empty((len(features), 60), device="cuda", dtype=dtype)
     for _ in range(warmup):
         runner.infer(features, baseline, output)
     runner.stream.synchronize()
@@ -275,11 +290,16 @@ def qualify(
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    fp16_onnx_path = output_dir / "trajectory-model-fp16.onnx"
+    torch_trajectory_model.export_onnx(
+        copy.deepcopy(model).half(), fp16_onnx_path, dtype=torch.float16
+    )
     engines: dict[str, Any] = {}
     before_free, total_memory = torch.cuda.mem_get_info()
     for precision, fp16 in (("fp32", False), ("fp16", True)):
+        onnx_path = fp16_onnx_path if fp16 else model_dir / "trajectory-model.onnx"
         engine_path = build_engine(
-            model_dir / "trajectory-model.onnx",
+            onnx_path,
             output_dir / f"trajectory-{precision}.engine",
             fp16=fp16,
             max_batch=max(batches),
@@ -287,13 +307,15 @@ def qualify(
         runner = TensorRTRunner(engine_path)
         measurements: dict[str, Any] = {}
         parity: dict[str, Any] = {}
+        tensor_dtype = torch.float16 if fp16 else torch.float32
         for batch in batches:
-            features = cpu_features[:batch].cuda()
-            baseline = cpu_baseline[:batch].cuda()
+            features = cpu_features[:batch].to(device="cuda", dtype=tensor_dtype)
+            baseline = cpu_baseline[:batch].to(device="cuda", dtype=tensor_dtype)
             latency, prediction = _cuda_benchmark(
                 runner,
                 features,
                 baseline,
+                dtype=tensor_dtype,
                 warmup=warmup,
                 iterations=iterations,
             )
@@ -307,6 +329,7 @@ def qualify(
         engines[precision] = {
             "bytes": engine_path.stat().st_size,
             "sha256": _sha256(engine_path.read_bytes()),
+            "source_onnx_sha256": _sha256(onnx_path.read_bytes()),
             "batches": measurements,
             "pytorch_fp32_parity": parity,
         }

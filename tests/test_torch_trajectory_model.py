@@ -12,7 +12,9 @@ from planmargin import torch_trajectory_model
 from planmargin import trajectory_model
 
 
-def _samples(scenario_id: str, offset: float = 0.0) -> torch_trajectory_model.ScenarioWindows:
+def _samples(
+    scenario_id: str, offset: float = 0.0
+) -> torch_trajectory_model.ScenarioWindows:
     steps = 81
     time = np.arange(steps, dtype=np.float32) * 0.1
     x = (time * 5 + offset)[None, :]
@@ -78,6 +80,18 @@ def test_onnx_export_is_valid_and_has_dynamic_batch(tmp_path: Path) -> None:
         "features",
         "constant_velocity",
     }
+
+
+def test_fp16_onnx_export_has_typed_inputs(tmp_path: Path) -> None:
+    path = torch_trajectory_model.export_onnx(
+        _model().half(), tmp_path / "model-fp16.onnx", dtype=torch.float16
+    )
+    graph = onnx.load(path)
+    onnx.checker.check_model(graph)
+    assert all(
+        value.type.tensor_type.elem_type == onnx.TensorProto.FLOAT16
+        for value in graph.graph.input
+    )
 
 
 def test_small_training_is_deterministic() -> None:

@@ -16,6 +16,9 @@ class _TensorRT11:
     class NetworkDefinitionCreationFlag:
         pass
 
+    class BuilderFlag:
+        pass
+
 
 class _LegacyBuilder:
     platform_has_fast_fp16 = False
@@ -23,6 +26,14 @@ class _LegacyBuilder:
 
 class _TensorRT11Builder:
     pass
+
+
+class _Config:
+    def __init__(self) -> None:
+        self.flags: list[object] = []
+
+    def set_flag(self, flag: object) -> None:
+        self.flags.append(flag)
 
 
 def test_latency_summary_reports_required_percentiles() -> None:
@@ -36,6 +47,11 @@ def test_network_flags_cover_legacy_and_tensorrt_11() -> None:
     assert tensorrt_qualification._network_creation_flags(_TensorRT11) == 0
     assert not tensorrt_qualification._supports_fast_fp16(_LegacyBuilder())
     assert tensorrt_qualification._supports_fast_fp16(_TensorRT11Builder())
+    config = _Config()
+    assert not tensorrt_qualification._enable_legacy_fp16(
+        _TensorRT11, _TensorRT11Builder(), config
+    )
+    assert config.flags == []
 
 
 @pytest.mark.parametrize("samples", [[], [1.0, float("nan")]])

@@ -164,7 +164,9 @@ def stream_womd_scenarios(config: TorchTrainingConfig) -> Iterator[ScenarioWindo
             if emitted == target:
                 break
         if emitted != target:
-            raise RuntimeError(f"WOMD shard {shard_index} yielded only {emitted} scenarios")
+            raise RuntimeError(
+                f"WOMD shard {shard_index} yielded only {emitted} scenarios"
+            )
 
 
 def _write_cache(path: Path, scenarios: Iterable[ScenarioWindows]) -> None:
@@ -176,7 +178,9 @@ def _write_cache(path: Path, scenarios: Iterable[ScenarioWindows]) -> None:
         path,
         scenario_ids=np.asarray([item.scenario_id for item in values], dtype=str),
         shard_indices=np.asarray([item.shard_index for item in values], dtype=np.int16),
-        window_counts=np.asarray([len(item.features) for item in values], dtype=np.int32),
+        window_counts=np.asarray(
+            [len(item.features) for item in values], dtype=np.int32
+        ),
         features=np.concatenate([item.features for item in values]),
         targets=np.concatenate([item.targets for item in values]),
         baseline=np.concatenate([item.baseline for item in values]),
@@ -214,7 +218,9 @@ def _read_cache(path: Path) -> list[ScenarioWindows]:
     return result
 
 
-def prepare_cache(path: Path, config: TorchTrainingConfig, refresh: bool = False) -> Path:
+def prepare_cache(
+    path: Path, config: TorchTrainingConfig, refresh: bool = False
+) -> Path:
     if refresh or not path.is_file():
         _write_cache(path, stream_womd_scenarios(config))
     scenarios = _read_cache(path)
@@ -299,9 +305,7 @@ class TrajectoryConvNet(nn.Module):
         sequence = torch.cat((past_xy, past_velocity, sine, cosine), dim=2)
         encoded = self.encoder(sequence.transpose(1, 2))
         residual = self.head(encoded) * self.target_scale
-        prediction = (baseline + residual).reshape(
-            -1, trajectory_model.FUTURE_STEPS, 2
-        )
+        prediction = (baseline + residual).reshape(-1, trajectory_model.FUTURE_STEPS, 2)
         smoothed = torch.matmul(self.smoothing_matrix, prediction)
         return smoothed.reshape(-1, trajectory_model.FUTURE_STEPS * 2)
 
@@ -416,10 +420,8 @@ def train(
         "scenario_level_holdout": True,
         "minimum_100_scenarios": config.scenario_count >= 100,
         "finite_training": bool(np.isfinite(epoch_losses).all()),
-        "beats_constant_velocity_ade": test["ade_m"]
-        < test["constant_velocity_ade_m"],
-        "beats_constant_velocity_fde": test["fde_m"]
-        < test["constant_velocity_fde_m"],
+        "beats_constant_velocity_ade": test["ade_m"] < test["constant_velocity_ade_m"],
+        "beats_constant_velocity_fde": test["fde_m"] < test["constant_velocity_fde_m"],
     }
     return model.cpu(), {
         "loss_first": round(epoch_losses[0], 8),
@@ -462,7 +464,9 @@ def serialize_model(model: TrajectoryConvNet) -> bytes:
 def load_model(payload: bytes) -> TrajectoryConvNet:
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
         names = archive.namelist()
-        if set(names) != MODEL_MEMBERS or any(Path(name).name != name for name in names):
+        if set(names) != MODEL_MEMBERS or any(
+            Path(name).name != name for name in names
+        ):
             raise ValueError("Trajectory model member allowlist mismatch")
         configuration = json.loads(archive.read("configuration.json"))
         arrays = {
@@ -487,7 +491,12 @@ def load_model(payload: bytes) -> TrajectoryConvNet:
     return model
 
 
-def export_onnx(model: TrajectoryConvNet, path: Path) -> Path:
+def export_onnx(
+    model: TrajectoryConvNet,
+    path: Path,
+    *,
+    dtype: torch.dtype = torch.float32,
+) -> Path:
     try:
         import onnx
     except ImportError as error:
@@ -500,8 +509,8 @@ def export_onnx(model: TrajectoryConvNet, path: Path) -> Path:
         model.eval(),
         args=(),
         kwargs={
-            "features": torch.zeros((2, feature_width), dtype=torch.float32),
-            "baseline": torch.zeros((2, target_width), dtype=torch.float32),
+            "features": torch.zeros((2, feature_width), dtype=dtype),
+            "baseline": torch.zeros((2, target_width), dtype=dtype),
         },
         f=path,
         input_names=["features", "constant_velocity"],
@@ -528,7 +537,9 @@ def run(
 ) -> Path:
     prepare_cache(cache, config, refresh=refresh_cache)
     scenario_splits = split_scenarios(_read_cache(cache), config.seed)
-    splits = {name: combine_scenarios(values) for name, values in scenario_splits.items()}
+    splits = {
+        name: combine_scenarios(values) for name, values in scenario_splits.items()
+    }
     model, training = train(splits, config)
     payload = serialize_model(model)
     output.mkdir(parents=True, exist_ok=True)
@@ -573,9 +584,13 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--scenario-count", type=int, default=DEFAULT_SCENARIO_COUNT)
     parser.add_argument("--shard-count", type=int, default=DEFAULT_SHARD_COUNT)
-    parser.add_argument("--max-windows-per-scenario", type=int, default=DEFAULT_MAX_WINDOWS_PER_SCENARIO)
+    parser.add_argument(
+        "--max-windows-per-scenario", type=int, default=DEFAULT_MAX_WINDOWS_PER_SCENARIO
+    )
     parser.add_argument("--epochs", type=int, default=TorchTrainingConfig.epochs)
-    parser.add_argument("--batch-size", type=int, default=TorchTrainingConfig.batch_size)
+    parser.add_argument(
+        "--batch-size", type=int, default=TorchTrainingConfig.batch_size
+    )
     parser.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
     parser.add_argument("--refresh-cache", action="store_true")
     args = parser.parse_args()
