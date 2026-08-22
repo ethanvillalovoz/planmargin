@@ -84,6 +84,9 @@ def _public_bundle_ready(root: Path) -> bool:
             directory / "manifest.json",
             directory / "verify.py",
             directory / "data" / "campaign.jsonl",
+            directory / "data" / "trajectory-model.json",
+            directory / "data" / "tensorrt-qualification.json",
+            directory / "data" / "tensorrt-cpp-benchmark.json",
         )
     )
 
@@ -361,18 +364,33 @@ def _tensorrt_qualified(root: Path) -> tuple[bool, str]:
     path = root / "experiments" / "tensorrt-qualification-v1.json"
     try:
         if path.is_symlink() or not path.is_file():
-            raise FileNotFoundError("No published TensorRT qualification report is present")
+            raise FileNotFoundError(
+                "No published TensorRT qualification report is present"
+            )
         report = json.loads(path.read_text(encoding="utf-8"))
+        sealed = dict(report)
+        expected_seal = sealed.pop("report_sha256")
+        canonical = (
+            json.dumps(sealed, sort_keys=True, separators=(",", ":")) + "\n"
+        ).encode()
+        if hashlib.sha256(canonical).hexdigest() != expected_seal:
+            raise ValueError("The TensorRT qualification report seal is invalid")
         if (
-            report.get("record_type")
-            != "planmargin.tensorrt_qualification_report"
-            or report.get("synthetic") is not False
+            report.get("record_type") != "planmargin.tensorrt_qualification_report"
+            or report.get("source_model_training_data", {}).get("synthetic")
+            is not False
             or report.get("redistribution") != "aggregate_only"
             or report.get("status") != "qualified"
             or not all(report.get("gates", {}).values())
         ):
             raise ValueError("The TensorRT qualification gates did not all pass")
-    except (FileNotFoundError, ValueError, OSError, json.JSONDecodeError) as error:
+    except (
+        FileNotFoundError,
+        ValueError,
+        OSError,
+        json.JSONDecodeError,
+        KeyError,
+    ) as error:
         return False, str(error)
     fp16 = report["engines"]["fp16"]["batches"]["1"]
     return (

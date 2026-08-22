@@ -9,10 +9,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(CUDAToolkit REQUIRED)
 
 find_path(TENSORRT_INCLUDE_DIR NvInfer.h
-  HINTS $ENV{TENSORRT_ROOT}
+  HINTS ${TENSORRT_ROOT} $ENV{TENSORRT_ROOT}
   PATH_SUFFIXES include)
-find_library(TENSORRT_LIBRARY nvinfer
-  HINTS $ENV{TENSORRT_ROOT}
+find_library(TENSORRT_LIBRARY
+  NAMES nvinfer libnvinfer.so.11
+  HINTS ${TENSORRT_ROOT} $ENV{TENSORRT_ROOT}
   PATH_SUFFIXES lib lib64)
 
 if(NOT TENSORRT_INCLUDE_DIR OR NOT TENSORRT_LIBRARY)
@@ -20,7 +21,8 @@ if(NOT TENSORRT_INCLUDE_DIR OR NOT TENSORRT_LIBRARY)
 endif()
 
 add_executable(planmargin_tensorrt_runner trajectory_runner.cpp)
-target_include_directories(planmargin_tensorrt_runner PRIVATE ${TENSORRT_INCLUDE_DIR})
+target_include_directories(planmargin_tensorrt_runner SYSTEM PRIVATE
+  ${TENSORRT_INCLUDE_DIR})
 target_link_libraries(planmargin_tensorrt_runner PRIVATE
   ${TENSORRT_LIBRARY}
   CUDA::cudart)

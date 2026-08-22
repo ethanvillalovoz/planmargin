@@ -192,6 +192,7 @@ export function parseCampaign(
       nativeKernelSpeedupRange: '585–619×',
       heldOutComparisonRun: false,
       trajectoryModel: CAMPAIGN_EVIDENCE.trajectoryModel,
+      inference: CAMPAIGN_EVIDENCE.inference,
       mode: 'real-local-redacted',
     },
     cells,

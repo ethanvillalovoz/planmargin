@@ -1,0 +1,47 @@
+{
+  "claim_boundary": "Inference qualification of PlanMargin's bounded research trajectory model; not a production autonomy or safety benchmark.",
+  "engines": {
+    "fp16": {
+      "batches": {
+        "1": {"latency_ms": {"mean": 0.211071, "p50": 0.196688, "p95": 0.264453, "p99": 0.293873}, "throughput_samples_per_second": 4737.742},
+        "8": {"latency_ms": {"mean": 0.195539, "p50": 0.186672, "p95": 0.237762, "p99": 0.272369}, "throughput_samples_per_second": 40912.555},
+        "256": {"latency_ms": {"mean": 0.253763, "p50": 0.24672, "p95": 0.287053, "p99": 0.30965}, "throughput_samples_per_second": 1008815.312}
+      },
+      "bytes": 816660,
+      "pytorch_fp32_parity": {
+        "1": {"max_absolute_error_m": 0.00713634, "rmse_m": 0.00186586},
+        "8": {"max_absolute_error_m": 0.02915192, "rmse_m": 0.00451769},
+        "256": {"max_absolute_error_m": 0.05508423, "rmse_m": 0.00563178}
+      },
+      "sha256": "0ee9c0c6bf9d5a978c8e0b8f933e1725e3b5499609159bb6404047d0ef9dbb58",
+      "source_onnx_sha256": "a9b1d2a91e8318a72b855c7b100891d5c8c635ce338c97e6bb10113cff7a23ea"
+    },
+    "fp32": {
+      "batches": {
+        "1": {"latency_ms": {"mean": 0.24635, "p50": 0.246592, "p95": 0.297026, "p99": 0.424751}, "throughput_samples_per_second": 4059.265},
+        "8": {"latency_ms": {"mean": 0.226985, "p50": 0.216512, "p95": 0.268506, "p99": 0.307519}, "throughput_samples_per_second": 35244.62},
+        "256": {"latency_ms": {"mean": 0.37241, "p50": 0.33792, "p95": 0.518872, "p99": 0.557821}, "throughput_samples_per_second": 687414.409}
+      },
+      "bytes": 1434660,
+      "pytorch_fp32_parity": {
+        "1": {"max_absolute_error_m": 0.00000668, "rmse_m": 0.00000143},
+        "8": {"max_absolute_error_m": 0.00003433, "rmse_m": 0.00000472},
+        "256": {"max_absolute_error_m": 0.00004578, "rmse_m": 0.00000459}
+      },
+      "sha256": "417aae7a68104c1fc797f9c50931f5b07b83002068df8ced920bfca538e5695b",
+      "source_onnx_sha256": "8ce5582c2a56014f4cd7b78515e92a5298660cd9e7782db56d7b936288c9d813"
+    }
+  },
+  "environment": {"cuda": "13.0", "platform": "Linux-6.6.122+-x86_64-with-glibc2.35", "python": "3.11.16", "tensorrt": "11.2.1.2", "torch": "2.13.0+cu130"},
+  "gates": {"fp16_max_error_under_7_5e_2_m": true, "fp16_rmse_under_1e_2_m": true, "fp32_max_error_under_1e_4_m": true, "gpu_faster_than_cpu_at_batch_1": true},
+  "gpu": {"compute_capability": [7, 5], "name": "Tesla T4", "observed_free_memory_delta_bytes": 65011712, "total_memory_bytes": 15637086208},
+  "measurement": {"batches": [1, 8, 256], "clock": "CUDA events around TensorRT enqueueV3", "cpu_reference_batch_1": {"mean": 0.450243, "p50": 0.439425, "p95": 0.534834, "p99": 0.709588}, "input_protocol": "deterministic_physical_probe_v1", "input_purpose": "deployment timing and numerical parity only", "measured_iterations": 500, "warmup_iterations": 50},
+  "record_type": "planmargin.tensorrt_qualification_report",
+  "redistribution": "aggregate_only",
+  "report_sha256": "d802b09f4f4fdc7535eb8b11e51cb975ce5797e10f3f8a6591253333a74846c8",
+  "schema_version": "1.0.0",
+  "source_model_training_data": {"dataset": "Waymo Open Motion Dataset v1.3.1 training TFExamples", "synthetic": false},
+  "source_onnx_sha256": "8ce5582c2a56014f4cd7b78515e92a5298660cd9e7782db56d7b936288c9d813",
+  "source_training_report_sha256": "20a04f22b4d8083f5f4c425353ec4b9c50a177257e77496a17eea9f5307bb159",
+  "status": "qualified"
+}

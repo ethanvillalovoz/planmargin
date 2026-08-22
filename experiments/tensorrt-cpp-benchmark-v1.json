@@ -1,0 +1,8 @@
+{
+  "batch_size": 1,
+  "latency_ms": {"mean": 0.125970, "p50": 0.124288, "p95": 0.140486, "p99": 0.149049},
+  "measured_iterations": 500,
+  "record_type": "planmargin.tensorrt_cpp_benchmark",
+  "throughput_samples_per_second": 7938.390975,
+  "warmup_iterations": 50
+}

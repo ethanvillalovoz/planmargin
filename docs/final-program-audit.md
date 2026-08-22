@@ -2,7 +2,7 @@
 
 **Audit date:** August 21, 2026
 
-**Release:** v1.0.0
+**Release:** v1.2.0
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -21,6 +21,11 @@ no key.
 No paid service, hosted database, subscription, or purchased compute is
 required.
 
+The v1.2 audit adds a second real-WOMD trajectory track intended for deployment
+qualification: 128 scenarios, 29,288 windows, complete-scenario holdout,
+PyTorch, ONNX, TensorRT 11 FP32/FP16 engines, and an independent C++17 runtime.
+The public model release contains weights and aggregate metrics only.
+
 ## What an engineer can do
 
 1. Open an authenticated local session without copying a token.
@@ -36,6 +41,8 @@ required.
    planner outcomes.
 7. Export a privacy-reduced, SHA-256-digested HTML investigation report.
 8. Ask bounded evidence questions through deterministic local tools.
+9. Inspect measured Tesla T4 latency, throughput, FP32/FP16 drift, environment
+   versions, and engine hashes without accessing licensed WOMD records.
 
 The product does not invent a scenario, trajectory, camera stream, box track,
 point field, or reconstruction when licensed evidence is absent.
@@ -74,14 +81,17 @@ point field, or reconstruction when licensed evidence is absent.
 | 3D Gaussian splatting      | Split       | real SHARP Perception reconstruction shipped; planning-linked study preserved as `no_go`   |
 | Evidence assistant         | Shipped     | deterministic local tools; Gemini is an optional allowlisted explanation adapter           |
 | Proposal replay retention  | Shipped     | exact re-execution linked to the sealed proposal by trajectory, outcome, metric, and seal checks |
+| PyTorch trajectory model   | Shipped     | 128 real WOMD scenarios; 0.322 m ADE vs 0.620 m constant-velocity baseline                      |
+| ONNX and TensorRT 11       | Shipped     | hash-pinned FP32/typed-FP16 graphs; T4 CUDA-event timing and parity gates                        |
+| C++17 TensorRT runtime     | Shipped     | independently compiled `enqueueV3` runner; 0.124 ms batch-1 p50                                  |
 | Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                 |
 
 ## Verification performed on this revision
 
 - Ruff: all checks passed.
-- Python: 240 tests passed. The two warnings are upstream PyTorch deprecation
-  notices.
-- Angular/Vitest: 49 tests passed across launch authentication, local evidence,
+- Python: full data-free suite passed. Upstream warnings are identified in the
+  CI log and do not suppress failures.
+- Angular/Vitest: 50 tests passed across launch authentication, local evidence,
   parsers, stores, navigation, reports, and workbench behavior.
 - Playwright: four Chromium journeys passed across desktop and mobile. They
   cover the data-free public boundary, exact proposal-to-replay transition,
@@ -97,8 +107,8 @@ point field, or reconstruction when licensed evidence is absent.
   responses included `Cache-Control: no-store` and
   `X-Content-Type-Options: nosniff`.
 - Workspace doctor: public source, campaign evidence, exact proposal replay,
-  Sensor evidence, Beam output, Gaussian research, and JAX research all
-  verified as ready.
+  Sensor evidence, Beam output, Gaussian research, JAX research, PyTorch/ONNX,
+  and TensorRT qualification all verified as ready.
 
 ## Scientific outcome
 

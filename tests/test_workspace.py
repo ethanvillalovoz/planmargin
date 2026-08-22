@@ -16,7 +16,15 @@ def test_empty_clone_reports_each_private_capability_without_faking_readiness(
         tmp_path / "release" / "huggingface" / "planmargin-public-evidence" / "data"
     ).mkdir(parents=True)
     bundle = tmp_path / "release" / "huggingface" / "planmargin-public-evidence"
-    for relative in ("README.md", "manifest.json", "verify.py", "data/campaign.jsonl"):
+    for relative in (
+        "README.md",
+        "manifest.json",
+        "verify.py",
+        "data/campaign.jsonl",
+        "data/trajectory-model.json",
+        "data/tensorrt-qualification.json",
+        "data/tensorrt-cpp-benchmark.json",
+    ):
         (bundle / relative).write_text("{}\n", encoding="utf-8")
 
     report = workspace.inspect_workspace(tmp_path)
