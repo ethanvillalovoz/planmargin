@@ -17,6 +17,14 @@ class _TensorRT11:
         pass
 
 
+class _LegacyBuilder:
+    platform_has_fast_fp16 = False
+
+
+class _TensorRT11Builder:
+    pass
+
+
 def test_latency_summary_reports_required_percentiles() -> None:
     result = tensorrt_qualification.latency_summary([1.0, 2.0, 3.0, 4.0])
 
@@ -26,6 +34,8 @@ def test_latency_summary_reports_required_percentiles() -> None:
 def test_network_flags_cover_legacy_and_tensorrt_11() -> None:
     assert tensorrt_qualification._network_creation_flags(_LegacyTensorRT) == 8
     assert tensorrt_qualification._network_creation_flags(_TensorRT11) == 0
+    assert not tensorrt_qualification._supports_fast_fp16(_LegacyBuilder())
+    assert tensorrt_qualification._supports_fast_fp16(_TensorRT11Builder())
 
 
 @pytest.mark.parametrize("samples", [[], [1.0, float("nan")]])

@@ -58,6 +58,11 @@ def _network_creation_flags(trt: Any) -> int:
     return 0 if explicit_batch is None else 1 << int(explicit_batch)
 
 
+def _supports_fast_fp16(builder: Any) -> bool:
+    """TensorRT 11 removed this advisory capability property."""
+    return bool(getattr(builder, "platform_has_fast_fp16", True))
+
+
 def build_engine(
     onnx_path: Path,
     engine_path: Path,
@@ -79,7 +84,7 @@ def build_engine(
         trt.MemoryPoolType.WORKSPACE, workspace_gib * 1024 * 1024 * 1024
     )
     if fp16:
-        if not builder.platform_has_fast_fp16:
+        if not _supports_fast_fp16(builder):
             raise RuntimeError("The selected NVIDIA GPU has no fast FP16 support")
         config.set_flag(trt.BuilderFlag.FP16)
     profile = builder.create_optimization_profile()
@@ -106,6 +111,7 @@ class TensorRTRunner:
         self.context = self.engine.create_execution_context()
         if self.context is None:
             raise RuntimeError("Could not create a TensorRT execution context")
+        self.stream = torch.cuda.Stream()
 
     def infer(
         self, features: torch.Tensor, baseline: torch.Tensor, output: torch.Tensor
@@ -122,7 +128,7 @@ class TensorRTRunner:
         ):
             if not self.context.set_tensor_address(name, tensor.data_ptr()):
                 raise RuntimeError(f"TensorRT rejected the {name} tensor address")
-        if not self.context.execute_async_v3(torch.cuda.current_stream().cuda_stream):
+        if not self.context.execute_async_v3(self.stream.cuda_stream):
             raise RuntimeError("TensorRT enqueueV3 failed")
 
 
@@ -137,14 +143,14 @@ def _cuda_benchmark(
     output = torch.empty((len(features), 60), device="cuda", dtype=torch.float32)
     for _ in range(warmup):
         runner.infer(features, baseline, output)
-    torch.cuda.synchronize()
+    runner.stream.synchronize()
     samples: list[float] = []
     for _ in range(iterations):
         start = torch.cuda.Event(enable_timing=True)
         end = torch.cuda.Event(enable_timing=True)
-        start.record()
+        start.record(runner.stream)
         runner.infer(features, baseline, output)
-        end.record()
+        end.record(runner.stream)
         end.synchronize()
         samples.append(float(start.elapsed_time(end)))
     return latency_summary(samples), output.detach().cpu().clone()
