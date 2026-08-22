@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ethanvillalovoz/planmargin/schemas/torch-trajectory-model-public-v1.schema.json",
+  "title": "PlanMargin public trajectory-model result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_type",
+    "schema_version",
+    "synthetic",
+    "redistribution",
+    "source",
+    "scenario_count",
+    "window_count",
+    "split",
+    "test_metrics",
+    "gates",
+    "model_sha256",
+    "onnx_sha256",
+    "claim_boundary"
+  ],
+  "properties": {
+    "record_type": {"const": "planmargin.public_torch_trajectory_model_result"},
+    "schema_version": {"const": "1.0.0"},
+    "synthetic": {"const": false},
+    "redistribution": {"const": "aggregate_only"},
+    "source": {"const": "Waymo Open Motion Dataset v1.3.1 training TFExamples"},
+    "scenario_count": {"type": "integer", "minimum": 100},
+    "window_count": {"type": "integer", "minimum": 1},
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train_scenarios", "validation_scenarios", "test_scenarios"],
+      "properties": {
+        "train_scenarios": {"type": "integer", "minimum": 1},
+        "validation_scenarios": {"type": "integer", "minimum": 1},
+        "test_scenarios": {"type": "integer", "minimum": 1}
+      }
+    },
+    "test_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["windows", "ade_m", "fde_m", "constant_velocity_ade_m", "constant_velocity_fde_m"],
+      "properties": {
+        "windows": {"type": "integer", "minimum": 1},
+        "ade_m": {"type": "number", "minimum": 0},
+        "fde_m": {"type": "number", "minimum": 0},
+        "constant_velocity_ade_m": {"type": "number", "minimum": 0},
+        "constant_velocity_fde_m": {"type": "number", "minimum": 0}
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": {"type": "boolean"},
+      "minProperties": 1
+    },
+    "model_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "onnx_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "claim_boundary": {"type": "string", "minLength": 20}
+  }
+}

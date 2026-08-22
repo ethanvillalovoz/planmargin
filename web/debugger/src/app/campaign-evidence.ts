@@ -15,7 +15,19 @@ export interface CampaignEvidence {
   };
   readonly nativeKernelSpeedupRange: string;
   readonly heldOutComparisonRun: boolean;
+  readonly trajectoryModel: TrajectoryModelEvidence;
   readonly mode: 'published-aggregate' | 'real-local-redacted';
+}
+
+export interface TrajectoryModelEvidence {
+  readonly scenarios: number;
+  readonly windows: number;
+  readonly testWindows: number;
+  readonly adeMeters: number;
+  readonly fdeMeters: number;
+  readonly baselineAdeMeters: number;
+  readonly baselineFdeMeters: number;
+  readonly status: 'deployment candidate';
 }
 
 export interface MethodEvidence {
@@ -52,5 +64,15 @@ export const CAMPAIGN_EVIDENCE: CampaignEvidence = {
   },
   nativeKernelSpeedupRange: '585–619×',
   heldOutComparisonRun: false,
+  trajectoryModel: {
+    scenarios: 128,
+    windows: 29_288,
+    testWindows: 3_157,
+    adeMeters: 0.322497,
+    fdeMeters: 0.888763,
+    baselineAdeMeters: 0.620216,
+    baselineFdeMeters: 1.666729,
+    status: 'deployment candidate',
+  },
   mode: 'published-aggregate',
 };

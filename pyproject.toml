@@ -40,6 +40,8 @@ planmargin-build-gaussian-field = "planmargin.gaussian_field:main"
 planmargin-retain-proposal-replay = "planmargin.proposal_replay:main"
 planmargin-train-rl-controller = "planmargin.rl_controller:main"
 planmargin-train-trajectory-model = "planmargin.trajectory_model:main"
+planmargin-train-torch-trajectory = "planmargin.torch_trajectory_model:main"
+planmargin-qualify-tensorrt = "planmargin.tensorrt_qualification:main"
 planmargin-doctor = "planmargin.workspace:doctor_main"
 planmargin-bootstrap-sensor = "planmargin.workspace:bootstrap_sensor_main"
 planmargin-workbench = "planmargin.debugger_launcher:main"
@@ -48,11 +50,17 @@ planmargin-workbench = "planmargin.debugger_launcher:main"
 assistant = [
   "google-genai==2.17.0",
 ]
+nvidia = [
+  "onnx==1.20.0",
+  "onnxscript==0.7.1",
+]
 
 [dependency-groups]
 dev = [
   "httpx2>=2.10,<3",
   "jsonschema>=4.25,<5",
+  "onnx==1.20.0",
+  "onnxscript==0.7.1",
   "pytest>=8.4,<9",
   "ruff>=0.12,<0.13",
 ]

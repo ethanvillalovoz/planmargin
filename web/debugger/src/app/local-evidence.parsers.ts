@@ -1,4 +1,4 @@
-import { CampaignEvidence } from './campaign-evidence';
+import { CAMPAIGN_EVIDENCE, CampaignEvidence } from './campaign-evidence';
 import { DebuggerHypothesis, DebuggerRun, MetricSample, Point2d } from './debugger.types';
 import {
   CampaignInvestigation,
@@ -191,6 +191,7 @@ export function parseCampaign(
       },
       nativeKernelSpeedupRange: '585–619×',
       heldOutComparisonRun: false,
+      trajectoryModel: CAMPAIGN_EVIDENCE.trajectoryModel,
       mode: 'real-local-redacted',
     },
     cells,

@@ -1556,6 +1556,65 @@ wheels = [
 ]
 
 [[package]]
+name = "onnx"
+version = "1.20.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ml-dtypes" },
+    { name = "numpy" },
+    { name = "protobuf" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bd/bf/824b13b7ea14c2d374b48a296cfa412442e5559326fbab5441a4fcb68924/onnx-1.20.0.tar.gz", hash = "sha256:1a93ec69996b4556062d552ed1aa0671978cfd3c17a40bf4c89a1ae169c6a4ad", size = 12049527, upload-time = "2025-12-01T18:14:34.679Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/9a/125ad5ed919d1782b26b0b4404e51adc44afd029be30d5a81b446dccd9c5/onnx-1.20.0-cp311-cp311-macosx_12_0_universal2.whl", hash = "sha256:00dc8ae2c7b283f79623961f450b5515bd2c4b47a7027e7a1374ba49cef27768", size = 18341929, upload-time = "2025-12-01T18:13:43.79Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/3c/85280dd05396493f3e1b4feb7a3426715e344b36083229437f31d9788a01/onnx-1.20.0-cp311-cp311-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f62978ecfb8f320faba6704abd20253a5a79aacc4e5d39a9c061dd63d3b7574f", size = 17899362, upload-time = "2025-12-01T18:13:46.496Z" },
+    { url = "https://files.pythonhosted.org/packages/26/db/e11cf9aaa6ccbcd27ea94d321020fef3207cba388bff96111e6431f97d1a/onnx-1.20.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:71177f8fd5c0dd90697bc281f5035f73707bdac83257a5c54d74403a1100ace9", size = 18119129, upload-time = "2025-12-01T18:13:49.662Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/0b/1b99e7ba5ccfa8ecb3509ec579c8520098d09b903ccd520026d60faa7c75/onnx-1.20.0-cp311-cp311-win32.whl", hash = "sha256:1d3d0308e2c194f4b782f51e78461b567fac8ce6871c0cf5452ede261683cc8f", size = 16364604, upload-time = "2025-12-01T18:13:52.691Z" },
+    { url = "https://files.pythonhosted.org/packages/51/ab/7399817821d0d18ff67292ac183383e41f4f4ddff2047902f1b7b51d2d40/onnx-1.20.0-cp311-cp311-win_amd64.whl", hash = "sha256:3a6de7dda77926c323b0e5a830dc9c2866ce350c1901229e193be1003a076c25", size = 16488019, upload-time = "2025-12-01T18:13:55.776Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/e0/23059c11d9c0fb1951acec504a5cc86e1dd03d2eef3a98cf1941839f5322/onnx-1.20.0-cp311-cp311-win_arm64.whl", hash = "sha256:afc4cf83ce5d547ebfbb276dae8eb0ec836254a8698d462b4ba5f51e717fd1ae", size = 16446841, upload-time = "2025-12-01T18:13:58.091Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/19/2caa972a31014a8cb4525f715f2a75d93caef9d4b9da2809cc05d0489e43/onnx-1.20.0-cp312-abi3-macosx_12_0_universal2.whl", hash = "sha256:31efe37d7d1d659091f34ddd6a31780334acf7c624176832db9a0a8ececa8fb5", size = 18340913, upload-time = "2025-12-01T18:14:00.477Z" },
+    { url = "https://files.pythonhosted.org/packages/78/bb/b98732309f2f6beb4cdcf7b955d7bbfd75a191185370ee21233373db381e/onnx-1.20.0-cp312-abi3-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d75da05e743eb9a11ff155a775cae5745e71f1cd0ca26402881b8f20e8d6e449", size = 17896118, upload-time = "2025-12-01T18:14:03.239Z" },
+    { url = "https://files.pythonhosted.org/packages/84/a7/38aa564871d062c11538d65c575af9c7e057be880c09ecbd899dd1abfa83/onnx-1.20.0-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:02e0d72ab09a983fce46686b155a5049898558d9f3bc6e8515120d6c40666318", size = 18115415, upload-time = "2025-12-01T18:14:06.261Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/17/a600b62cf4ad72976c66f83ce9e324205af434706ad5ec0e35129e125aef/onnx-1.20.0-cp312-abi3-win32.whl", hash = "sha256:392ca68b34b97e172d33b507e1e7bfdf2eea96603e6e7ff109895b82ff009dc7", size = 16363019, upload-time = "2025-12-01T18:14:09.16Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/3b/5146ba0a89f73c026bb468c49612bab8d005aa28155ebf06cf5f2eb8d36c/onnx-1.20.0-cp312-abi3-win_amd64.whl", hash = "sha256:259b05758d41645f5545c09f887187662b350d40db8d707c33c94a4f398e1733", size = 16485934, upload-time = "2025-12-01T18:14:13.046Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/bc/d251b97395e721b3034e9578d4d4d9fb33aac4197ae16ce8c7ed79a26dce/onnx-1.20.0-cp312-abi3-win_arm64.whl", hash = "sha256:2d25a9e1fde44bc69988e50e2211f62d6afcd01b0fd6dfd23429fd978a35d32f", size = 16444946, upload-time = "2025-12-01T18:14:15.801Z" },
+]
+
+[[package]]
+name = "onnx-ir"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ml-dtypes" },
+    { name = "numpy" },
+    { name = "onnx" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d6/c2/61194cec0dbc5622273c0ebd592d37cc1dca0d7f1a744f02edd45ac905a3/onnx_ir-1.0.0.tar.gz", hash = "sha256:9e261f25fde8da9612ae5cb43b3b374d5ff469c04af0363cad588b2bb000b812", size = 163121, upload-time = "2026-08-11T14:49:46.895Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/91/cd/6d1637172eb59c7b18ac90ed089d1f599a11fe0e63b4db2d017f3bb38a32/onnx_ir-1.0.0-py3-none-any.whl", hash = "sha256:e578f0d608d3062866b48223616eb2d10a6d6d01f8b8faac596129034f483cc7", size = 185849, upload-time = "2026-08-11T14:49:45.524Z" },
+]
+
+[[package]]
+name = "onnxscript"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ml-dtypes" },
+    { name = "numpy" },
+    { name = "onnx" },
+    { name = "onnx-ir" },
+    { name = "packaging" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/3a/4d79bce3f460e0df7fed54a92ce80827f25da66511da368bb00783ad8d20/onnxscript-0.7.1.tar.gz", hash = "sha256:309fb86484b11fa4ded90dba580e0d63f1a0827588e521cecaf2eeddb46d6e86", size = 618160, upload-time = "2026-06-29T23:33:21.526Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/bd/a0c8e737b6afda10e42a597787d53d5b66e00268df6f59184701eeae37d9/onnxscript-0.7.1-py3-none-any.whl", hash = "sha256:544763b7fdef49940cdd9412ff5135cbae96d59ac6bc1921457f21280f40f4b7", size = 721970, upload-time = "2026-06-29T23:33:23.298Z" },
+]
+
+[[package]]
 name = "opt-einsum"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1704,11 +1763,17 @@ dependencies = [
 assistant = [
     { name = "google-genai" },
 ]
+nvidia = [
+    { name = "onnx" },
+    { name = "onnxscript" },
+]
 
 [package.dev-dependencies]
 dev = [
     { name = "httpx2" },
     { name = "jsonschema" },
+    { name = "onnx" },
+    { name = "onnxscript" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -1720,17 +1785,21 @@ requires-dist = [
     { name = "duckdb", specifier = "==1.5.5" },
     { name = "fastapi", specifier = ">=0.128,<1" },
     { name = "google-genai", marker = "extra == 'assistant'", specifier = "==2.17.0" },
+    { name = "onnx", marker = "extra == 'nvidia'", specifier = "==1.20.0" },
+    { name = "onnxscript", marker = "extra == 'nvidia'", specifier = "==0.7.1" },
     { name = "optax", specifier = ">=0.2.8,<0.3" },
     { name = "scipy", specifier = ">=1.17,<2" },
     { name = "uvicorn", specifier = ">=0.40,<1" },
     { name = "waymo-waymax", git = "https://github.com/waymo-research/waymax.git?rev=a64dfec9be8576b60d9cecc94f406d9812d4a7d0" },
 ]
-provides-extras = ["assistant"]
+provides-extras = ["assistant", "nvidia"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx2", specifier = ">=2.10,<3" },
     { name = "jsonschema", specifier = ">=4.25,<5" },
+    { name = "onnx", specifier = "==1.20.0" },
+    { name = "onnxscript", specifier = "==0.7.1" },
     { name = "pytest", specifier = ">=8.4,<9" },
     { name = "ruff", specifier = ">=0.12,<0.13" },
 ]
