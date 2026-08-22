@@ -1,10 +1,10 @@
-# Implemented version-one architecture
+# Implemented PlanMargin 2.0 architecture
 
 PlanMargin is a local counterfactual stress-testing workbench with two strict
 boundaries: deterministic code owns scientific decisions, and restricted WOMD
 records never enter the public repository. Experiment v1 is complete at this
-boundary. The broader program now adds platform layers without changing that
-frozen scientific result.
+boundary. Version 2 adds separately gated prediction, active-mining, interaction,
+and deployment tracks without changing that frozen scientific result.
 
 ## System flow
 
@@ -25,6 +25,9 @@ flowchart TB
         Q --> R["Deterministic partitioned Parquet"]
         R --> J
         H --> O["Authenticated localhost FastAPI"]
+        H --> AR["Scene-grouped active-risk qualification"]
+        Y["Real WOMD motion tracks"] --> PT["PyTorch Conv1d predictor"]
+        Y --> IA["Nearest-actor ablation"]
         J --> O
         V["WOD Perception camera + LiDAR"] --> W["Ignored sensor-scene manifest"]
         X["Apple SHARP reconstruction"] --> W
@@ -38,10 +41,14 @@ flowchart TB
         N["Python and native parity tests"]
         S["Deterministic aggregate evidence tools"]
         T["Offline / optional Gemini explanation"]
+        ONNX["Model-only weights + ONNX release"]
+        TRT["Free-T4 TensorRT + C++17 protocol"]
         L --> M
         K --> N
         L --> S
         S --> T
+        PT -->|"aggregate metrics + model only"| ONNX
+        ONNX --> TRT
     end
 
     I -->|"permitted aggregates only"| L
@@ -65,6 +72,10 @@ flowchart TB
 | Local API       | FastAPI, read-only DuckDB        | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced evidence plus fixed sensor assets on loopback only.                |
 | Evidence UI     | Angular, TypeScript, Three.js, Spark | Keep Camera and Planning on independent clocks; render calibrated SHARP 3DGS, same-frame LiDAR, sealed planning metrics, and bounded assistance without export. |
 | Evidence assistant | Python, optional Gemini SDK   | Route questions to one closed aggregate tool, cite sealed deterministic facts, and optionally explain public aggregates without sharing the raw question or private records. |
+| Deployable prediction | PyTorch, ONNX             | Train a compact temporal Conv1d model on complete-scenario real-WOMD splits and export a dynamic-batch graph. |
+| Active-risk qualification | PyTorch ensemble      | Rank sealed real outcomes under scenario-grouped cross-validation, calibration, random baselines, and frozen promotion gates. |
+| Interaction ablation | PyTorch                    | Compare nearest-actor pooling against ego-only history on the identical real-data scenario split. |
+| NVIDIA qualification | TensorRT 11, CUDA, C++17  | Measure parity plus device and pinned-host end-to-end latency without requiring WOMD records. |
 | Automation      | uv, npm, GitHub Actions          | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                     |
 
 ## Experiment execution
@@ -131,12 +142,25 @@ See the [analytics contract](analytics.md).
 | Synthetic fixtures and parity cases            | Scenario and object identifiers           |
 | Frozen protocols and decision records          | Original and mutated trajectories         |
 | Campaign-level aggregate results               | Proposal and cell records                 |
+| Aggregate model and no-go reports              | Per-scenario model windows and targets    |
+| Model-only PyTorch and ONNX release             | Local training cache                      |
 | Privacy-reviewed product screenshots           | Feature vectors and support scores        |
 | UI code and data-free renderer tests            | Camera frames, SHARP PLY, and LiDAR PLY   |
 | Data-free CI configuration                     | DuckDB, Parquet, and checkpoint artifacts |
 
 Repository policy tests and `.gitignore` enforce this separation. The debugger
 ships no private data and does not upload local records.
+
+## Version 2 promotion outcomes
+
+- The 1,024-scenario temporal Conv1d model passed its real-data prediction and
+  byte-reproducibility gates. It is a model-release candidate.
+- The active-risk ensemble failed rank, budget-win, and calibration gates. No
+  learned search selector was exported or used prospectively.
+- The nearest-actor model underperformed its ego-only ablation. Its local model
+  and ONNX were not promoted.
+- The scaled model's NVIDIA protocol is implemented, but its T4 result remains
+  pending. Metrics from the earlier 128-scenario model are never inherited.
 
 The implemented local API can expose redacted real evidence only to an
 authenticated process on the same machine. It is not a public-data boundary:

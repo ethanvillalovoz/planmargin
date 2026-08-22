@@ -50,6 +50,15 @@ def test_public_bundle_hashes_and_scope() -> None:
         "tensorrt-cpp-benchmark.json": ROOT
         / "experiments"
         / "tensorrt-cpp-benchmark-v1.json",
+        "trajectory-model-v2.json": ROOT
+        / "experiments"
+        / "torch-trajectory-model-v2.json",
+        "active-risk-v1.json": ROOT
+        / "experiments"
+        / "active-risk-qualification-v1.json",
+        "active-risk-v2.json": ROOT
+        / "experiments"
+        / "active-risk-qualification-v2.json",
     }
     for name, source in expected_sources.items():
         public = json.loads((BUNDLE / "data" / name).read_text(encoding="utf-8"))

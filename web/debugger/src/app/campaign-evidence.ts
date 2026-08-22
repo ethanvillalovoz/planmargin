@@ -16,7 +16,10 @@ export interface CampaignEvidence {
   readonly nativeKernelSpeedupRange: string;
   readonly heldOutComparisonRun: boolean;
   readonly trajectoryModel: TrajectoryModelEvidence;
+  readonly scaleTrajectoryModel: TrajectoryModelEvidence;
   readonly inference: InferenceEvidence;
+  readonly activeRisk: ActiveRiskEvidence;
+  readonly interactionStudy: InteractionStudyEvidence;
   readonly mode: 'published-aggregate' | 'real-local-redacted';
 }
 
@@ -41,6 +44,24 @@ export interface TrajectoryModelEvidence {
   readonly baselineAdeMeters: number;
   readonly baselineFdeMeters: number;
   readonly status: 'deployment candidate';
+}
+
+export interface ActiveRiskEvidence {
+  readonly examples: number;
+  readonly scenarios: number;
+  readonly meanSpearman: number;
+  readonly budgetEightAdvantageMeters: number;
+  readonly budgetEightWins: number;
+  readonly status: 'no-go';
+}
+
+export interface InteractionStudyEvidence {
+  readonly scenarios: number;
+  readonly interactionAdeMeters: number;
+  readonly egoOnlyAdeMeters: number;
+  readonly interactionFdeMeters: number;
+  readonly egoOnlyFdeMeters: number;
+  readonly status: 'no-go';
 }
 
 export interface MethodEvidence {
@@ -87,6 +108,16 @@ export const CAMPAIGN_EVIDENCE: CampaignEvidence = {
     baselineFdeMeters: 1.666729,
     status: 'deployment candidate',
   },
+  scaleTrajectoryModel: {
+    scenarios: 1_024,
+    windows: 126_992,
+    testWindows: 12_832,
+    adeMeters: 0.418364,
+    fdeMeters: 1.166769,
+    baselineAdeMeters: 0.870479,
+    baselineFdeMeters: 2.341937,
+    status: 'deployment candidate',
+  },
   inference: {
     gpu: 'Tesla T4',
     tensorrtVersion: '11.2.1.2',
@@ -97,6 +128,22 @@ export const CAMPAIGN_EVIDENCE: CampaignEvidence = {
     fp16MaxDriftMeters: 0.05508423,
     fp16RmseMeters: 0.00563178,
     status: 'qualified',
+  },
+  activeRisk: {
+    examples: 2_097,
+    scenarios: 9,
+    meanSpearman: 0.137194,
+    budgetEightAdvantageMeters: -0.475234,
+    budgetEightWins: 3,
+    status: 'no-go',
+  },
+  interactionStudy: {
+    scenarios: 1_024,
+    interactionAdeMeters: 0.452594,
+    egoOnlyAdeMeters: 0.434009,
+    interactionFdeMeters: 1.386596,
+    egoOnlyFdeMeters: 1.332229,
+    status: 'no-go',
   },
   mode: 'published-aggregate',
 };

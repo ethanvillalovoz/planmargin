@@ -1,8 +1,8 @@
 # Release-readiness audit
 
-**Audit date:** August 21, 2026
+**Audit date:** August 22, 2026
 
-**Release:** v1.2.0
+**Release:** v2.0.0 candidate
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -21,10 +21,12 @@ no key.
 No paid service, hosted database, subscription, or purchased compute is
 required.
 
-The v1.2 audit adds a second real-WOMD trajectory track intended for deployment
-qualification: 128 scenarios, 29,288 windows, complete-scenario holdout,
-PyTorch, ONNX, TensorRT 11 FP32/FP16 engines, and an independent C++17 runtime.
-The public model release contains weights and aggregate metrics only.
+The v2.0 audit scales the deployment-oriented real-WOMD track to 1,024
+scenarios and 126,992 windows, with complete-scenario holdout, PyTorch, dynamic-
+batch ONNX, and a byte-identical clean repeat. It also evaluates—rather than
+merely lists—two additional learned responsibilities: active-risk proposal
+ranking and nearest-actor interaction context. Both failed frozen promotion
+gates and remain documented negative results with no deployed model.
 
 ## What an engineer can do
 
@@ -43,6 +45,8 @@ The public model release contains weights and aggregate metrics only.
 8. Ask bounded evidence questions through deterministic local tools.
 9. Inspect measured Tesla T4 latency, throughput, FP32/FP16 drift, environment
    versions, and engine hashes without accessing licensed WOMD records.
+10. Inspect the scaled model's real-data ADE/FDE, active-mining no-go, interaction
+    ablation no-go, and NVIDIA rerun status without conflating those tracks.
 
 The product does not invent a scenario, trajectory, camera stream, box track,
 point field, or reconstruction when licensed evidence is absent.
@@ -81,24 +85,28 @@ point field, or reconstruction when licensed evidence is absent.
 | 3D Gaussian splatting      | Split       | real SHARP Perception reconstruction shipped; planning-linked study preserved as `no_go`   |
 | Evidence assistant         | Shipped     | deterministic local tools; Gemini is an optional allowlisted explanation adapter           |
 | Proposal replay retention  | Shipped     | exact re-execution linked to the sealed proposal by trajectory, outcome, metric, and seal checks |
-| PyTorch trajectory model   | Shipped     | 128 real WOMD scenarios; 0.322 m ADE vs 0.620 m constant-velocity baseline                      |
-| ONNX and TensorRT 11       | Shipped     | hash-pinned FP32/typed-FP16 graphs; T4 CUDA-event timing and parity gates                        |
-| C++17 TensorRT runtime     | Shipped     | independently compiled `enqueueV3` runner; 0.124 ms batch-1 p50                                  |
+| PyTorch trajectory model   | Shipped     | 1,024 real WOMD scenarios; 0.418 m ADE vs 0.870 m constant-velocity baseline; byte-identical repeat |
+| Active-risk qualification  | Stopped     | 2,097 real targets; 0.137 held-out rank correlation; only 3/9 budget-eight wins                  |
+| Interaction model          | Stopped     | 0.453 m ADE with nearest actors vs 0.434 m for same-data ego-only ablation                       |
+| ONNX and TensorRT 11       | Split       | scaled ONNX shipped; prior model has T4 qualification; scaled model rerun remains pending        |
+| C++17 TensorRT runtime     | Shipped     | independent `enqueueV3` runner now reports device and pinned-host end-to-end p50/p95/p99         |
 | Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                 |
 
 ## Verification performed on this revision
 
 - Ruff: all checks passed.
-- Python: full data-free suite passed. Upstream warnings are identified in the
+- Python: 270 tests passed. Upstream warnings are identified in the
   CI log and do not suppress failures.
 - Angular/Vitest: 50 tests passed across launch authentication, local evidence,
   parsers, stores, navigation, reports, and workbench behavior.
-- Playwright: four Chromium journeys passed across desktop and mobile. They
-  cover the data-free public boundary, exact proposal-to-replay transition,
-  responsive overflow, meaningful interaction, and WCAG A/AA axe checks.
+- Browser sign-off covers desktop and 390 px mobile evidence surfaces, planning
+  playback, ten-frame seek controls, frame-native camera annotation changes,
+  and two independently selectable SHARP reconstruction frames.
+- Playwright: four desktop/mobile journeys passed, including meaningful
+  interactions, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
-  payload is about 309 kB raw, while Spark and Three.js viewers remain lazy.
+  payload is 338.92 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
 - Authenticated HTTP: frontend, health, campaign, investigation, planning runs,
@@ -106,9 +114,12 @@ point field, or reconstruction when licensed evidence is absent.
 - Authorization and headers: unauthenticated health returned `401`; private
   responses included `Cache-Control: no-store` and
   `X-Content-Type-Options: nosniff`.
-- Workspace doctor: public source, campaign evidence, exact proposal replay,
-  Sensor evidence, Beam output, Gaussian research, JAX research, PyTorch/ONNX,
-  and TensorRT qualification all verified as ready.
+- Workspace doctor distinguishes the prior TensorRT qualification from the
+  scaled model's pending NVIDIA rerun.
+- Python source/wheel distributions and the native C++20 extension built
+  successfully for PlanMargin 2.0.0.
+- The twelve-record aggregate-only Hugging Face package was downloaded from its
+  published commit and passed its independent SHA-256 verifier.
 
 ## Scientific outcome
 
@@ -122,6 +133,12 @@ after the no-go.
 That negative result is part of the product's credibility: the repository
 preserves what was measured, what failed, and what cannot be claimed.
 
+The Version 2 active-risk and interaction studies add two further negative
+results. Neither is promoted, and no thresholds were relaxed after results were
+observed. The supported positive claim is narrower: the scaled ego-history
+predictor beats constant velocity on its 102-scenario real-WOMD test split and
+reproduces byte-for-byte on the recorded MPS toolchain.
+
 ## Remaining operator actions
 
 - Supply a Gemini key only when optional external explanations are wanted and
@@ -133,3 +150,5 @@ preserves what was measured, what failed, and what cannot be claimed.
 - Re-run the authenticated visual sign-off whenever UI or evidence-contract
   source changes. CI covers a data-free equivalent because licensed evidence
   is deliberately not uploaded.
+- Run the scaled-model TensorRT notebook on a free T4 and publish its aggregate
+  report before changing the scaled model's NVIDIA status from pending.

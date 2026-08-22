@@ -7,14 +7,19 @@ product. This is a licensing and privacy boundary, not a demo-data fallback.
 | ---------------------------------- | --------------------------- | ---------------------- |
 | Campaign decision and scale        | Yes                         | Yes                    |
 | Method and hypothesis aggregates   | Yes                         | Yes                    |
+| Aggregate learned-model decisions  | Yes                         | Yes                    |
+| Model-only PyTorch and ONNX files  | GitHub release              | Yes                    |
 | Per-cell and per-proposal records  | No                          | Yes                    |
 | Stage-0 planning replay            | No                          | Yes                    |
 | WOD camera, LiDAR, and 3DGS assets | No                          | Yes                    |
 | Scenario IDs and source provenance | No                          | No UI exposure         |
 
 The staged dataset package is in
-`release/huggingface/planmargin-public-evidence`. It contains six campaign
-records, three aggregate model/deployment records, and an integrity verifier.
+`release/huggingface/planmargin-public-evidence` and is published as
+[ethanvillalovoz/planmargin-public-evidence](https://huggingface.co/datasets/ethanvillalovoz/planmargin-public-evidence).
+It contains six campaign records, two trajectory-model results, two active-risk
+qualification decisions, the earlier TensorRT qualification and C++ benchmark,
+and an integrity verifier: twelve aggregate research records in total.
 This is a review supplement, not the data package for the complete workbench. It
 must not be expanded with ignored artifacts or `data/raw` files.
 

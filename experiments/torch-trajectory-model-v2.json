@@ -1,0 +1,33 @@
+{
+  "claim_boundary": "Research prediction on 1,024 real WOMD training scenarios with complete-scenario holdout; not a Waymo Driver model or a safety claim.",
+  "gates": {
+    "beats_constant_velocity_ade": true,
+    "beats_constant_velocity_fde": true,
+    "byte_identical_repeat": true,
+    "finite_training": true,
+    "minimum_100_scenarios": true,
+    "real_womd_only": true,
+    "scenario_level_holdout": true
+  },
+  "model_sha256": "6e557177c57126fc51fb066033147f316d253126aecb165b3f767d4f04ef8660",
+  "onnx_sha256": "38934ad17b8ea04698feccf116c6c75a030788124b096c25d99a942386aa73d7",
+  "record_type": "planmargin.public_torch_trajectory_model_result",
+  "redistribution": "aggregate_only",
+  "scenario_count": 1024,
+  "schema_version": "1.0.0",
+  "source": "Waymo Open Motion Dataset v1.3.1 training TFExamples",
+  "split": {
+    "test_scenarios": 102,
+    "train_scenarios": 820,
+    "validation_scenarios": 102
+  },
+  "synthetic": false,
+  "test_metrics": {
+    "ade_m": 0.418364,
+    "constant_velocity_ade_m": 0.870479,
+    "constant_velocity_fde_m": 2.341937,
+    "fde_m": 1.166769,
+    "windows": 12832
+  },
+  "window_count": 126992
+}

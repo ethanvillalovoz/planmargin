@@ -24,7 +24,8 @@ downloading scenario-level Waymo Open Dataset data.
 - one aggregate campaign record;
 - two method records;
 - three preregistered hypothesis decisions;
-- one trajectory-model result trained on 128 real WOMD scenarios;
+- the original 128-scenario and scaled 1,024-scenario trajectory-model results;
+- two active-risk qualification decisions over 2,097 real proposal targets;
 - one sealed TensorRT qualification report from a free-tier Tesla T4;
 - one C++17 TensorRT runtime benchmark;
 - a deterministic SHA-256 manifest.
@@ -40,12 +41,18 @@ qualifying planner failures. Bayesian search improved the support-and-pipeline-v
 rate from 54.5625% to 69.3750%; H3 was supported, while H1 and H2 were untestable
 because neither method found a qualifying failure.
 
-The trajectory model produced 0.3225 m ADE and 0.8888 m FDE on a complete-scenario
-test split, beating the constant-velocity baseline. The FP16 TensorRT engine ran
+The scaled trajectory model produced 0.4184 m ADE and 1.1668 m FDE on 12,832
+complete-scenario test windows, versus 0.8705 m and 2.3419 m for constant
+velocity. A clean repeat produced byte-identical weights and ONNX.
+
+The active-risk ensemble did not pass promotion: mean scene-held-out Spearman
+was 0.1372, it beat matched random selection at budget eight in 3 of 9 scenes,
+and interval coverage was 0.5451. No learned selector was exported.
+
+The TensorRT record still belongs to the original 128-scenario model: FP16 ran
 at 0.1967 ms batch-1 p50 latency and 1.009M samples/s at batch 256; a separate
-C++17 driver measured 0.1243 ms batch-1 p50 latency. These deployment timings use
-deterministic physical probes for timing and numerical parity. Model quality is
-reported only on the real-WOMD scenario split.
+C++17 driver measured 0.1243 ms batch-1 p50 latency. The scaled model does not
+inherit those values and remains pending a free-T4 rerun.
 
 ## Use
 
@@ -57,7 +64,7 @@ python verify.py
 ```
 
 The model weights and ONNX graph are available from the public
-[trajectory-model-v1 GitHub release](https://github.com/ethanvillalovoz/planmargin/releases/tag/trajectory-model-v1).
+[trajectory-model-v2 GitHub release](https://github.com/ethanvillalovoz/planmargin/releases/tag/trajectory-model-v2).
 TensorRT engines are intentionally rebuilt for the target GPU and TensorRT version.
 The repository's distribution-policy checks verify that this bundle contains
 aggregate records only and excludes licensed scenario-level artifacts.
@@ -75,6 +82,6 @@ only aggregate research outputs, not a copy of the Waymo Open Dataset.
 ## Claim boundary
 
 The counterfactual study used ten training scenarios, five seeds, and two search
-methods. The trajectory model used 128 WOMD training scenarios with a 102/13/13
-scenario split. Neither result evaluates the production Waymo Driver, establishes
-real-world safety, or represents a production autonomy benchmark.
+methods. The scaled trajectory model used 1,024 WOMD training scenarios with an
+820/102/102 scenario split. These results do not evaluate the production Waymo
+Driver, establish real-world safety, or represent a production autonomy benchmark.

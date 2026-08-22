@@ -79,6 +79,7 @@ struct Arguments {
   int batch{1};
   int warmup{50};
   int iterations{500};
+  std::string mode{"both"};
 };
 
 Arguments parse_arguments(int argc, char** argv) {
@@ -91,10 +92,34 @@ Arguments parse_arguments(int argc, char** argv) {
     else if (key == "--batch") args.batch = parse_positive(value, "batch");
     else if (key == "--warmup") args.warmup = parse_positive(value, "warmup");
     else if (key == "--iterations") args.iterations = parse_positive(value, "iterations");
+    else if (key == "--mode") args.mode = value;
     else throw std::invalid_argument("unknown argument: " + key);
   }
   if (args.engine.empty()) throw std::invalid_argument("--engine is required");
+  if (args.mode != "device" && args.mode != "end-to-end" && args.mode != "both") {
+    throw std::invalid_argument("--mode must be device, end-to-end, or both");
+  }
   return args;
+}
+
+struct Summary {
+  double mean_ms;
+  double p50_ms;
+  double p95_ms;
+  double p99_ms;
+};
+
+Summary summarize(const std::vector<float>& samples) {
+  const double mean = std::accumulate(samples.begin(), samples.end(), 0.0) /
+                      static_cast<double>(samples.size());
+  return {mean, percentile(samples, 0.50), percentile(samples, 0.95),
+          percentile(samples, 0.99)};
+}
+
+void write_summary(std::ostream& output, const Summary& value) {
+  output << "{\"mean\":" << value.mean_ms << ",\"p50\":" << value.p50_ms
+         << ",\"p95\":" << value.p95_ms << ",\"p99\":" << value.p99_ms
+         << '}';
 }
 
 void require_tensor(const nvinfer1::ICudaEngine& engine, const char* name,
@@ -138,12 +163,25 @@ int main(int argc, char** argv) {
     void* features = nullptr;
     void* baseline = nullptr;
     void* output = nullptr;
+    void* host_features = nullptr;
+    void* host_baseline = nullptr;
+    void* host_output = nullptr;
     cudaStream_t stream{};
     cudaEvent_t start{};
     cudaEvent_t stop{};
     check_cuda(cudaMalloc(&features, feature_bytes), "cudaMalloc(features)");
     check_cuda(cudaMalloc(&baseline, trajectory_bytes), "cudaMalloc(baseline)");
     check_cuda(cudaMalloc(&output, trajectory_bytes), "cudaMalloc(output)");
+    check_cuda(cudaMallocHost(&host_features, feature_bytes),
+               "cudaMallocHost(features)");
+    check_cuda(cudaMallocHost(&host_baseline, trajectory_bytes),
+               "cudaMallocHost(baseline)");
+    check_cuda(cudaMallocHost(&host_output, trajectory_bytes),
+               "cudaMallocHost(output)");
+    std::fill_n(static_cast<float*>(host_features),
+                static_cast<std::size_t>(args.batch * kFeatureWidth), 0.0F);
+    std::fill_n(static_cast<float*>(host_baseline),
+                static_cast<std::size_t>(args.batch * kTrajectoryWidth), 0.0F);
     check_cuda(cudaMemset(features, 0, feature_bytes), "cudaMemset(features)");
     check_cuda(cudaMemset(baseline, 0, trajectory_bytes), "cudaMemset(baseline)");
     check_cuda(cudaStreamCreate(&stream), "cudaStreamCreate");
@@ -154,6 +192,9 @@ int main(int argc, char** argv) {
       cudaEventDestroy(start);
       cudaEventDestroy(stop);
       cudaStreamDestroy(stream);
+      cudaFreeHost(host_output);
+      cudaFreeHost(host_baseline);
+      cudaFreeHost(host_features);
       cudaFree(output);
       cudaFree(baseline);
       cudaFree(features);
@@ -166,43 +207,94 @@ int main(int argc, char** argv) {
       throw std::runtime_error("failed to bind TensorRT tensor addresses");
     }
 
-    for (int index = 0; index < args.warmup; ++index) {
+    const auto enqueue = [&]() {
       if (!context->enqueueV3(stream)) {
-        cleanup();
-        throw std::runtime_error("TensorRT warmup enqueue failed");
+        throw std::runtime_error("TensorRT enqueue failed");
+      }
+    };
+    const auto enqueue_end_to_end = [&]() {
+      check_cuda(cudaMemcpyAsync(features, host_features, feature_bytes,
+                                 cudaMemcpyHostToDevice, stream),
+                 "cudaMemcpyAsync(features H2D)");
+      check_cuda(cudaMemcpyAsync(baseline, host_baseline, trajectory_bytes,
+                                 cudaMemcpyHostToDevice, stream),
+                 "cudaMemcpyAsync(baseline H2D)");
+      enqueue();
+      check_cuda(cudaMemcpyAsync(host_output, output, trajectory_bytes,
+                                 cudaMemcpyDeviceToHost, stream),
+                 "cudaMemcpyAsync(output D2H)");
+    };
+
+    for (int index = 0; index < args.warmup; ++index) {
+      if (args.mode == "end-to-end" || args.mode == "both") {
+        enqueue_end_to_end();
+      } else {
+        enqueue();
       }
     }
     check_cuda(cudaStreamSynchronize(stream), "cudaStreamSynchronize(warmup)");
 
-    std::vector<float> latencies;
-    latencies.reserve(static_cast<std::size_t>(args.iterations));
-    for (int index = 0; index < args.iterations; ++index) {
-      check_cuda(cudaEventRecord(start, stream), "cudaEventRecord(start)");
-      if (!context->enqueueV3(stream)) {
-        cleanup();
-        throw std::runtime_error("TensorRT benchmark enqueue failed");
+    std::vector<float> device_latencies;
+    if (args.mode == "device" || args.mode == "both") {
+      device_latencies.reserve(static_cast<std::size_t>(args.iterations));
+      for (int index = 0; index < args.iterations; ++index) {
+        check_cuda(cudaEventRecord(start, stream), "cudaEventRecord(start)");
+        enqueue();
+        check_cuda(cudaEventRecord(stop, stream), "cudaEventRecord(stop)");
+        check_cuda(cudaEventSynchronize(stop), "cudaEventSynchronize(stop)");
+        float elapsed_ms = 0.0F;
+        check_cuda(cudaEventElapsedTime(&elapsed_ms, start, stop),
+                   "cudaEventElapsedTime");
+        device_latencies.push_back(elapsed_ms);
       }
-      check_cuda(cudaEventRecord(stop, stream), "cudaEventRecord(stop)");
-      check_cuda(cudaEventSynchronize(stop), "cudaEventSynchronize(stop)");
-      float elapsed_ms = 0.0F;
-      check_cuda(cudaEventElapsedTime(&elapsed_ms, start, stop),
-                 "cudaEventElapsedTime");
-      latencies.push_back(elapsed_ms);
     }
 
-    const double mean_ms = std::accumulate(latencies.begin(), latencies.end(), 0.0) /
-                           static_cast<double>(latencies.size());
-    const double throughput = static_cast<double>(args.batch) * 1000.0 / mean_ms;
+    std::vector<float> end_to_end_latencies;
+    if (args.mode == "end-to-end" || args.mode == "both") {
+      end_to_end_latencies.reserve(static_cast<std::size_t>(args.iterations));
+      for (int index = 0; index < args.iterations; ++index) {
+        const auto before = std::chrono::steady_clock::now();
+        enqueue_end_to_end();
+        check_cuda(cudaStreamSynchronize(stream),
+                   "cudaStreamSynchronize(end-to-end)");
+        const auto after = std::chrono::steady_clock::now();
+        const auto elapsed =
+            std::chrono::duration<double, std::milli>(after - before).count();
+        end_to_end_latencies.push_back(static_cast<float>(elapsed));
+      }
+    }
+
+    const Summary device = device_latencies.empty()
+                               ? Summary{0.0, 0.0, 0.0, 0.0}
+                               : summarize(device_latencies);
+    const Summary end_to_end = end_to_end_latencies.empty()
+                                   ? Summary{0.0, 0.0, 0.0, 0.0}
+                                   : summarize(end_to_end_latencies);
+    const double selected_mean = args.mode == "device" ? device.mean_ms
+                                                       : end_to_end.mean_ms;
+    const double throughput =
+        static_cast<double>(args.batch) * 1000.0 / selected_mean;
     std::cout << std::fixed << std::setprecision(6)
-              << "{\"record_type\":\"planmargin.tensorrt_cpp_benchmark\"," 
+              << "{\"record_type\":\"planmargin.tensorrt_cpp_benchmark\","
+              << "\"schema_version\":\"2.0.0\","
               << "\"batch_size\":" << args.batch << ','
               << "\"warmup_iterations\":" << args.warmup << ','
               << "\"measured_iterations\":" << args.iterations << ','
-              << "\"latency_ms\":{\"mean\":" << mean_ms
-              << ",\"p50\":" << percentile(latencies, 0.50)
-              << ",\"p95\":" << percentile(latencies, 0.95)
-              << ",\"p99\":" << percentile(latencies, 0.99) << "},"
-              << "\"throughput_samples_per_second\":" << throughput << "}\n";
+              << "\"mode\":\"" << args.mode << "\","
+              << "\"measurement_boundary\":\"pinned host input to pinned host output\","
+              << "\"device_latency_ms\":";
+    if (device_latencies.empty()) {
+      std::cout << "null";
+    } else {
+      write_summary(std::cout, device);
+    }
+    std::cout << ",\"end_to_end_latency_ms\":";
+    if (end_to_end_latencies.empty()) {
+      std::cout << "null";
+    } else {
+      write_summary(std::cout, end_to_end);
+    }
+    std::cout << ",\"throughput_samples_per_second\":" << throughput << "}\n";
     cleanup();
     return 0;
   } catch (const std::exception& error) {

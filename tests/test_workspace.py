@@ -22,6 +22,9 @@ def test_empty_clone_reports_each_private_capability_without_faking_readiness(
         "verify.py",
         "data/campaign.jsonl",
         "data/trajectory-model.json",
+        "data/trajectory-model-v2.json",
+        "data/active-risk-v1.json",
+        "data/active-risk-v2.json",
         "data/tensorrt-qualification.json",
         "data/tensorrt-cpp-benchmark.json",
     ):
@@ -36,6 +39,7 @@ def test_empty_clone_reports_each_private_capability_without_faking_readiness(
     assert not report.sensor_ready
     assert not report.torch_trajectory_ready
     assert not report.tensorrt_qualified
+    assert not report.scaled_tensorrt_qualified
     assert not report.research_program_ready
     assert not report.full_workbench_ready
     assert {item.scope for item in report.capabilities} >= {

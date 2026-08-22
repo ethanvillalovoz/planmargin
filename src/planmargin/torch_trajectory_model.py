@@ -342,7 +342,9 @@ def train(
     torch.manual_seed(config.seed)
     np.random.seed(config.seed)
     torch.set_num_threads(max(1, min(8, torch.get_num_threads())))
-    torch.use_deterministic_algorithms(True)
+    # This model uses deterministic Conv1d/linear/reduction operators and an
+    # explicit permutation seed. The global deterministic switch unnecessarily
+    # imports Triton on CPU-only Linux runners and can segfault there.
     device = torch.device(config.device)
     train_samples = splits["train"]
     feature_mean = train_samples.features.mean(axis=0).astype(np.float32)

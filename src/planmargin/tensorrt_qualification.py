@@ -171,6 +171,49 @@ def _cuda_benchmark(
     return latency_summary(samples), output.detach().cpu().clone()
 
 
+def _cuda_end_to_end_benchmark(
+    runner: TensorRTRunner,
+    features: torch.Tensor,
+    baseline: torch.Tensor,
+    *,
+    dtype: torch.dtype,
+    warmup: int,
+    iterations: int,
+) -> dict[str, float]:
+    """Time pinned-host inputs through synchronized pinned-host output.
+
+    The measurement includes H2D transfer, TensorRT enqueue, D2H transfer, and
+    synchronization. Dataset decoding and feature construction are deliberately
+    excluded because they belong to the upstream application pipeline.
+    """
+    host_features = features.to(dtype=dtype).pin_memory()
+    host_baseline = baseline.to(dtype=dtype).pin_memory()
+    device_features = torch.empty_like(host_features, device="cuda")
+    device_baseline = torch.empty_like(host_baseline, device="cuda")
+    device_output = torch.empty((len(features), 60), device="cuda", dtype=dtype)
+    host_output = torch.empty(
+        (len(features), 60), device="cpu", dtype=dtype, pin_memory=True
+    )
+
+    def invoke() -> None:
+        with torch.cuda.stream(runner.stream):
+            device_features.copy_(host_features, non_blocking=True)
+            device_baseline.copy_(host_baseline, non_blocking=True)
+            runner.infer(device_features, device_baseline, device_output)
+            host_output.copy_(device_output, non_blocking=True)
+
+    for _ in range(warmup):
+        invoke()
+    runner.stream.synchronize()
+    samples: list[float] = []
+    for _ in range(iterations):
+        start = time.perf_counter_ns()
+        invoke()
+        runner.stream.synchronize()
+        samples.append((time.perf_counter_ns() - start) / 1_000_000)
+    return latency_summary(samples)
+
+
 def _cpu_benchmark(
     model: torch.nn.Module,
     features: torch.Tensor,
@@ -319,10 +362,21 @@ def qualify(
                 warmup=warmup,
                 iterations=iterations,
             )
+            end_to_end_latency = _cuda_end_to_end_benchmark(
+                runner,
+                cpu_features[:batch],
+                cpu_baseline[:batch],
+                dtype=tensor_dtype,
+                warmup=warmup,
+                iterations=iterations,
+            )
             measurements[str(batch)] = {
+                # Preserve the v1 key as a device-only compatibility alias.
                 "latency_ms": latency,
+                "device_latency_ms": latency,
+                "end_to_end_latency_ms": end_to_end_latency,
                 "throughput_samples_per_second": round(
-                    batch * 1000.0 / latency["mean"], 3
+                    batch * 1000.0 / end_to_end_latency["mean"], 3
                 ),
             }
             parity[str(batch)] = _parity(reference[:batch], prediction.numpy())
@@ -340,7 +394,7 @@ def qualify(
     trt = _load_tensorrt()
     result: dict[str, Any] = {
         "record_type": "planmargin.tensorrt_qualification_report",
-        "schema_version": "1.0.0",
+        "schema_version": "2.0.0",
         "source_model_training_data": {
             "dataset": "Waymo Open Motion Dataset v1.3.1 training TFExamples",
             "synthetic": False,
@@ -352,7 +406,10 @@ def qualify(
             (model_dir / "trajectory-model.onnx").read_bytes()
         ),
         "measurement": {
-            "clock": "CUDA events around TensorRT enqueueV3",
+            "clocks": {
+                "device": "CUDA events around TensorRT enqueueV3",
+                "end_to_end": "host monotonic clock around pinned-host H2D, enqueueV3, D2H, and synchronization",
+            },
             "input_protocol": input_protocol,
             "input_purpose": "deployment timing and numerical parity only",
             "warmup_iterations": warmup,
@@ -389,9 +446,9 @@ def qualify(
             item["rmse_m"] < 1e-2
             for item in engines["fp16"]["pytorch_fp32_parity"].values()
         ),
-        "gpu_faster_than_cpu_at_batch_1": engines["fp32"]["batches"]["1"]["latency_ms"][
-            "p50"
-        ]
+        "gpu_end_to_end_faster_than_cpu_at_batch_1": engines["fp32"]["batches"]["1"][
+            "end_to_end_latency_ms"
+        ]["p50"]
         < cpu_latency["p50"],
     }
     result["status"] = "qualified" if all(result["gates"].values()) else "no_go"
