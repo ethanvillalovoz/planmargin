@@ -341,7 +341,10 @@ def qualify(
     result: dict[str, Any] = {
         "record_type": "planmargin.tensorrt_qualification_report",
         "schema_version": "1.0.0",
-        "synthetic": False,
+        "source_model_training_data": {
+            "dataset": "Waymo Open Motion Dataset v1.3.1 training TFExamples",
+            "synthetic": False,
+        },
         "redistribution": "aggregate_only",
         "status": "qualified",
         "source_training_report_sha256": _sha256(report_path.read_bytes()),

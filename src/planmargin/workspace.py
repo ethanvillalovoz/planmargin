@@ -366,7 +366,8 @@ def _tensorrt_qualified(root: Path) -> tuple[bool, str]:
         if (
             report.get("record_type")
             != "planmargin.tensorrt_qualification_report"
-            or report.get("synthetic") is not False
+            or report.get("source_model_training_data", {}).get("synthetic")
+            is not False
             or report.get("redistribution") != "aggregate_only"
             or report.get("status") != "qualified"
             or not all(report.get("gates", {}).values())
