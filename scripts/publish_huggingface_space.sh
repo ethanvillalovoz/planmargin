@@ -22,4 +22,5 @@ cp "$project_root/deploy/huggingface-space/README.md" "$staging_dir/README.md"
 
 "$hf_cli" upload "$space_id" "$staging_dir" . \
   --type space \
+  --delete '*' \
   --commit-message "Deploy PlanMargin aggregate workbench"

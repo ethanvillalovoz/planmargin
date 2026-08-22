@@ -229,3 +229,7 @@ def test_static_space_contract_builds_only_the_public_frontend() -> None:
     assert "ethanvillalovoz-planmargin.static.hf.space" in (
         REPOSITORY_ROOT / "README.md"
     ).read_text(encoding="utf-8")
+    publisher = (
+        REPOSITORY_ROOT / "scripts" / "publish_huggingface_space.sh"
+    ).read_text(encoding="utf-8")
+    assert "--delete '*'" in publisher
