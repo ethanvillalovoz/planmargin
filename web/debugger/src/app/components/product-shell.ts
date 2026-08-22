@@ -69,22 +69,26 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
           >
             <ng-icon name="phosphorSparkle" size="15" />Ask analysis
           </button>
-          <button
-            type="button"
-            class="connection"
-            [class.connected]="local.connected()"
-            [class.connecting]="local.state() === 'connecting'"
-            (click)="connectRequested.emit()"
-          >
-            <i></i
-            >{{
-              local.connected()
-                ? 'Local records verified'
-                : local.state() === 'connecting'
-                  ? 'Verifying local records…'
-                  : 'Open local workspace'
-            }}
-          </button>
+          @if (publicHosted) {
+            <a class="connection" [href]="repositoryUrl"><i></i>Clone for local workspace</a>
+          } @else {
+            <button
+              type="button"
+              class="connection"
+              [class.connected]="local.connected()"
+              [class.connecting]="local.state() === 'connecting'"
+              (click)="connectRequested.emit()"
+            >
+              <i></i
+              >{{
+                local.connected()
+                  ? 'Local records verified'
+                  : local.state() === 'connecting'
+                    ? 'Verifying local records…'
+                    : 'Open local workspace'
+              }}
+            </button>
+          }
         </div>
       </header>
 
@@ -113,9 +117,13 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                     or synthetic cases.
                   </p>
                 </div>
-                <button class="primary" type="button" (click)="connectRequested.emit()">
-                  Open licensed local evidence
-                </button>
+                @if (publicHosted) {
+                  <a class="primary" [href]="repositoryUrl">Clone for licensed local evidence</a>
+                } @else {
+                  <button class="primary" type="button" (click)="connectRequested.emit()">
+                    Open licensed local evidence
+                  </button>
+                }
               </header>
               <div class="public-kpis" aria-label="Published campaign totals">
                 <div>
@@ -190,6 +198,56 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                   </dl>
                 </section>
               </div>
+              <section class="model-evidence" aria-labelledby="model-evidence-title">
+                <header>
+                  <div>
+                    <span>Real WOMD trajectory model</span>
+                    <h3 id="model-evidence-title">
+                      A deployable predictor that beats its baseline.
+                    </h3>
+                  </div>
+                  <b>{{ local.campaign().trajectoryModel.status }}</b>
+                </header>
+                <div class="model-metrics">
+                  <div>
+                    <span>Sealed corpus</span>
+                    <strong>{{ local.campaign().trajectoryModel.scenarios }}</strong>
+                    <small
+                      >{{
+                        local.campaign().trajectoryModel.windows.toLocaleString()
+                      }}
+                      windows</small
+                    >
+                  </div>
+                  <div>
+                    <span>Test ADE</span>
+                    <strong>{{ local.campaign().trajectoryModel.adeMeters.toFixed(3) }} m</strong>
+                    <small
+                      >baseline
+                      {{ local.campaign().trajectoryModel.baselineAdeMeters.toFixed(3) }} m</small
+                    >
+                  </div>
+                  <div>
+                    <span>Test FDE</span>
+                    <strong>{{ local.campaign().trajectoryModel.fdeMeters.toFixed(3) }} m</strong>
+                    <small
+                      >baseline
+                      {{ local.campaign().trajectoryModel.baselineFdeMeters.toFixed(3) }} m</small
+                    >
+                  </div>
+                  <div>
+                    <span>Held-out evidence</span>
+                    <strong>{{
+                      local.campaign().trajectoryModel.testWindows.toLocaleString()
+                    }}</strong>
+                    <small>complete-scenario test windows</small>
+                  </div>
+                </div>
+                <p>
+                  Two-layer temporal Conv1d residual network · PyTorch → ONNX → TensorRT · aggregate
+                  metrics only
+                </p>
+              </section>
               <footer class="public-boundary">
                 <div>
                   <strong>Public and reproducible</strong>
@@ -623,9 +681,13 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
               campaign analysis remains available without them.
             </p>
             <div>
-              <button class="primary" type="button" (click)="connectRequested.emit()">
-                Open local workspace
-              </button>
+              @if (publicHosted) {
+                <a class="primary" [href]="repositoryUrl">Clone for local workspace</a>
+              } @else {
+                <button class="primary" type="button" (click)="connectRequested.emit()">
+                  Open local workspace
+                </button>
+              }
               <button type="button" (click)="setView('investigate')">Review public evidence</button>
             </div>
           </div>
@@ -743,6 +805,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       background: var(--surface-subtle);
       color: var(--secondary);
       font-size: 0.63rem;
+      text-decoration: none;
     }
     .assistant-launch {
       color: var(--primary);
@@ -987,6 +1050,63 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .decision-card dd.supported {
       background: rgb(86 217 138 / 12%);
       color: #7be5a6;
+    }
+    .model-evidence {
+      padding: 1.5rem;
+      border-top: 1px solid var(--divider);
+      background: linear-gradient(100deg, rgb(53 197 211 / 5%), transparent 55%);
+    }
+    .model-evidence > header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .model-evidence header span {
+      color: var(--reference);
+      font-size: 0.56rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .model-evidence h3 {
+      margin: 0.3rem 0 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .model-evidence header b {
+      color: #7be5a6;
+      font-size: 0.58rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .model-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border: 1px solid var(--divider);
+    }
+    .model-metrics div {
+      display: grid;
+      gap: 0.28rem;
+      padding: 1rem;
+      border-right: 1px solid var(--divider);
+    }
+    .model-metrics div:last-child {
+      border-right: 0;
+    }
+    .model-metrics span,
+    .model-metrics small,
+    .model-evidence > p {
+      color: var(--secondary);
+      font-size: 0.56rem;
+    }
+    .model-metrics strong {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .model-evidence > p {
+      margin: 0.8rem 0 0;
     }
     .public-boundary {
       display: grid;
@@ -1751,6 +1871,15 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       .locked-workspace {
         grid-template-columns: 1fr;
       }
+      .model-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .model-metrics div:nth-child(2) {
+        border-right: 0;
+      }
+      .model-metrics div:nth-child(-n + 2) {
+        border-bottom: 1px solid var(--divider);
+      }
       .method-card {
         border-right: 0;
         border-bottom: 1px solid var(--divider);
@@ -1799,6 +1928,10 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       }
       .public-boundary {
         grid-template-columns: 1fr;
+      }
+      .model-evidence > header {
+        align-items: flex-start;
+        flex-direction: column;
       }
       .public-boundary div:first-child {
         border-right: 0;
@@ -1870,6 +2003,11 @@ export class ProductShell {
   private readonly debuggerStore = inject(DebuggerStore);
   private readonly reports = inject(InvestigationReportService);
   readonly connectRequested = output<void>();
+  protected readonly repositoryUrl = 'https://github.com/ethanvillalovoz/planmargin';
+  protected readonly publicHosted =
+    window.location.protocol === 'https:' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1';
   protected readonly view = signal<ProductView>('replay');
   protected readonly sort = signal<ProposalSort>('criticality');
   protected readonly filter = signal<ProposalFilter>('all');

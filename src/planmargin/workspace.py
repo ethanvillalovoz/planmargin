@@ -65,6 +65,8 @@ class ReadinessReport:
     evidence_ready: bool
     proposal_replay_ready: bool
     sensor_ready: bool
+    torch_trajectory_ready: bool
+    tensorrt_qualified: bool
     research_program_ready: bool
     full_workbench_ready: bool
     capabilities: tuple[Capability, ...]
@@ -303,6 +305,83 @@ def _trajectory_model_ready(root: Path) -> tuple[bool, str]:
     )
 
 
+def _torch_trajectory_ready(root: Path) -> tuple[bool, str]:
+    from planmargin import torch_trajectory_model
+
+    directory = root / torch_trajectory_model.DEFAULT_OUTPUT_DIR
+    report_path = directory / "training-report.json"
+    model_path = directory / "trajectory-model.pmtorch"
+    onnx_path = directory / "trajectory-model.onnx"
+    try:
+        if not _regular_files((report_path, model_path, onnx_path)):
+            raise FileNotFoundError("The PyTorch/ONNX trajectory model is missing")
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        sealed = dict(report)
+        expected_seal = sealed.pop("report_sha256")
+        if (
+            torch_trajectory_model._sha256(
+                torch_trajectory_model._canonical_json(sealed)
+            )
+            != expected_seal
+        ):
+            raise ValueError("The PyTorch trajectory report seal is invalid")
+        model = model_path.read_bytes()
+        onnx = onnx_path.read_bytes()
+        if (
+            len(model) != report["model_bytes"]
+            or torch_trajectory_model._sha256(model) != report["model_sha256"]
+            or len(onnx) != report["onnx_bytes"]
+            or torch_trajectory_model._sha256(onnx) != report["onnx_sha256"]
+        ):
+            raise ValueError("The PyTorch/ONNX artifacts do not match their report")
+        torch_trajectory_model.load_model(model)
+        if (
+            report.get("synthetic") is not False
+            or report.get("status") != "deployment_candidate"
+            or not all(report.get("gates", {}).values())
+        ):
+            raise ValueError("The real-data deployment gates did not all pass")
+    except (
+        FileNotFoundError,
+        ValueError,
+        OSError,
+        json.JSONDecodeError,
+        KeyError,
+    ) as error:
+        return False, str(error)
+    metrics = report["metrics"]["test"]
+    return (
+        True,
+        "The real WOMD PyTorch/ONNX model verified on complete held-out scenarios "
+        f"({metrics['ade_m']:.3f} m ADE vs {metrics['constant_velocity_ade_m']:.3f} m baseline).",
+    )
+
+
+def _tensorrt_qualified(root: Path) -> tuple[bool, str]:
+    path = root / "experiments" / "tensorrt-qualification-v1.json"
+    try:
+        if path.is_symlink() or not path.is_file():
+            raise FileNotFoundError("No published TensorRT qualification report is present")
+        report = json.loads(path.read_text(encoding="utf-8"))
+        if (
+            report.get("record_type")
+            != "planmargin.tensorrt_qualification_report"
+            or report.get("synthetic") is not False
+            or report.get("redistribution") != "aggregate_only"
+            or report.get("status") != "qualified"
+            or not all(report.get("gates", {}).values())
+        ):
+            raise ValueError("The TensorRT qualification gates did not all pass")
+    except (FileNotFoundError, ValueError, OSError, json.JSONDecodeError) as error:
+        return False, str(error)
+    fp16 = report["engines"]["fp16"]["batches"]["1"]
+    return (
+        True,
+        "TensorRT FP32/FP16 parity and CUDA-event benchmarks verified; FP16 batch-1 "
+        f"p50 is {fp16['latency_ms']['p50']:.3f} ms.",
+    )
+
+
 def inspect_workspace(root: Path) -> ReadinessReport:
     """Return the exact public, private-evidence, and sensor readiness state."""
     root = root.resolve(strict=True)
@@ -315,7 +394,15 @@ def inspect_workspace(root: Path) -> ReadinessReport:
     beam_ready, beam_detail = _beam_study_ready(root)
     rl_ready, rl_detail = _rl_study_ready(root)
     trajectory_model_ready, trajectory_model_detail = _trajectory_model_ready(root)
-    research_program_ready = gaussian_ready and beam_ready and trajectory_model_ready
+    torch_trajectory_ready, torch_trajectory_detail = _torch_trajectory_ready(root)
+    tensorrt_qualified, tensorrt_detail = _tensorrt_qualified(root)
+    research_program_ready = (
+        gaussian_ready
+        and beam_ready
+        and trajectory_model_ready
+        and torch_trajectory_ready
+        and tensorrt_qualified
+    )
     raw_directory = root / "data" / "raw" / "perception" / SEGMENT_ID
     raw_ready = _regular_files(
         tuple(raw_directory / f"{component}.parquet" for component in WOD_COMPONENTS)
@@ -414,6 +501,20 @@ def inspect_workspace(root: Path) -> ReadinessReport:
             "uv run --frozen planmargin-train-trajectory-model --epochs 64",
         ),
         Capability(
+            "Real WOMD PyTorch/ONNX trajectory model",
+            torch_trajectory_ready,
+            "authorized local research",
+            torch_trajectory_detail,
+            "uv run --frozen --extra nvidia planmargin-train-torch-trajectory",
+        ),
+        Capability(
+            "NVIDIA TensorRT deployment qualification",
+            tensorrt_qualified,
+            "public aggregate / free Colab",
+            tensorrt_detail,
+            "Run notebooks/planmargin_tensorrt_colab.ipynb in a free T4 runtime",
+        ),
+        Capability(
             "Gemini explanation adapter",
             bool(os.environ.get("GEMINI_API_KEY")),
             "optional external",
@@ -431,6 +532,8 @@ def inspect_workspace(root: Path) -> ReadinessReport:
         evidence_ready=evidence_ready,
         proposal_replay_ready=proposal_replay_ready,
         sensor_ready=sensor_ready,
+        torch_trajectory_ready=torch_trajectory_ready,
+        tensorrt_qualified=tensorrt_qualified,
         research_program_ready=research_program_ready,
         full_workbench_ready=(
             evidence_ready

@@ -41,8 +41,18 @@ jobs:
       - name: Build source and native wheel distributions
         run: uv build
 
-      - name: Test without WOMD credentials
-        run: uv run --frozen pytest
+      - name: Test core without WOMD credentials
+        run: >-
+          uv run --frozen pytest
+          --ignore=tests/test_torch_trajectory_model.py
+          --ignore=tests/test_tensorrt_qualification.py
+
+      - name: Test isolated PyTorch and ONNX qualification
+        run: |
+          uv pip uninstall triton
+          uv run --frozen --no-sync pytest \
+            tests/test_torch_trajectory_model.py \
+            tests/test_tensorrt_qualification.py
 
   debugger-quality:
     name: Scenario debugger checks

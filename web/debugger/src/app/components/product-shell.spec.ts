@@ -24,10 +24,19 @@ describe('ProductShell', () => {
     const fixture = TestBed.createComponent(ProductShell);
     fixture.detectChanges();
 
-    const text = fixture.nativeElement.textContent as string;
+    let text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Workbench');
     expect(text).toContain('Replay sealed planner evidence locally');
     expect(text).toContain('Public proposals3,200');
+    const evidence = Array.from(
+      fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
+    evidence.click();
+    fixture.detectChanges();
+    text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('A deployable predictor that beats its baseline');
+    expect(text).toContain('Test ADE0.322 m');
+    expect(text).toContain('baseline 0.620 m');
     expect(text).not.toContain('No qualifying planner failure was found');
   });
 

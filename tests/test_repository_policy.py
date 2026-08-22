@@ -28,6 +28,7 @@ def test_per_scenario_womd_reports_are_not_committed() -> None:
         REPOSITORY_ROOT / "artifacts" / "search-comparison",
         REPOSITORY_ROOT / "artifacts" / "beam-features",
         REPOSITORY_ROOT / "artifacts" / "experiment-v2",
+        REPOSITORY_ROOT / "artifacts" / "experiment-v4",
     )
 
     tracked = subprocess.run(
@@ -44,6 +45,27 @@ def test_per_scenario_womd_reports_are_not_committed() -> None:
     ).stdout.splitlines()
 
     assert tracked == []
+
+
+def test_public_torch_result_is_aggregate_only_and_schema_valid() -> None:
+    import json
+
+    import jsonschema
+
+    record = json.loads(
+        (REPOSITORY_ROOT / "experiments" / "torch-trajectory-model-v1.json").read_text()
+    )
+    schema = json.loads(
+        (
+            REPOSITORY_ROOT
+            / "schemas"
+            / "torch-trajectory-model-public-v1.schema.json"
+        ).read_text()
+    )
+
+    jsonschema.validate(record, schema)
+    assert record["redistribution"] == "aggregate_only"
+    assert "scenario_ids" not in json.dumps(record)
 
 
 def test_public_claims_do_not_repeat_disproven_pristine_holdout_language() -> None:
