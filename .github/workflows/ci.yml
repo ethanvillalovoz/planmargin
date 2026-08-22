@@ -48,10 +48,11 @@ jobs:
           --ignore=tests/test_tensorrt_qualification.py
 
       - name: Test isolated PyTorch and ONNX qualification
-        run: >-
-          uv run --frozen pytest
-          tests/test_torch_trajectory_model.py
-          tests/test_tensorrt_qualification.py
+        run: |
+          uv pip uninstall triton
+          uv run --frozen --no-sync pytest \
+            tests/test_torch_trajectory_model.py \
+            tests/test_tensorrt_qualification.py
 
   debugger-quality:
     name: Scenario debugger checks
