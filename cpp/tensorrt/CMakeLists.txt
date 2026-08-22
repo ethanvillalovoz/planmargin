@@ -21,7 +21,8 @@ if(NOT TENSORRT_INCLUDE_DIR OR NOT TENSORRT_LIBRARY)
 endif()
 
 add_executable(planmargin_tensorrt_runner trajectory_runner.cpp)
-target_include_directories(planmargin_tensorrt_runner PRIVATE ${TENSORRT_INCLUDE_DIR})
+target_include_directories(planmargin_tensorrt_runner SYSTEM PRIVATE
+  ${TENSORRT_INCLUDE_DIR})
 target_link_libraries(planmargin_tensorrt_runner PRIVATE
   ${TENSORRT_LIBRARY}
   CUDA::cudart)
