@@ -1,10 +1,5 @@
 # PlanMargin campaign workbench
 
-The hosted Space is the aggregate-only public application. It contains no WOD
-frames, point clouds, scenario paths, proposal records, or local credentials.
-Clone the [GitHub repository](https://github.com/ethanvillalovoz/planmargin) for
-the authenticated local Workbench and Sensors surfaces.
-
 This Angular, TypeScript, Three.js, and Spark application is PlanMargin's local
 counterfactual-driving workbench. Its default workspace combines four visible
 responsibilities:
