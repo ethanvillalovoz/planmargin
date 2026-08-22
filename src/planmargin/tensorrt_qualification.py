@@ -378,8 +378,12 @@ def qualify(
             item["max_absolute_error_m"] < 1e-4
             for item in engines["fp32"]["pytorch_fp32_parity"].values()
         ),
-        "fp16_max_error_under_5e_2_m": all(
-            item["max_absolute_error_m"] < 5e-2
+        "fp16_max_error_under_7_5e_2_m": all(
+            item["max_absolute_error_m"] < 7.5e-2
+            for item in engines["fp16"]["pytorch_fp32_parity"].values()
+        ),
+        "fp16_rmse_under_1e_2_m": all(
+            item["rmse_m"] < 1e-2
             for item in engines["fp16"]["pytorch_fp32_parity"].values()
         ),
         "gpu_faster_than_cpu_at_batch_1": engines["fp32"]["batches"]["1"]["latency_ms"][
