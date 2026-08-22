@@ -33,10 +33,21 @@ describe('ProductShell', () => {
     ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
     evidence.click();
     fixture.detectChanges();
+    const runtime = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.evidence-sections button',
+      ) as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.includes('Model & runtime'))!;
+    runtime.click();
+    fixture.detectChanges();
     text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('A deployable predictor that beats its baseline');
+    expect(text).toContain('Real WOMD model → ONNX → TensorRT');
     expect(text).toContain('Test ADE0.322 m');
     expect(text).toContain('baseline 0.620 m');
+    expect(text).toContain('Tesla T4 · 50 warmups + 500 measured');
+    expect(text).toContain('FP16 · batch 10.197 ms');
+    expect(text).toContain('C++17 · batch 10.124 ms');
+    expect(text).toContain('0.56 cm RMSE');
     expect(text).not.toContain('No qualifying planner failure was found');
   });
 
@@ -49,8 +60,36 @@ describe('ProductShell', () => {
     button.click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Review planner regressions');
+    expect(fixture.nativeElement.textContent).toContain('Review candidate counterfactuals');
     expect(fixture.nativeElement.textContent).toContain('Open local workspace');
+  });
+
+  it('keeps measured model and runtime evidence reachable with local records connected', () => {
+    const fixture = TestBed.createComponent(ProductShell);
+    const local = TestBed.inject(LocalEvidenceService);
+    local.state.set('connected');
+    fixture.detectChanges();
+
+    const navigation = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.product-header nav button',
+      ) as NodeListOf<HTMLButtonElement>,
+    );
+    navigation.find((candidate) => candidate.textContent?.includes('Evidence'))!.click();
+    fixture.detectChanges();
+    const runtime = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.evidence-sections button',
+      ) as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.includes('Model & runtime'))!;
+    runtime.click();
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Real WOMD model → ONNX → TensorRT');
+    expect(text).toContain('real data · no synthetic training');
+    expect(text).toContain('FP16 · batch 10.197 ms');
+    expect(text).toContain('Quality and deployment probes are kept separate');
   });
 
   it('maps task navigation to the correct planning and sensor workspaces', () => {

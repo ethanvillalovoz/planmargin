@@ -21,6 +21,7 @@ import { SimulatorStore } from '../simulator.store';
 import { SimulatorWorkspace } from './simulator-workspace';
 
 type ProductView = 'investigate' | 'replay' | 'sensor';
+type EvidenceView = 'campaign' | 'deployment';
 type ProposalSort = 'criticality' | 'minimality' | 'support' | 'sequence';
 type ProposalFilter = 'all' | 'eligible' | 'support-rejected' | 'pipeline-rejected';
 type InvestigationRank = 'closest' | 'minimal' | 'support';
@@ -97,7 +98,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
           <header class="page-heading">
             <div>
               <p>Candidate review</p>
-              <h1>Review planner regressions by the reason they stopped.</h1>
+              <h1>Review candidate counterfactuals by the gate that stopped them.</h1>
             </div>
             <div class="page-status" [class.connected]="local.connected()">
               <i></i
@@ -105,7 +106,137 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
             </div>
           </header>
 
-          @if (!local.connected()) {
+          <nav class="evidence-sections" aria-label="Evidence sections">
+            <button
+              type="button"
+              [class.active]="evidenceView() === 'campaign'"
+              (click)="evidenceView.set('campaign')"
+            >
+              Campaign review
+            </button>
+            <button
+              type="button"
+              [class.active]="evidenceView() === 'deployment'"
+              (click)="evidenceView.set('deployment')"
+            >
+              Model & runtime
+            </button>
+          </nav>
+
+          @if (evidenceView() === 'deployment') {
+            <section class="deployment-workbench" aria-labelledby="deployment-workbench-title">
+              <header>
+                <div>
+                  <p>Measured deployment evidence</p>
+                  <h2 id="deployment-workbench-title">Real WOMD model → ONNX → TensorRT</h2>
+                </div>
+                <span class="qualification-status"
+                  ><i></i>TensorRT {{ local.campaign().inference.status }}</span
+                >
+              </header>
+              <section class="model-evidence" aria-labelledby="deployment-quality-title">
+                <header>
+                  <div>
+                    <span>Complete-scenario test split</span>
+                    <h3 id="deployment-quality-title">Prediction quality</h3>
+                  </div>
+                  <b>real data · no synthetic training</b>
+                </header>
+                <div class="model-metrics">
+                  <div>
+                    <span>WOMD scenarios</span>
+                    <strong>{{ local.campaign().trajectoryModel.scenarios }}</strong>
+                    <small
+                      >{{
+                        local.campaign().trajectoryModel.windows.toLocaleString()
+                      }}
+                      windows</small
+                    >
+                  </div>
+                  <div>
+                    <span>Test ADE</span>
+                    <strong>{{ local.campaign().trajectoryModel.adeMeters.toFixed(3) }} m</strong>
+                    <small
+                      >baseline
+                      {{ local.campaign().trajectoryModel.baselineAdeMeters.toFixed(3) }} m</small
+                    >
+                  </div>
+                  <div>
+                    <span>Test FDE</span>
+                    <strong>{{ local.campaign().trajectoryModel.fdeMeters.toFixed(3) }} m</strong>
+                    <small
+                      >baseline
+                      {{ local.campaign().trajectoryModel.baselineFdeMeters.toFixed(3) }} m</small
+                    >
+                  </div>
+                  <div>
+                    <span>Test evidence</span>
+                    <strong>{{
+                      local.campaign().trajectoryModel.testWindows.toLocaleString()
+                    }}</strong>
+                    <small>complete-scenario windows</small>
+                  </div>
+                </div>
+                <div class="deployment-divider">
+                  <span>{{ local.campaign().inference.gpu }} · 50 warmups + 500 measured</span>
+                  <b>TensorRT {{ local.campaign().inference.tensorrtVersion }}</b>
+                </div>
+                <div class="model-metrics" aria-label="Measured NVIDIA inference evidence">
+                  <div>
+                    <span>FP32 · batch 1</span>
+                    <strong>{{ local.campaign().inference.fp32Batch1P50Ms.toFixed(3) }} ms</strong>
+                    <small>p50 CUDA-event latency</small>
+                  </div>
+                  <div>
+                    <span>FP16 · batch 1</span>
+                    <strong>{{ local.campaign().inference.fp16Batch1P50Ms.toFixed(3) }} ms</strong>
+                    <small>p50 CUDA-event latency</small>
+                  </div>
+                  <div>
+                    <span>FP16 · batch 256</span>
+                    <strong
+                      >{{
+                        (local.campaign().inference.fp16Batch256Throughput / 1_000_000).toFixed(2)
+                      }}M/s</strong
+                    >
+                    <small>measured throughput</small>
+                  </div>
+                  <div>
+                    <span>C++17 · batch 1</span>
+                    <strong>{{ local.campaign().inference.cppBatch1P50Ms.toFixed(3) }} ms</strong>
+                    <small>independent enqueueV3 runner</small>
+                  </div>
+                </div>
+              </section>
+              <div class="deployment-notes">
+                <article>
+                  <span>Numerical parity</span>
+                  <strong>FP16 stayed inside both preregistered drift gates.</strong>
+                  <p>
+                    {{ (local.campaign().inference.fp16RmseMeters * 100).toFixed(2) }} cm RMSE ·
+                    {{ (local.campaign().inference.fp16MaxDriftMeters * 100).toFixed(2) }} cm
+                    maximum drift against PyTorch FP32 at batch 256.
+                  </p>
+                </article>
+                <article>
+                  <span>Protocol boundary</span>
+                  <strong>Quality and deployment probes are kept separate.</strong>
+                  <p>
+                    ADE/FDE use the real WOMD scenario split. Deterministic physical probes are used
+                    only for TensorRT timing and numerical parity.
+                  </p>
+                </article>
+                <article>
+                  <span>Reproducible artifact chain</span>
+                  <strong>Weights, ONNX, reports, versions, and hashes are public.</strong>
+                  <p>
+                    TensorRT engines are rebuilt per GPU; the free-T4 notebook verifies each source
+                    hash before engine creation and compiles the C++17 cross-check.
+                  </p>
+                </article>
+              </div>
+            </section>
+          } @else if (!local.connected()) {
             <section class="public-workbench">
               <header class="public-result">
                 <div>
@@ -198,56 +329,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                   </dl>
                 </section>
               </div>
-              <section class="model-evidence" aria-labelledby="model-evidence-title">
-                <header>
-                  <div>
-                    <span>Real WOMD trajectory model</span>
-                    <h3 id="model-evidence-title">
-                      A deployable predictor that beats its baseline.
-                    </h3>
-                  </div>
-                  <b>{{ local.campaign().trajectoryModel.status }}</b>
-                </header>
-                <div class="model-metrics">
-                  <div>
-                    <span>Sealed corpus</span>
-                    <strong>{{ local.campaign().trajectoryModel.scenarios }}</strong>
-                    <small
-                      >{{
-                        local.campaign().trajectoryModel.windows.toLocaleString()
-                      }}
-                      windows</small
-                    >
-                  </div>
-                  <div>
-                    <span>Test ADE</span>
-                    <strong>{{ local.campaign().trajectoryModel.adeMeters.toFixed(3) }} m</strong>
-                    <small
-                      >baseline
-                      {{ local.campaign().trajectoryModel.baselineAdeMeters.toFixed(3) }} m</small
-                    >
-                  </div>
-                  <div>
-                    <span>Test FDE</span>
-                    <strong>{{ local.campaign().trajectoryModel.fdeMeters.toFixed(3) }} m</strong>
-                    <small
-                      >baseline
-                      {{ local.campaign().trajectoryModel.baselineFdeMeters.toFixed(3) }} m</small
-                    >
-                  </div>
-                  <div>
-                    <span>Held-out evidence</span>
-                    <strong>{{
-                      local.campaign().trajectoryModel.testWindows.toLocaleString()
-                    }}</strong>
-                    <small>complete-scenario test windows</small>
-                  </div>
-                </div>
-                <p>
-                  Two-layer temporal Conv1d residual network · PyTorch → ONNX → TensorRT · aggregate
-                  metrics only
-                </p>
-              </section>
               <footer class="public-boundary">
                 <div>
                   <strong>Public and reproducible</strong>
@@ -888,6 +969,98 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       min-height: calc(100dvh - 64px);
       padding: 1.7rem;
     }
+    .evidence-sections {
+      display: flex;
+      gap: 0.35rem;
+      margin: -0.8rem 1.5rem 1rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid var(--divider);
+    }
+    .evidence-sections button {
+      min-height: 34px;
+      padding: 0 0.8rem;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--secondary);
+      font-size: 0.62rem;
+      font-weight: 650;
+    }
+    .evidence-sections button.active {
+      border-color: var(--divider-strong);
+      background: var(--surface-subtle);
+      color: var(--primary);
+    }
+    .deployment-workbench {
+      margin: 0 1.5rem 1.5rem;
+      border: 1px solid var(--divider);
+      background: var(--panel);
+    }
+    .deployment-workbench > header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.1rem 1.3rem;
+      border-bottom: 1px solid var(--divider);
+    }
+    .deployment-workbench > header p,
+    .deployment-notes span {
+      margin: 0 0 0.28rem;
+      color: var(--reference);
+      font-size: 0.55rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .deployment-workbench > header h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .qualification-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: #7be5a6;
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .qualification-status i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentcolor;
+      box-shadow: 0 0 10px currentcolor;
+    }
+    .deployment-workbench .model-evidence {
+      margin: 0;
+      border: 0;
+      border-bottom: 1px solid var(--divider);
+    }
+    .deployment-notes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .deployment-notes article {
+      padding: 1.2rem 1.3rem;
+      border-right: 1px solid var(--divider);
+    }
+    .deployment-notes article:last-child {
+      border-right: 0;
+    }
+    .deployment-notes strong {
+      display: block;
+      font-size: 0.72rem;
+      line-height: 1.45;
+    }
+    .deployment-notes p {
+      margin: 0.55rem 0 0;
+      color: var(--secondary);
+      font-size: 0.6rem;
+      line-height: 1.6;
+    }
     .page-heading {
       display: flex;
       align-items: flex-end;
@@ -1107,6 +1280,28 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     }
     .model-evidence > p {
       margin: 0.8rem 0 0;
+    }
+    .deployment-divider {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin: 1.35rem 0 0.65rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--divider);
+    }
+    .deployment-divider span {
+      color: var(--reference);
+      font-size: 0.56rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .deployment-divider b {
+      color: #7be5a6;
+      font-size: 0.58rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
     .public-boundary {
       display: grid;
@@ -1871,6 +2066,16 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       .locked-workspace {
         grid-template-columns: 1fr;
       }
+      .deployment-notes {
+        grid-template-columns: 1fr;
+      }
+      .deployment-notes article {
+        border-right: 0;
+        border-bottom: 1px solid var(--divider);
+      }
+      .deployment-notes article:last-child {
+        border-bottom: 0;
+      }
       .model-metrics {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -1909,6 +2114,15 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       }
       .investigation-page {
         padding: 1.25rem 1rem 4.5rem;
+      }
+      .evidence-sections,
+      .deployment-workbench {
+        margin-right: 0;
+        margin-left: 0;
+      }
+      .deployment-workbench > header {
+        align-items: flex-start;
+        flex-direction: column;
       }
       .page-heading {
         align-items: flex-start;
@@ -2009,6 +2223,7 @@ export class ProductShell {
     window.location.hostname !== 'localhost' &&
     window.location.hostname !== '127.0.0.1';
   protected readonly view = signal<ProductView>('replay');
+  protected readonly evidenceView = signal<EvidenceView>('campaign');
   protected readonly sort = signal<ProposalSort>('criticality');
   protected readonly filter = signal<ProposalFilter>('all');
   protected readonly rank = signal<InvestigationRank>('closest');

@@ -16,7 +16,20 @@ export interface CampaignEvidence {
   readonly nativeKernelSpeedupRange: string;
   readonly heldOutComparisonRun: boolean;
   readonly trajectoryModel: TrajectoryModelEvidence;
+  readonly inference: InferenceEvidence;
   readonly mode: 'published-aggregate' | 'real-local-redacted';
+}
+
+export interface InferenceEvidence {
+  readonly gpu: string;
+  readonly tensorrtVersion: string;
+  readonly fp32Batch1P50Ms: number;
+  readonly fp16Batch1P50Ms: number;
+  readonly fp16Batch256Throughput: number;
+  readonly cppBatch1P50Ms: number;
+  readonly fp16MaxDriftMeters: number;
+  readonly fp16RmseMeters: number;
+  readonly status: 'qualified';
 }
 
 export interface TrajectoryModelEvidence {
@@ -73,6 +86,17 @@ export const CAMPAIGN_EVIDENCE: CampaignEvidence = {
     baselineAdeMeters: 0.620216,
     baselineFdeMeters: 1.666729,
     status: 'deployment candidate',
+  },
+  inference: {
+    gpu: 'Tesla T4',
+    tensorrtVersion: '11.2.1.2',
+    fp32Batch1P50Ms: 0.246592,
+    fp16Batch1P50Ms: 0.196688,
+    fp16Batch256Throughput: 1_008_815.312,
+    cppBatch1P50Ms: 0.124288,
+    fp16MaxDriftMeters: 0.05508423,
+    fp16RmseMeters: 0.00563178,
+    status: 'qualified',
   },
   mode: 'published-aggregate',
 };
