@@ -84,3 +84,12 @@ target-version = "py311"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.uv]
+# PlanMargin uses eager PyTorch execution for its small trajectory model. Triton
+# is a torch.compile backend, is not used by this project, and its Linux wheel
+# crashes during import on the supported GitHub runner. Keep that unused
+# transitive dependency out of every locked environment.
+exclude-dependencies = [
+  { package = { name = "torch" }, dependencies = ["triton"] },
+]

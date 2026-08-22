@@ -28,6 +28,11 @@ the native interaction-metrics extension. On macOS, if Apple blocks the
 compiler behind an unaccepted Xcode license, review and accept it with
 `sudo xcodebuild -license` before running `uv sync`.
 
+Current Apple-silicon macOS and x86-64 Ubuntu Linux are the tested platforms.
+The locked environment excludes the unused Triton compiler backend; all torch
+paths in this repository use eager execution, and CI tests that same lockfile
+without uninstalling or replacing packages after synchronization.
+
 ## 2. Authorize WOD access
 
 Review the current [Waymo Dataset License Agreement for Non-Commercial

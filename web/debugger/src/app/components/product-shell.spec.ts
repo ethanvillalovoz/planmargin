@@ -20,14 +20,23 @@ describe('ProductShell', () => {
     TestBed.resetTestingModule();
   });
 
-  it('opens on an honest local-workspace boundary with public evidence available', () => {
+  it('opens on public evidence and keeps the local-workspace boundary explicit', () => {
     const fixture = TestBed.createComponent(ProductShell);
     fixture.detectChanges();
 
     let text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Workbench');
+    expect(text).toContain('3,200 counterfactual proposals. Zero qualifying regressions.');
+    expect(text).not.toContain('Replay sealed planner evidence locally');
+    const workbench = Array.from(
+      fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.includes('Workbench'))!;
+    workbench.click();
+    fixture.detectChanges();
+    text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Replay sealed planner evidence locally');
     expect(text).toContain('Public proposals3,200');
+
     const evidence = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
     ).find((candidate) => candidate.textContent?.includes('Evidence'))!;

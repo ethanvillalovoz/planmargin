@@ -86,4 +86,41 @@ describe('launch session bootstrap', () => {
     expect(loadRun).toHaveBeenCalledWith(initialRun);
     TestBed.resetTestingModule();
   });
+
+  it('keeps a public clone usable when no loopback API is running', async () => {
+    vi.useFakeTimers();
+    const restoreBrowserSession = vi.fn().mockRejectedValue(new TypeError('API unavailable'));
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: LocalEvidenceService, useValue: { restoreBrowserSession } },
+        { provide: DebuggerStore, useValue: { loadRun: vi.fn() } },
+      ],
+    });
+
+    const app = TestBed.runInInjectionContext(() => new App());
+    await vi.advanceTimersByTimeAsync(250);
+
+    expect(restoreBrowserSession).toHaveBeenCalledTimes(2);
+    expect((app as unknown as { showLocalEvidence: () => boolean }).showLocalEvidence()).toBe(
+      false,
+    );
+    TestBed.resetTestingModule();
+  });
+
+  it('surfaces the connection panel when an explicit launch token is rejected', async () => {
+    const connect = vi.fn().mockRejectedValue(new Error('Token rejected'));
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: LocalEvidenceService, useValue: { connect } },
+        { provide: DebuggerStore, useValue: { loadRun: vi.fn() } },
+      ],
+    });
+    window.history.replaceState(null, '', '/#token=0123456789abcdef');
+
+    const app = TestBed.runInInjectionContext(() => new App());
+    await vi.waitFor(() => expect(connect).toHaveBeenCalledOnce());
+
+    expect((app as unknown as { showLocalEvidence: () => boolean }).showLocalEvidence()).toBe(true);
+    TestBed.resetTestingModule();
+  });
 });
