@@ -12,10 +12,6 @@ export function consumeLaunchToken(location: Location, history: History): string
   return token;
 }
 
-export function isLoopbackHostname(hostname: string): boolean {
-  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
-}
-
 @Component({
   selector: 'app-root',
   imports: [LocalEvidencePanel, ProductShell],
@@ -58,7 +54,6 @@ export class App {
 
   private async connectFromAvailableSession(): Promise<void> {
     const token = consumeLaunchToken(window.location, window.history);
-    if (token === undefined && !isLoopbackHostname(window.location.hostname)) return;
     const recover =
       token === undefined
         ? () => this.local.restoreBrowserSession()
