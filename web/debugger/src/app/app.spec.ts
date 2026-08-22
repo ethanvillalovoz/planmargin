@@ -28,9 +28,7 @@ describe('launch session bootstrap', () => {
     expect(isLoopbackHostname('localhost')).toBe(true);
     expect(isLoopbackHostname('127.0.0.1')).toBe(true);
     expect(isLoopbackHostname('[::1]')).toBe(true);
-    expect(isLoopbackHostname('ethanvillalovoz-planmargin.static.hf.space')).toBe(
-      false,
-    );
+    expect(isLoopbackHostname('ethanvillalovoz-planmargin.static.hf.space')).toBe(false);
   });
 
   it('loads the initial planning run after an automatic launch connection', async () => {
