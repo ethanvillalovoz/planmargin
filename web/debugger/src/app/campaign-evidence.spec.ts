@@ -19,5 +19,12 @@ describe('CAMPAIGN_EVIDENCE', () => {
     expect(CAMPAIGN_EVIDENCE.hypotheses.minimality).toBe('Untestable');
     expect(CAMPAIGN_EVIDENCE.hypotheses.validity).toBe('Supported');
     expect(CAMPAIGN_EVIDENCE.heldOutComparisonRun).toBe(false);
+    expect(CAMPAIGN_EVIDENCE.scaleTrajectoryModel.scenarios).toBe(1_024);
+    expect(CAMPAIGN_EVIDENCE.scaleTrajectoryModel.testWindows).toBe(12_832);
+    expect(CAMPAIGN_EVIDENCE.scaleTrajectoryModel.adeMeters).toBeLessThan(
+      CAMPAIGN_EVIDENCE.scaleTrajectoryModel.baselineAdeMeters,
+    );
+    expect(CAMPAIGN_EVIDENCE.activeRisk.status).toBe('no-go');
+    expect(CAMPAIGN_EVIDENCE.interactionStudy.status).toBe('no-go');
   });
 });

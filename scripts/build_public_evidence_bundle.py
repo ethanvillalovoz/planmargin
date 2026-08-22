@@ -11,7 +11,7 @@ from planmargin.public_evidence_bundle import build_archive
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--output", type=Path, default=Path("dist/planmargin-public-evidence-v1")
+        "--output", type=Path, default=Path("dist/planmargin-public-evidence-v2")
     )
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]

@@ -66,6 +66,74 @@ def test_public_torch_result_is_aggregate_only_and_schema_valid() -> None:
     assert "scenario_ids" not in json.dumps(record)
 
 
+def test_public_scaled_torch_result_is_aggregate_only_and_schema_valid() -> None:
+    import json
+
+    import jsonschema
+
+    record = json.loads(
+        (REPOSITORY_ROOT / "experiments" / "torch-trajectory-model-v2.json").read_text()
+    )
+    schema = json.loads(
+        (
+            REPOSITORY_ROOT / "schemas" / "torch-trajectory-model-public-v1.schema.json"
+        ).read_text()
+    )
+
+    jsonschema.validate(record, schema)
+    assert record["scenario_count"] == 1024
+    assert record["split"]["test_scenarios"] == 102
+    assert record["gates"]["byte_identical_repeat"] is True
+    assert "scenario_ids" not in json.dumps(record)
+
+
+def test_public_active_risk_results_are_sealed_aggregate_only() -> None:
+    import hashlib
+    import json
+
+    import jsonschema
+
+    schema = json.loads(
+        (
+            REPOSITORY_ROOT
+            / "schemas"
+            / "active-risk-qualification-public-v1.schema.json"
+        ).read_text()
+    )
+    for name in (
+        "active-risk-qualification-v1.json",
+        "active-risk-qualification-v2.json",
+    ):
+        record = json.loads((REPOSITORY_ROOT / "experiments" / name).read_text())
+        jsonschema.validate(record, schema)
+        expected = record.pop("report_sha256")
+        canonical = (
+            json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
+        ).encode()
+        assert hashlib.sha256(canonical).hexdigest() == expected
+        assert record["redistribution"] == "aggregate_only"
+        assert record["synthetic"] is False
+        assert record["status"] == "qualification_no_go"
+        assert record["model_sha256"] is None
+        assert record["onnx_sha256"] is None
+
+
+def test_cpp_tensorrt_runner_declares_end_to_end_measurement_boundary() -> None:
+    source = (
+        REPOSITORY_ROOT / "cpp" / "tensorrt" / "trajectory_runner.cpp"
+    ).read_text()
+
+    for required in (
+        "cudaMallocHost",
+        "cudaMemcpyHostToDevice",
+        "cudaMemcpyDeviceToHost",
+        "cudaStreamSynchronize(end-to-end)",
+        "end_to_end_latency_ms",
+        "pinned host input to pinned host output",
+    ):
+        assert required in source
+
+
 def test_public_tensorrt_result_is_sealed_aggregate_only_and_schema_valid() -> None:
     import hashlib
     import json

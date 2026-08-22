@@ -1,5 +1,9 @@
 """Data-free tests for the NVIDIA qualification report helpers."""
 
+import json
+from pathlib import Path
+
+import jsonschema
 import torch
 
 import pytest
@@ -79,3 +83,13 @@ def test_deterministic_inference_probe_is_stable_and_physically_shaped() -> None
 def test_deterministic_inference_probe_rejects_empty_batch() -> None:
     with pytest.raises(ValueError, match="positive"):
         tensorrt_qualification.deterministic_inference_probe(0)
+
+
+def test_end_to_end_qualification_schema_is_well_formed() -> None:
+    schema_path = (
+        Path(__file__).parents[1]
+        / "schemas"
+        / "tensorrt-qualification-public-v2.schema.json"
+    )
+
+    jsonschema.Draft202012Validator.check_schema(json.loads(schema_path.read_text()))

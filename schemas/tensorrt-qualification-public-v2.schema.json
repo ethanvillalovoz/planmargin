@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ethanvillalovoz/planmargin/schemas/tensorrt-qualification-public-v2.schema.json",
+  "title": "PlanMargin end-to-end TensorRT qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_type", "schema_version", "source_model_training_data",
+    "redistribution", "status", "source_training_report_sha256",
+    "source_onnx_sha256", "measurement", "engines", "gpu", "environment",
+    "gates", "claim_boundary", "report_sha256"
+  ],
+  "properties": {
+    "record_type": {"const": "planmargin.tensorrt_qualification_report"},
+    "schema_version": {"const": "2.0.0"},
+    "source_model_training_data": {
+      "type": "object", "additionalProperties": false,
+      "required": ["dataset", "synthetic"],
+      "properties": {
+        "dataset": {"type": "string", "minLength": 10},
+        "synthetic": {"const": false}
+      }
+    },
+    "redistribution": {"const": "aggregate_only"},
+    "status": {"enum": ["qualified", "no_go"]},
+    "source_training_report_sha256": {"$ref": "#/$defs/sha256"},
+    "source_onnx_sha256": {"$ref": "#/$defs/sha256"},
+    "measurement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["clocks", "input_protocol", "input_purpose", "warmup_iterations", "measured_iterations", "batches", "cpu_reference_batch_1"],
+      "properties": {
+        "clocks": {
+          "type": "object", "additionalProperties": false,
+          "required": ["device", "end_to_end"],
+          "properties": {
+            "device": {"const": "CUDA events around TensorRT enqueueV3"},
+            "end_to_end": {"type": "string", "pattern": "pinned-host H2D.*enqueueV3.*D2H.*synchronization"}
+          }
+        },
+        "input_protocol": {"enum": ["deterministic_physical_probe_v1", "sealed_real_womd_holdout"]},
+        "input_purpose": {"const": "deployment timing and numerical parity only"},
+        "warmup_iterations": {"type": "integer", "minimum": 1},
+        "measured_iterations": {"type": "integer", "minimum": 10},
+        "batches": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 1}},
+        "cpu_reference_batch_1": {"$ref": "#/$defs/latency"}
+      }
+    },
+    "engines": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fp32", "fp16"],
+      "properties": {
+        "fp32": {"$ref": "#/$defs/engine"},
+        "fp16": {"$ref": "#/$defs/engine"}
+      }
+    },
+    "gpu": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "compute_capability", "total_memory_bytes", "observed_free_memory_delta_bytes"],
+      "properties": {
+        "name": {"type": "string", "minLength": 2},
+        "compute_capability": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1}},
+        "total_memory_bytes": {"type": "integer", "minimum": 1},
+        "observed_free_memory_delta_bytes": {"type": "integer", "minimum": 0}
+      }
+    },
+    "environment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["python", "torch", "cuda", "tensorrt", "platform"],
+      "properties": {
+        "python": {"type": "string", "minLength": 3},
+        "torch": {"type": "string", "minLength": 3},
+        "cuda": {"type": "string", "minLength": 3},
+        "tensorrt": {"type": "string", "minLength": 3},
+        "platform": {"type": "string", "minLength": 3}
+      }
+    },
+    "gates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fp16_max_error_under_7_5e_2_m", "fp16_rmse_under_1e_2_m", "fp32_max_error_under_1e_4_m", "gpu_end_to_end_faster_than_cpu_at_batch_1"],
+      "properties": {
+        "fp16_max_error_under_7_5e_2_m": {"type": "boolean"},
+        "fp16_rmse_under_1e_2_m": {"type": "boolean"},
+        "fp32_max_error_under_1e_4_m": {"type": "boolean"},
+        "gpu_end_to_end_faster_than_cpu_at_batch_1": {"type": "boolean"}
+      }
+    },
+    "claim_boundary": {"type": "string", "minLength": 20},
+    "report_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "latency": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mean", "p50", "p95", "p99"],
+      "properties": {
+        "mean": {"type": "number", "minimum": 0},
+        "p50": {"type": "number", "minimum": 0},
+        "p95": {"type": "number", "minimum": 0},
+        "p99": {"type": "number", "minimum": 0}
+      }
+    },
+    "batch_measurement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["latency_ms", "device_latency_ms", "end_to_end_latency_ms", "throughput_samples_per_second"],
+      "properties": {
+        "latency_ms": {"$ref": "#/$defs/latency"},
+        "device_latency_ms": {"$ref": "#/$defs/latency"},
+        "end_to_end_latency_ms": {"$ref": "#/$defs/latency"},
+        "throughput_samples_per_second": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "parity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["max_absolute_error_m", "rmse_m"],
+      "properties": {
+        "max_absolute_error_m": {"type": "number", "minimum": 0},
+        "rmse_m": {"type": "number", "minimum": 0}
+      }
+    },
+    "engine": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bytes", "sha256", "source_onnx_sha256", "batches", "pytorch_fp32_parity"],
+      "properties": {
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "source_onnx_sha256": {"$ref": "#/$defs/sha256"},
+        "batches": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/batch_measurement"}},
+        "pytorch_fp32_parity": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/parity"}}
+      }
+    }
+  }
+}

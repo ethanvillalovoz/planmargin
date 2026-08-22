@@ -41,13 +41,17 @@ describe('ProductShell', () => {
     runtime.click();
     fixture.detectChanges();
     text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Real WOMD model → ONNX → TensorRT');
-    expect(text).toContain('Test ADE0.322 m');
-    expect(text).toContain('baseline 0.620 m');
-    expect(text).toContain('Tesla T4 · 50 warmups + 500 measured');
+    expect(text).toContain('Models, deployment, and promotion gates');
+    expect(text).toContain('Test ADE0.418 m');
+    expect(text).toContain('baseline 0.870 m');
+    expect(text).toContain('Released 128-scenario model · Tesla T4 · 500 measured');
     expect(text).toContain('FP16 · batch 10.197 ms');
     expect(text).toContain('C++17 · batch 10.124 ms');
     expect(text).toContain('0.56 cm RMSE');
+    expect(text).toContain('Active-risk promotion gate · stopped');
+    expect(text).toContain('Neighbor-context ablation · stopped');
+    expect(text).toContain('Scale-model deployment · pending');
+    expect(text).toContain('does not inherit old runtime results');
     expect(text).not.toContain('No qualifying planner failure was found');
   });
 
@@ -86,7 +90,7 @@ describe('ProductShell', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Real WOMD model → ONNX → TensorRT');
+    expect(text).toContain('Models, deployment, and promotion gates');
     expect(text).toContain('real data · no synthetic training');
     expect(text).toContain('FP16 · batch 10.197 ms');
     expect(text).toContain('Quality and deployment probes are kept separate');

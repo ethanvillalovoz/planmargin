@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ethanvillalovoz/planmargin/schemas/active-risk-qualification-public-v1.schema.json",
+  "title": "PlanMargin public active-risk qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_type", "schema_version", "experiment", "synthetic",
+    "redistribution", "source", "evaluation", "target", "feature_names",
+    "scenario_count", "unique_example_count", "aggregate", "gates", "status",
+    "stop_reason", "model_sha256", "onnx_sha256", "claim_boundary",
+    "report_sha256"
+  ],
+  "properties": {
+    "record_type": {"const": "planmargin.active_risk_qualification"},
+    "schema_version": {"const": "1.0.0"},
+    "experiment": {"enum": ["v5", "v6"]},
+    "synthetic": {"const": false},
+    "redistribution": {"const": "aggregate_only"},
+    "source": {"type": "string", "minLength": 20},
+    "evaluation": {"type": "string", "minLength": 20},
+    "target": {"const": "tested_minimum_signed_separation_m"},
+    "feature_names": {
+      "type": "array", "minItems": 12, "uniqueItems": true,
+      "items": {"type": "string", "minLength": 3}
+    },
+    "scenario_count": {"type": "integer", "minimum": 1},
+    "unique_example_count": {"type": "integer", "minimum": 500},
+    "aggregate": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["mean_spearman", "mean_budget_8_random_minus_learned_m", "budget_8_win_count", "interval_coverage"],
+          "properties": {
+            "mean_spearman": {"type": "number", "minimum": -1, "maximum": 1},
+            "mean_budget_8_random_minus_learned_m": {"type": "number"},
+            "budget_8_win_count": {"type": "integer", "minimum": 0},
+            "interval_coverage": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        }
+      ]
+    },
+    "gates": {
+      "type": "object", "minProperties": 6,
+      "additionalProperties": {"type": "boolean"}
+    },
+    "status": {"const": "qualification_no_go"},
+    "stop_reason": {"type": ["string", "null"]},
+    "model_sha256": {"type": "null"},
+    "onnx_sha256": {"type": "null"},
+    "claim_boundary": {"type": "string", "minLength": 20},
+    "report_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

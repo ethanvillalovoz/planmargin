@@ -31,22 +31,42 @@ def main() -> None:
     ):
         raise SystemExit("Restricted provenance field found")
     trajectory = json.loads((ROOT / "data/trajectory-model.json").read_text())
+    trajectory_v2 = json.loads((ROOT / "data/trajectory-model-v2.json").read_text())
+    active_risk = [
+        json.loads((ROOT / f"data/active-risk-v{version}.json").read_text())
+        for version in (1, 2)
+    ]
     tensorrt = json.loads((ROOT / "data/tensorrt-qualification.json").read_text())
     cpp = json.loads((ROOT / "data/tensorrt-cpp-benchmark.json").read_text())
     if trajectory.get("synthetic") is not False:
         raise SystemExit("Trajectory result must identify real training data")
+    if (
+        trajectory_v2.get("synthetic") is not False
+        or trajectory_v2.get("scenario_count") != 1024
+        or not all(trajectory_v2.get("gates", {}).values())
+    ):
+        raise SystemExit("Scaled trajectory result is incomplete")
+    if any(
+        result.get("status") != "qualification_no_go"
+        or result.get("model_sha256") is not None
+        for result in active_risk
+    ):
+        raise SystemExit("Active-risk no-go boundary is incomplete")
     if tensorrt.get("status") != "qualified" or not all(
         tensorrt.get("gates", {}).values()
     ):
         raise SystemExit("TensorRT qualification is incomplete")
     if cpp.get("measured_iterations") != 500:
         raise SystemExit("Unexpected C++ benchmark protocol")
-    restricted = json.dumps((rows, trajectory, tensorrt, cpp), sort_keys=True)
+    restricted = json.dumps(
+        (rows, trajectory, trajectory_v2, active_risk, tensorrt, cpp),
+        sort_keys=True,
+    )
     if any(
         key in restricted for key in ("scenario_ids", "source_shard", "record_index")
     ):
         raise SystemExit("Restricted provenance field found")
-    print("PlanMargin public evidence verified: 9 aggregate research records")
+    print("PlanMargin public evidence verified: 12 aggregate research records")
 
 
 if __name__ == "__main__":

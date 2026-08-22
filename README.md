@@ -13,15 +13,17 @@ specific to the tested planner.
 It is an engineering workbench, not a benchmark leaderboard or a Waymo Driver
 evaluation.
 
-![PlanMargin public aggregate evidence workbench](docs/assets/planmargin-public-workbench-v1.1.png)
+![PlanMargin 2.0 real-data model and promotion evidence](docs/assets/planmargin-model-runtime-v2.jpg)
 
 The public clone opens a useful aggregate analysis surface over the sealed
 3,200-proposal campaign. It fails closed only for licensed per-scenario data. An
 authorized local launch adds exact proposal replay, candidate investigation,
 recorded camera annotations, LiDAR, two 3D Gaussian reconstructions, and a
 calibrated real-data JAX trajectory overlay without uploading those artifacts.
-The public Evidence view also exposes the sealed 128-scenario PyTorch trajectory
-result and measured TensorRT qualification from a free Tesla T4 runtime.
+The public Evidence view exposes the 1,024-scenario real-WOMD prediction study,
+the earlier model's measured free-T4 TensorRT result, and every promotion gate—
+including two learned ideas that were stopped because the evidence did not
+support deployment.
 
 ## The engineering workflow
 
@@ -151,16 +153,35 @@ held out by scenario and meets its absolute visualization error gates, but does
 not beat constant velocity on its test scenario; the UI and report state that
 negative comparison rather than claiming model superiority.
 
-A separate TensorRT-friendly PyTorch Conv1d predictor was trained on 29,288
-windows from 128 real WOMD scenarios with complete-scenario train/validation/
-test separation. On 3,157 test windows it achieved 0.322 m ADE and 0.889 m FDE,
-compared with 0.620 m and 1.667 m for constant velocity. Its hash-pinned
-[model-only release](https://github.com/ethanvillalovoz/planmargin/releases/tag/trajectory-model-v1)
-contains no WOMD records. The exact ONNX graph was qualified on a free Tesla T4
-with TensorRT 11.2.1.2: FP32 batch-1 p50 was 0.247 ms, FP16 batch-1 p50 was
-0.197 ms, and the independently compiled C++17 runner measured 0.124 ms p50.
-The published reports retain every percentile, batch, parity value, gate,
-environment version, and artifact hash.
+The deployable Conv1d track now covers 126,992 windows from 1,024 real WOMD
+scenarios with complete-scenario train/validation/test separation. On 12,832
+test windows it achieved 0.418 m ADE and 1.167 m FDE, compared with 0.870 m and
+2.342 m for constant velocity. A clean repeat produced byte-identical weights
+and ONNX. Its hash-pinned
+[model-only release](https://github.com/ethanvillalovoz/planmargin/releases/tag/trajectory-model-v2)
+contains no WOMD records.
+
+Two Version 2 hypotheses did not pass their frozen gates. A five-model active-
+risk ensemble trained on 2,097 real campaign targets reached mean held-out
+Spearman 0.137 and beat matched random selection at budget eight in only 3 of 9
+scenes, so no learned selector was promoted. An interaction model pooling eight
+nearest actors reached 0.453 m ADE versus 0.434 m for its same-data ego-only
+ablation, so it was also stopped rather than packaged.
+
+The earlier 128-scenario ONNX graph remains the only model with measured NVIDIA
+qualification: on a free Tesla T4 with TensorRT 11.2.1.2, FP32 batch-1 p50 was
+0.247 ms, FP16 batch-1 p50 was 0.197 ms, and the independently compiled C++17
+runner measured 0.124 ms p50. The new model does not inherit those results. Its
+free-T4 notebook now reports both CUDA-event latency and pinned-host end-to-end
+latency (H2D, `enqueueV3`, D2H, and synchronization); its status remains pending
+until that notebook is rerun.
+
+| Version 2 decision | Evidence | Promotion |
+| --- | --- | --- |
+| Scale the deployable predictor | 1,024 real scenes; model beats constant velocity; byte-identical repeat | Model-only release candidate |
+| Learn which counterfactual to test | 2,097 targets; weak scene-held-out ranking and 3/9 budget wins | Stopped |
+| Add nearest-actor context | Same 102-scene test split; worse than ego-only | Stopped |
+| Qualify the scaled ONNX on NVIDIA | Reproducible free-T4 Python + C++17 protocol is ready | Awaiting measured rerun |
 
 Read the [aggregate result](docs/natural-development-results.md) and
 [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md) for the
@@ -175,10 +196,12 @@ flowchart LR
     X --> C["C++20 interaction metrics"]
     S --> E["Content-sealed evidence"]
     C --> E
+    E --> Q["Scene-grouped active-risk qualification"]
     E --> D["Beam · Parquet · DuckDB"]
     E --> A["Loopback FastAPI"]
     M["Real WOMD tracks"] --> J["JAX trajectory predictor"]
     M --> T["PyTorch temporal Conv1d"]
+    M --> I["Nearest-actor ablation"]
     T --> O["ONNX FP32 · typed FP16"]
     O --> N["TensorRT 11 · Python + C++17"]
     P["WOD Perception"] --> V["Camera · two SHARP 3DGS scenes · LiDAR"]
@@ -199,8 +222,10 @@ flowchart LR
 | Product          | Angular, TypeScript, Three.js, Spark | strict types, component tests, production build         |
 | Reconstruction   | Apple SHARP                          | pinned source, model hash, MPS/CUDA/CPU execution       |
 | Trajectory model | JAX, Optax, real WOMD tracks         | scenario holdout, baseline comparison, sealed checkpoint |
-| Deployable model | PyTorch, ONNX, TensorRT 11           | 128-scenario holdout, FP32/FP16 parity, CUDA-event timing |
-| NVIDIA runtime   | Python and C++17 `enqueueV3`          | Tesla T4, 500 runs per batch, sealed hashes and versions  |
+| Deployable model | PyTorch, ONNX, TensorRT 11           | 1,024-scenario holdout, constant-velocity baseline, byte repeat |
+| Learned mining   | PyTorch ensemble, grouped CV          | rank, budgeted selection, calibration, and no-go gates    |
+| Interaction study | PyTorch nearest-actor pooling        | same-data ego-only ablation and no-go gate                |
+| NVIDIA runtime   | Python and C++17 `enqueueV3`          | device plus pinned-host end-to-end p50/p95/p99 contract   |
 | Assistant        | deterministic tools, optional Gemini | allowlisted evidence and sealed citations               |
 | Replay retention | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching      |
 
@@ -208,6 +233,11 @@ flowchart LR
 
 PlanMargin separates public code and aggregate results from licensed local
 evidence:
+
+The independently downloadable
+[PlanMargin public evidence dataset](https://huggingface.co/datasets/ethanvillalovoz/planmargin-public-evidence)
+contains twelve manifest-verified aggregate records and no scene-level WOD
+files.
 
 | Surface                              | Public clone      | Authorized local workspace                   |
 | ------------------------------------ | ----------------- | -------------------------------------------- |
@@ -252,7 +282,9 @@ To reproduce the NVIDIA deployment result without downloading WOMD records,
 open [`notebooks/planmargin_tensorrt_colab.ipynb`](notebooks/planmargin_tensorrt_colab.ipynb)
 in a free T4 Colab runtime. It downloads and verifies the model-only release,
 builds FP32 and typed-FP16 engines, runs 50 warmups plus 500 measured iterations
-at batches 1, 8, and 256, and compiles the C++17 cross-check.
+at batches 1, 8, and 256, and compiles the C++17 cross-check. The notebook uses
+the scaled `trajectory-model-v2` release and labels its output independently
+from the earlier published TensorRT result.
 
 `uv run --frozen planmargin-doctor` reports exactly which public and authorized
 artifacts are present instead of silently degrading the product.
@@ -269,7 +301,8 @@ artifacts are present instead of silently degrading the product.
 | [`docs`](docs)                               | architecture, protocols, decisions, results, and runbooks      |
 | [`release/huggingface`](release/huggingface) | aggregate-only package; no WOD scene files                     |
 
-Start with [using the workbench](docs/using-the-workbench.md), the
+Start with the [PlanMargin 2.0 evidence release](docs/release-2.0.md),
+[using the workbench](docs/using-the-workbench.md), the
 [architecture](docs/architecture.md),
 [workspace reproduction](docs/reproducing-the-workspace.md),
 [evidence API](docs/evidence-api.md), and [contribution guide](CONTRIBUTING.md).

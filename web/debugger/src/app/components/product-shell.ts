@@ -128,58 +128,65 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
               <header>
                 <div>
                   <p>Measured deployment evidence</p>
-                  <h2 id="deployment-workbench-title">Real WOMD model → ONNX → TensorRT</h2>
+                  <h2 id="deployment-workbench-title">Models, deployment, and promotion gates</h2>
                 </div>
-                <span class="qualification-status"
-                  ><i></i>TensorRT {{ local.campaign().inference.status }}</span
-                >
+                <span class="qualification-status"><i></i>Promotion status explicit</span>
               </header>
               <section class="model-evidence" aria-labelledby="deployment-quality-title">
                 <header>
                   <div>
-                    <span>Complete-scenario test split</span>
-                    <h3 id="deployment-quality-title">Prediction quality</h3>
+                    <span>1,024-scenario scale study · byte-reproducible</span>
+                    <h3 id="deployment-quality-title">Real-WOMD prediction quality</h3>
                   </div>
                   <b>real data · no synthetic training</b>
                 </header>
                 <div class="model-metrics">
                   <div>
                     <span>WOMD scenarios</span>
-                    <strong>{{ local.campaign().trajectoryModel.scenarios }}</strong>
+                    <strong>{{ local.campaign().scaleTrajectoryModel.scenarios }}</strong>
                     <small
                       >{{
-                        local.campaign().trajectoryModel.windows.toLocaleString()
+                        local.campaign().scaleTrajectoryModel.windows.toLocaleString()
                       }}
                       windows</small
                     >
                   </div>
                   <div>
                     <span>Test ADE</span>
-                    <strong>{{ local.campaign().trajectoryModel.adeMeters.toFixed(3) }} m</strong>
+                    <strong
+                      >{{ local.campaign().scaleTrajectoryModel.adeMeters.toFixed(3) }} m</strong
+                    >
                     <small
                       >baseline
-                      {{ local.campaign().trajectoryModel.baselineAdeMeters.toFixed(3) }} m</small
+                      {{ local.campaign().scaleTrajectoryModel.baselineAdeMeters.toFixed(3) }}
+                      m</small
                     >
                   </div>
                   <div>
                     <span>Test FDE</span>
-                    <strong>{{ local.campaign().trajectoryModel.fdeMeters.toFixed(3) }} m</strong>
+                    <strong
+                      >{{ local.campaign().scaleTrajectoryModel.fdeMeters.toFixed(3) }} m</strong
+                    >
                     <small
                       >baseline
-                      {{ local.campaign().trajectoryModel.baselineFdeMeters.toFixed(3) }} m</small
+                      {{ local.campaign().scaleTrajectoryModel.baselineFdeMeters.toFixed(3) }}
+                      m</small
                     >
                   </div>
                   <div>
                     <span>Test evidence</span>
                     <strong>{{
-                      local.campaign().trajectoryModel.testWindows.toLocaleString()
+                      local.campaign().scaleTrajectoryModel.testWindows.toLocaleString()
                     }}</strong>
                     <small>complete-scenario windows</small>
                   </div>
                 </div>
                 <div class="deployment-divider">
-                  <span>{{ local.campaign().inference.gpu }} · 50 warmups + 500 measured</span>
-                  <b>TensorRT {{ local.campaign().inference.tensorrtVersion }}</b>
+                  <span
+                    >Released 128-scenario model · {{ local.campaign().inference.gpu }} · 500
+                    measured</span
+                  >
+                  <b>TensorRT {{ local.campaign().inference.tensorrtVersion }} qualification</b>
                 </div>
                 <div class="model-metrics" aria-label="Measured NVIDIA inference evidence">
                   <div>
@@ -232,6 +239,36 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                   <p>
                     TensorRT engines are rebuilt per GPU; the free-T4 notebook verifies each source
                     hash before engine creation and compiles the C++17 cross-check.
+                  </p>
+                </article>
+                <article class="stopped-gate">
+                  <span>Active-risk promotion gate · stopped</span>
+                  <strong>The learned ranker did not generalize across scenes.</strong>
+                  <p>
+                    {{ local.campaign().activeRisk.examples.toLocaleString() }} real proposal
+                    targets · Spearman {{ local.campaign().activeRisk.meanSpearman.toFixed(3) }} ·
+                    matched random at budget 8 in
+                    {{ local.campaign().activeRisk.budgetEightWins }} of
+                    {{ local.campaign().activeRisk.scenarios }} scenes. No selector was promoted.
+                  </p>
+                </article>
+                <article class="stopped-gate">
+                  <span>Neighbor-context ablation · stopped</span>
+                  <strong>Nearest-actor pooling was worse than ego history alone.</strong>
+                  <p>
+                    ADE {{ local.campaign().interactionStudy.interactionAdeMeters.toFixed(3) }} m
+                    with neighbors versus
+                    {{ local.campaign().interactionStudy.egoOnlyAdeMeters.toFixed(3) }} m ego-only
+                    on the same 102-scenario test split.
+                  </p>
+                </article>
+                <article class="pending-gate">
+                  <span>Scale-model deployment · pending</span>
+                  <strong>The 1,024-scenario model does not inherit old runtime results.</strong>
+                  <p>
+                    Its weights and ONNX graph are byte-reproducible. The free-T4 notebook must
+                    still measure FP32/FP16 parity and pinned-host end-to-end latency before this
+                    model is deployment-qualified.
                   </p>
                 </article>
               </div>
@@ -1049,6 +1086,21 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     }
     .deployment-notes article:last-child {
       border-right: 0;
+    }
+    .deployment-notes article:nth-child(n + 4) {
+      border-top: 1px solid var(--divider);
+    }
+    .deployment-notes article.stopped-gate {
+      background: rgb(240 163 59 / 4%);
+    }
+    .deployment-notes article.stopped-gate span {
+      color: #f0a33b;
+    }
+    .deployment-notes article.pending-gate {
+      background: rgb(53 197 211 / 4%);
+    }
+    .deployment-notes article.pending-gate span {
+      color: var(--reference);
     }
     .deployment-notes strong {
       display: block;

@@ -67,6 +67,7 @@ class ReadinessReport:
     sensor_ready: bool
     torch_trajectory_ready: bool
     tensorrt_qualified: bool
+    scaled_tensorrt_qualified: bool
     research_program_ready: bool
     full_workbench_ready: bool
     capabilities: tuple[Capability, ...]
@@ -85,6 +86,9 @@ def _public_bundle_ready(root: Path) -> bool:
             directory / "verify.py",
             directory / "data" / "campaign.jsonl",
             directory / "data" / "trajectory-model.json",
+            directory / "data" / "trajectory-model-v2.json",
+            directory / "data" / "active-risk-v1.json",
+            directory / "data" / "active-risk-v2.json",
             directory / "data" / "tensorrt-qualification.json",
             directory / "data" / "tensorrt-cpp-benchmark.json",
         )
@@ -311,7 +315,9 @@ def _trajectory_model_ready(root: Path) -> tuple[bool, str]:
 def _torch_trajectory_ready(root: Path) -> tuple[bool, str]:
     from planmargin import torch_trajectory_model
 
-    directory = root / torch_trajectory_model.DEFAULT_OUTPUT_DIR
+    scaled_directory = root / "artifacts" / "experiment-v7" / "torch-trajectory-model"
+    legacy_directory = root / torch_trajectory_model.DEFAULT_OUTPUT_DIR
+    directory = scaled_directory if scaled_directory.is_dir() else legacy_directory
     report_path = directory / "training-report.json"
     model_path = directory / "trajectory-model.pmtorch"
     onnx_path = directory / "trajectory-model.onnx"
@@ -353,10 +359,12 @@ def _torch_trajectory_ready(root: Path) -> tuple[bool, str]:
     ) as error:
         return False, str(error)
     metrics = report["metrics"]["test"]
+    scenario_count = int(report.get("configuration", {}).get("scenario_count", 0))
     return (
         True,
         "The real WOMD PyTorch/ONNX model verified on complete held-out scenarios "
-        f"({metrics['ade_m']:.3f} m ADE vs {metrics['constant_velocity_ade_m']:.3f} m baseline).",
+        f"({scenario_count:,} scenarios; {metrics['ade_m']:.3f} m ADE vs "
+        f"{metrics['constant_velocity_ade_m']:.3f} m baseline).",
     )
 
 
@@ -400,6 +408,39 @@ def _tensorrt_qualified(root: Path) -> tuple[bool, str]:
     )
 
 
+def _scaled_tensorrt_qualified(root: Path) -> tuple[bool, str]:
+    path = root / "experiments" / "tensorrt-qualification-v2.json"
+    if path.is_symlink() or not path.is_file():
+        return (
+            False,
+            "The 1,024-scenario model has no measured T4 report yet; prior-model "
+            "latency is not inherited.",
+        )
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        sealed = dict(report)
+        expected_seal = sealed.pop("report_sha256")
+        canonical = (
+            json.dumps(sealed, sort_keys=True, separators=(",", ":")) + "\n"
+        ).encode()
+        if hashlib.sha256(canonical).hexdigest() != expected_seal:
+            raise ValueError("The scaled TensorRT report seal is invalid")
+        if (
+            report.get("schema_version") != "2.0.0"
+            or report.get("status") != "qualified"
+            or not all(report.get("gates", {}).values())
+        ):
+            raise ValueError("The scaled TensorRT qualification gates did not all pass")
+    except (ValueError, OSError, json.JSONDecodeError, KeyError) as error:
+        return False, str(error)
+    fp16 = report["engines"]["fp16"]["batches"]["1"]
+    return (
+        True,
+        "The scaled model passed TensorRT parity and end-to-end gates; FP16 "
+        f"batch-1 end-to-end p50 is {fp16['end_to_end_latency_ms']['p50']:.3f} ms.",
+    )
+
+
 def inspect_workspace(root: Path) -> ReadinessReport:
     """Return the exact public, private-evidence, and sensor readiness state."""
     root = root.resolve(strict=True)
@@ -414,6 +455,9 @@ def inspect_workspace(root: Path) -> ReadinessReport:
     trajectory_model_ready, trajectory_model_detail = _trajectory_model_ready(root)
     torch_trajectory_ready, torch_trajectory_detail = _torch_trajectory_ready(root)
     tensorrt_qualified, tensorrt_detail = _tensorrt_qualified(root)
+    scaled_tensorrt_qualified, scaled_tensorrt_detail = _scaled_tensorrt_qualified(
+        root
+    )
     research_program_ready = (
         gaussian_ready
         and beam_ready
@@ -526,10 +570,17 @@ def inspect_workspace(root: Path) -> ReadinessReport:
             "uv run --frozen --extra nvidia planmargin-train-torch-trajectory",
         ),
         Capability(
-            "NVIDIA TensorRT deployment qualification",
+            "Released 128-scenario NVIDIA qualification",
             tensorrt_qualified,
             "public aggregate / free Colab",
             tensorrt_detail,
+            "Run notebooks/planmargin_tensorrt_colab.ipynb in a free T4 runtime",
+        ),
+        Capability(
+            "Scaled-model NVIDIA qualification",
+            scaled_tensorrt_qualified,
+            "free Colab follow-up",
+            scaled_tensorrt_detail,
             "Run notebooks/planmargin_tensorrt_colab.ipynb in a free T4 runtime",
         ),
         Capability(
@@ -552,6 +603,7 @@ def inspect_workspace(root: Path) -> ReadinessReport:
         sensor_ready=sensor_ready,
         torch_trajectory_ready=torch_trajectory_ready,
         tensorrt_qualified=tensorrt_qualified,
+        scaled_tensorrt_qualified=scaled_tensorrt_qualified,
         research_program_ready=research_program_ready,
         full_workbench_ready=(
             evidence_ready

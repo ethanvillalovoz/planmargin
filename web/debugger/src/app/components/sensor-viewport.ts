@@ -508,7 +508,7 @@ export class SensorViewport {
   protected readonly frameLoading = signal(false);
   protected readonly splatLoading = signal(false);
   protected readonly splatReady = signal(false);
-  protected readonly reconstructionView = signal<'path' | 'source' | 'left' | 'right'>('path');
+  protected readonly reconstructionView = signal<'path' | 'source' | 'left' | 'right'>('source');
   protected readonly reconstructionAsset = signal<'reconstruction' | 'reconstruction_reference'>(
     'reconstruction',
   );
@@ -814,7 +814,7 @@ export class SensorViewport {
   protected setReconstructionAsset(asset: 'reconstruction' | 'reconstruction_reference'): void {
     if (asset === this.reconstructionAsset()) return;
     this.reconstructionAsset.set(asset);
-    this.reconstructionView.set(asset === 'reconstruction' ? 'path' : 'source');
+    this.reconstructionView.set('source');
     const source =
       asset === 'reconstruction'
         ? this.summary()?.reconstruction
