@@ -13,10 +13,10 @@ product. This is a licensing and privacy boundary, not a demo-data fallback.
 | Scenario IDs and source provenance | No                          | No UI exposure         |
 
 The staged dataset package is in
-`release/huggingface/planmargin-public-evidence`. It contains six aggregate JSONL
-records and an integrity verifier. This is a review supplement, not the data
-package for the complete workbench. It must not be expanded with ignored
-artifacts or `data/raw` files.
+`release/huggingface/planmargin-public-evidence`. It contains six campaign
+records, three aggregate model/deployment records, and an integrity verifier.
+This is a review supplement, not the data package for the complete workbench. It
+must not be expanded with ignored artifacts or `data/raw` files.
 
 The complete public repository instead ships an authorized bootstrap and an
 executable readiness report. `planmargin-bootstrap-sensor` obtains WOD source

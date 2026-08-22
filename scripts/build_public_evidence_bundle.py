@@ -1,10 +1,11 @@
-"""Build a deterministic zip from the reviewed Hugging Face staging package."""
+"""Build a byte-for-byte deterministic public evidence archive."""
 
 from __future__ import annotations
 
 import argparse
-import shutil
 from pathlib import Path
+
+from planmargin.public_evidence_bundle import build_archive
 
 
 def main() -> None:
@@ -18,7 +19,7 @@ def main() -> None:
     output = (root / args.output).resolve()
     if not output.is_relative_to((root / "dist").resolve()):
         raise SystemExit("Output must remain under dist/")
-    archive = shutil.make_archive(str(output), "zip", root_dir=source)
+    archive = build_archive(source, output.with_suffix(".zip"))
     print(archive)
 
 

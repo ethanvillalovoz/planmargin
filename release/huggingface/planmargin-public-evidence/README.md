@@ -12,18 +12,21 @@ size_categories:
   - n<1K
 ---
 
-# PlanMargin public campaign evidence
+# PlanMargin public research evidence
 
-This package contains the public, aggregate-only result of PlanMargin's immutable
-Waymax counterfactual-search campaign. It is sufficient to inspect the campaign
-decision, compare random and Bayesian search, and reproduce the published
-hypothesis decisions without downloading scenario-level Waymo Open Dataset data.
+This package contains PlanMargin's public, aggregate-only research evidence. It
+lets a reviewer inspect the counterfactual-search campaign, the real-WOMD
+trajectory-model result, and the measured NVIDIA TensorRT qualification without
+downloading scenario-level Waymo Open Dataset data.
 
 ## What is included
 
 - one aggregate campaign record;
 - two method records;
 - three preregistered hypothesis decisions;
+- one trajectory-model result trained on 128 real WOMD scenarios;
+- one sealed TensorRT qualification report from a free-tier Tesla T4;
+- one C++17 TensorRT runtime benchmark;
 - a deterministic SHA-256 manifest.
 
 ## What is intentionally excluded
@@ -37,6 +40,13 @@ qualifying planner failures. Bayesian search improved the support-and-pipeline-v
 rate from 54.5625% to 69.3750%; H3 was supported, while H1 and H2 were untestable
 because neither method found a qualifying failure.
 
+The trajectory model produced 0.3225 m ADE and 0.8888 m FDE on a complete-scenario
+test split, beating the constant-velocity baseline. The FP16 TensorRT engine ran
+at 0.1967 ms batch-1 p50 latency and 1.009M samples/s at batch 256; a separate
+C++17 driver measured 0.1243 ms batch-1 p50 latency. These deployment timings use
+deterministic physical probes for timing and numerical parity. Model quality is
+reported only on the real-WOMD scenario split.
+
 ## Use
 
 ```bash
@@ -46,6 +56,9 @@ hf download ethanvillalovoz/planmargin-public-evidence \
 python verify.py
 ```
 
+The model weights and ONNX graph are available from the public
+[trajectory-model-v1 GitHub release](https://github.com/ethanvillalovoz/planmargin/releases/tag/trajectory-model-v1).
+TensorRT engines are intentionally rebuilt for the target GPU and TensorRT version.
 The repository's distribution-policy checks verify that this bundle contains
 aggregate records only and excludes licensed scenario-level artifacts.
 
@@ -61,6 +74,7 @@ only aggregate research outputs, not a copy of the Waymo Open Dataset.
 
 ## Claim boundary
 
-This bounded simulator study used ten training scenarios, five seeds, and two
-search methods. It does not evaluate the production Waymo Driver, establish
-real-world safety, or provide held-out performance evidence.
+The counterfactual study used ten training scenarios, five seeds, and two search
+methods. The trajectory model used 128 WOMD training scenarios with a 102/13/13
+scenario split. Neither result evaluates the production Waymo Driver, establishes
+real-world safety, or represents a production autonomy benchmark.

@@ -57,15 +57,41 @@ def test_public_torch_result_is_aggregate_only_and_schema_valid() -> None:
     )
     schema = json.loads(
         (
-            REPOSITORY_ROOT
-            / "schemas"
-            / "torch-trajectory-model-public-v1.schema.json"
+            REPOSITORY_ROOT / "schemas" / "torch-trajectory-model-public-v1.schema.json"
         ).read_text()
     )
 
     jsonschema.validate(record, schema)
     assert record["redistribution"] == "aggregate_only"
     assert "scenario_ids" not in json.dumps(record)
+
+
+def test_public_tensorrt_result_is_sealed_aggregate_only_and_schema_valid() -> None:
+    import hashlib
+    import json
+
+    import jsonschema
+
+    record = json.loads(
+        (REPOSITORY_ROOT / "experiments" / "tensorrt-qualification-v1.json").read_text()
+    )
+    schema = json.loads(
+        (
+            REPOSITORY_ROOT / "schemas" / "tensorrt-qualification-public-v1.schema.json"
+        ).read_text()
+    )
+
+    jsonschema.validate(record, schema)
+    expected = record.pop("report_sha256")
+    canonical = (
+        json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode()
+    assert hashlib.sha256(canonical).hexdigest() == expected
+    assert record["redistribution"] == "aggregate_only"
+    assert record["source_model_training_data"]["synthetic"] is False
+    serialized = json.dumps(record)
+    assert "scenario_ids" not in serialized
+    assert "features" not in serialized
 
 
 def test_public_claims_do_not_repeat_disproven_pristine_holdout_language() -> None:

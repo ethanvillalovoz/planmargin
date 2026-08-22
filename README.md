@@ -3,7 +3,7 @@
 **Find realistic scenario changes that isolate planner regressions.**
 
 <!-- prettier-ignore -->
-[![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![Node 24](https://img.shields.io/badge/Node-24-5FA04E?logo=nodedotjs&logoColor=white) ![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white) [![License](https://img.shields.io/badge/Code-Apache--2.0-blue.svg)](LICENSE)
+[![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![Node 24](https://img.shields.io/badge/Node-24-5FA04E?logo=nodedotjs&logoColor=white) ![C++17/20](https://img.shields.io/badge/C%2B%2B-17%2F20-00599C?logo=cplusplus&logoColor=white) ![TensorRT 11.2](https://img.shields.io/badge/TensorRT-11.2-76B900?logo=nvidia&logoColor=white) [![License](https://img.shields.io/badge/Code-Apache--2.0-blue.svg)](LICENSE)
 
 PlanMargin turns a recorded driving scenario into a reviewable counterfactual:
 change lead-vehicle behavior, replay the tested and reference planners under the
@@ -20,6 +20,8 @@ The public clone opens a useful aggregate analysis surface over the sealed
 authorized local launch adds exact proposal replay, candidate investigation,
 recorded camera annotations, LiDAR, two 3D Gaussian reconstructions, and a
 calibrated real-data JAX trajectory overlay without uploading those artifacts.
+The public Evidence view also exposes the sealed 128-scenario PyTorch trajectory
+result and measured TensorRT qualification from a free Tesla T4 runtime.
 
 ## The engineering workflow
 
@@ -149,6 +151,17 @@ held out by scenario and meets its absolute visualization error gates, but does
 not beat constant velocity on its test scenario; the UI and report state that
 negative comparison rather than claiming model superiority.
 
+A separate TensorRT-friendly PyTorch Conv1d predictor was trained on 29,288
+windows from 128 real WOMD scenarios with complete-scenario train/validation/
+test separation. On 3,157 test windows it achieved 0.322 m ADE and 0.889 m FDE,
+compared with 0.620 m and 1.667 m for constant velocity. Its hash-pinned
+[model-only release](https://github.com/ethanvillalovoz/planmargin/releases/tag/trajectory-model-v1)
+contains no WOMD records. The exact ONNX graph was qualified on a free Tesla T4
+with TensorRT 11.2.1.2: FP32 batch-1 p50 was 0.247 ms, FP16 batch-1 p50 was
+0.197 ms, and the independently compiled C++17 runner measured 0.124 ms p50.
+The published reports retain every percentile, batch, parity value, gate,
+environment version, and artifact hash.
+
 Read the [aggregate result](docs/natural-development-results.md) and
 [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md) for the
 frozen claim boundary.
@@ -165,6 +178,9 @@ flowchart LR
     E --> D["Beam · Parquet · DuckDB"]
     E --> A["Loopback FastAPI"]
     M["Real WOMD tracks"] --> J["JAX trajectory predictor"]
+    M --> T["PyTorch temporal Conv1d"]
+    T --> O["ONNX FP32 · typed FP16"]
+    O --> N["TensorRT 11 · Python + C++17"]
     P["WOD Perception"] --> V["Camera · two SHARP 3DGS scenes · LiDAR"]
     P --> R["Calibrated recorded ego path"]
     J --> R
@@ -183,6 +199,8 @@ flowchart LR
 | Product          | Angular, TypeScript, Three.js, Spark | strict types, component tests, production build         |
 | Reconstruction   | Apple SHARP                          | pinned source, model hash, MPS/CUDA/CPU execution       |
 | Trajectory model | JAX, Optax, real WOMD tracks         | scenario holdout, baseline comparison, sealed checkpoint |
+| Deployable model | PyTorch, ONNX, TensorRT 11           | 128-scenario holdout, FP32/FP16 parity, CUDA-event timing |
+| NVIDIA runtime   | Python and C++17 `enqueueV3`          | Tesla T4, 500 runs per batch, sealed hashes and versions  |
 | Assistant        | deterministic tools, optional Gemini | allowlisted evidence and sealed citations               |
 | Replay retention | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching      |
 
@@ -195,6 +213,9 @@ evidence:
 | ------------------------------------ | ----------------- | -------------------------------------------- |
 | Source, schemas, tests, architecture | Included          | Included                                     |
 | Aggregate experiment decision        | Included          | Included                                     |
+| Model-only PyTorch and ONNX artifacts | Versioned release | Versioned release                            |
+| TensorRT latency and parity report    | Included          | Included                                     |
+| TensorRT engine binaries              | Rebuilt per GPU   | Rebuilt per GPU                              |
 | Per-proposal records and exact gates | Not redistributed | Seal-verified locally                        |
 | Planning and proposal-linked replays | Not redistributed | Seal- and hash-verified locally               |
 | Camera, annotations, LiDAR, and 3DGS | Not redistributed | Seal-verified locally                        |
@@ -227,6 +248,12 @@ uv build
 cd web/debugger && npm run check
 ```
 
+To reproduce the NVIDIA deployment result without downloading WOMD records,
+open [`notebooks/planmargin_tensorrt_colab.ipynb`](notebooks/planmargin_tensorrt_colab.ipynb)
+in a free T4 Colab runtime. It downloads and verifies the model-only release,
+builds FP32 and typed-FP16 engines, runs 50 warmups plus 500 measured iterations
+at batches 1, 8, and 256, and compiles the C++17 cross-check.
+
 `uv run --frozen planmargin-doctor` reports exactly which public and authorized
 artifacts are present instead of silently degrading the product.
 
@@ -235,7 +262,7 @@ artifacts are present instead of silently degrading the product.
 | Path                                         | Responsibility                                                 |
 | -------------------------------------------- | -------------------------------------------------------------- |
 | [`src/planmargin`](src/planmargin)           | simulation, search, evidence API, assistant, readiness tooling |
-| [`cpp`](cpp)                                 | C++20 interaction-metrics kernel                               |
+| [`cpp`](cpp)                                 | C++20 metrics kernel and C++17 TensorRT runtime                 |
 | [`web/debugger`](web/debugger)               | Angular/TypeScript/Three.js/Spark workbench                    |
 | [`schemas`](schemas)                         | versioned experiment and analytics contracts                   |
 | [`tests`](tests)                             | data-free science, parity, API, privacy, and setup checks      |

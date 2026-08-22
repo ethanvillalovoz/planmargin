@@ -30,7 +30,23 @@ def main() -> None:
         for key in ("scenario_id", "source_shard", "record_index")
     ):
         raise SystemExit("Restricted provenance field found")
-    print("PlanMargin public evidence verified: 6 aggregate records")
+    trajectory = json.loads((ROOT / "data/trajectory-model.json").read_text())
+    tensorrt = json.loads((ROOT / "data/tensorrt-qualification.json").read_text())
+    cpp = json.loads((ROOT / "data/tensorrt-cpp-benchmark.json").read_text())
+    if trajectory.get("synthetic") is not False:
+        raise SystemExit("Trajectory result must identify real training data")
+    if tensorrt.get("status") != "qualified" or not all(
+        tensorrt.get("gates", {}).values()
+    ):
+        raise SystemExit("TensorRT qualification is incomplete")
+    if cpp.get("measured_iterations") != 500:
+        raise SystemExit("Unexpected C++ benchmark protocol")
+    restricted = json.dumps((rows, trajectory, tensorrt, cpp), sort_keys=True)
+    if any(
+        key in restricted for key in ("scenario_ids", "source_shard", "record_index")
+    ):
+        raise SystemExit("Restricted provenance field found")
+    print("PlanMargin public evidence verified: 9 aggregate research records")
 
 
 if __name__ == "__main__":

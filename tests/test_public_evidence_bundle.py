@@ -6,6 +6,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from planmargin.public_evidence_bundle import build_archive
+
 
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = ROOT / "release" / "huggingface" / "planmargin-public-evidence"
@@ -37,3 +39,27 @@ def test_public_bundle_hashes_and_scope() -> None:
         "gaussian",
     ):
         assert forbidden not in serialized
+
+    expected_sources = {
+        "trajectory-model.json": ROOT
+        / "experiments"
+        / "torch-trajectory-model-v1.json",
+        "tensorrt-qualification.json": ROOT
+        / "experiments"
+        / "tensorrt-qualification-v1.json",
+        "tensorrt-cpp-benchmark.json": ROOT
+        / "experiments"
+        / "tensorrt-cpp-benchmark-v1.json",
+    }
+    for name, source in expected_sources.items():
+        public = json.loads((BUNDLE / "data" / name).read_text(encoding="utf-8"))
+        canonical = json.loads(source.read_text(encoding="utf-8"))
+        assert public == canonical
+        assert "scenario_ids" not in json.dumps(public, sort_keys=True)
+
+
+def test_public_bundle_archive_is_byte_for_byte_deterministic(tmp_path: Path) -> None:
+    first = build_archive(BUNDLE, tmp_path / "first.zip")
+    second = build_archive(BUNDLE, tmp_path / "second.zip")
+
+    assert first.read_bytes() == second.read_bytes()
