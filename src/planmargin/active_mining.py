@@ -372,7 +372,7 @@ def qualify_eligible_scenarios(
     # The CPU-only network uses explicit per-member seeds and deterministic
     # operators. Avoid PyTorch's process-global deterministic switch here: on
     # CPU-only Linux wheels it imports the unused Triton stack and can crash
-    # before training starts (pytorch/pytorch#149735).
+    # before training starts.
     orders = sorted({example.selection_order for example in examples})
     if len(orders) < 3:
         raise ValueError("At least three eligible scenarios are required")
