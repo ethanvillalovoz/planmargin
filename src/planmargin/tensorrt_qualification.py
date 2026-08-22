@@ -175,10 +175,58 @@ def _parity(reference: np.ndarray, candidate: np.ndarray) -> dict[str, float]:
     }
 
 
+def deterministic_inference_probe(
+    sample_count: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Build reproducible, physically plausible tensors for deployment timing.
+
+    Model quality is measured separately on the sealed WOMD scenario holdout.
+    Deployment qualification intentionally does not require or redistribute any
+    held-out records: latency and numerical parity only need stable, valid-shaped
+    inputs that exercise the complete graph.
+    """
+    if sample_count < 1:
+        raise ValueError("sample_count must be positive")
+    rng = np.random.default_rng(20260821)
+    history_steps = torch_trajectory_model.trajectory_model.HISTORY_STEPS
+    future_steps = torch_trajectory_model.trajectory_model.FUTURE_STEPS
+    step_seconds = torch_trajectory_model.trajectory_model.STEP_SECONDS
+    speeds = rng.uniform(0.0, 24.0, size=(sample_count, 1)).astype(np.float32)
+    lateral_speeds = rng.normal(0.0, 0.7, size=(sample_count, 1)).astype(np.float32)
+    accelerations = rng.normal(0.0, 1.2, size=(sample_count, 1)).astype(np.float32)
+    yaw_rates = rng.normal(0.0, 0.08, size=(sample_count, 1)).astype(np.float32)
+    history_time = (
+        np.arange(1 - history_steps, 1, dtype=np.float32)[None, :] * step_seconds
+    )
+    history_velocity_x = speeds + accelerations * history_time
+    history_velocity_y = np.repeat(lateral_speeds, history_steps, axis=1)
+    history_x = speeds * history_time + 0.5 * accelerations * history_time**2
+    history_y = lateral_speeds * history_time
+    history_yaw = yaw_rates * history_time
+    features = np.concatenate(
+        (
+            np.stack((history_x, history_y), axis=2).reshape(sample_count, -1),
+            np.stack((history_velocity_x, history_velocity_y), axis=2).reshape(
+                sample_count, -1
+            ),
+            np.sin(history_yaw),
+            np.cos(history_yaw),
+        ),
+        axis=1,
+    ).astype(np.float32)
+    future_time = (
+        np.arange(1, future_steps + 1, dtype=np.float32)[None, :] * step_seconds
+    )
+    baseline = np.stack(
+        (speeds * future_time, lateral_speeds * future_time), axis=2
+    ).reshape(sample_count, -1)
+    return torch.from_numpy(features), torch.from_numpy(baseline.astype(np.float32))
+
+
 def qualify(
     *,
     model_dir: Path,
-    cache_path: Path,
+    cache_path: Path | None,
     output_dir: Path,
     batches: tuple[int, ...] = DEFAULT_BATCHES,
     warmup: int = 50,
@@ -188,20 +236,25 @@ def qualify(
         raise RuntimeError("An NVIDIA CUDA runtime is required")
     report_path = model_dir / "training-report.json"
     training = json.loads(report_path.read_text())
-    config = torch_trajectory_model.TorchTrainingConfig(
-        **training["configuration"]
-    )
-    scenarios = torch_trajectory_model._read_cache(cache_path)
-    scenario_splits = torch_trajectory_model.split_scenarios(scenarios, config.seed)
-    test = torch_trajectory_model.combine_scenarios(scenario_splits["test"])
     model = torch_trajectory_model.load_model(
         (model_dir / "trajectory-model.pmtorch").read_bytes()
     )
     sample_count = max(batches)
-    if len(test.features) < sample_count:
-        raise RuntimeError("Held-out sample count is smaller than the largest batch")
-    cpu_features = torch.from_numpy(test.features[:sample_count])
-    cpu_baseline = torch.from_numpy(test.baseline[:sample_count])
+    if cache_path is None:
+        cpu_features, cpu_baseline = deterministic_inference_probe(sample_count)
+        input_protocol = "deterministic_physical_probe_v1"
+    else:
+        config = torch_trajectory_model.TorchTrainingConfig(**training["configuration"])
+        scenarios = torch_trajectory_model._read_cache(cache_path)
+        scenario_splits = torch_trajectory_model.split_scenarios(scenarios, config.seed)
+        test = torch_trajectory_model.combine_scenarios(scenario_splits["test"])
+        if len(test.features) < sample_count:
+            raise RuntimeError(
+                "Held-out sample count is smaller than the largest batch"
+            )
+        cpu_features = torch.from_numpy(test.features[:sample_count])
+        cpu_baseline = torch.from_numpy(test.baseline[:sample_count])
+        input_protocol = "sealed_real_womd_holdout"
     with torch.inference_mode():
         reference = model(cpu_features, cpu_baseline).numpy()
     cpu_latency = _cpu_benchmark(
@@ -265,6 +318,8 @@ def qualify(
         ),
         "measurement": {
             "clock": "CUDA events around TensorRT enqueueV3",
+            "input_protocol": input_protocol,
+            "input_purpose": "deployment timing and numerical parity only",
             "warmup_iterations": warmup,
             "measured_iterations": iterations,
             "batches": list(batches),
@@ -295,9 +350,9 @@ def qualify(
             item["max_absolute_error_m"] < 5e-2
             for item in engines["fp16"]["pytorch_fp32_parity"].values()
         ),
-        "gpu_faster_than_cpu_at_batch_1": engines["fp32"]["batches"]["1"][
-            "latency_ms"
-        ]["p50"]
+        "gpu_faster_than_cpu_at_batch_1": engines["fp32"]["batches"]["1"]["latency_ms"][
+            "p50"
+        ]
         < cpu_latency["p50"],
     }
     result["status"] = "qualified" if all(result["gates"].values()) else "no_go"
@@ -310,14 +365,21 @@ def qualify(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR)
-    parser.add_argument("--cache", type=Path, default=torch_trajectory_model.DEFAULT_CACHE)
+    parser.add_argument(
+        "--cache",
+        type=Path,
+        default=None,
+        help="Optional private WOMD cache; omitted by default for a redistributable probe",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--warmup", type=int, default=50)
     parser.add_argument("--iterations", type=int, default=500)
     parser.add_argument("--batches", type=int, nargs="+", default=list(DEFAULT_BATCHES))
     args = parser.parse_args()
     if args.warmup < 1 or args.iterations < 10 or min(args.batches) < 1:
-        parser.error("warmup/batches must be positive and iterations must be at least 10")
+        parser.error(
+            "warmup/batches must be positive and iterations must be at least 10"
+        )
     output = qualify(
         model_dir=args.model_dir,
         cache_path=args.cache,
