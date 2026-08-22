@@ -433,7 +433,8 @@ def train_model(
 ) -> tuple[InteractionTrajectoryNet, dict[str, Any]]:
     torch.manual_seed(config.seed + seed_offset)
     np.random.seed(config.seed + seed_offset)
-    torch.use_deterministic_algorithms(True)
+    # Explicit seeds plus this network's deterministic operators are sufficient;
+    # PyTorch's process-global switch imports an unused Triton runtime on Linux.
     device = torch.device(config.device)
     train_features, train_targets, train_baseline = splits["train"]
     feature_mean = train_features.mean(axis=0).astype(np.float32)

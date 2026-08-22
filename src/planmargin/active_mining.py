@@ -369,7 +369,10 @@ def qualify_eligible_scenarios(
 ) -> dict[str, Any]:
     """Run the Experiment-v6 grouped protocol over every eligible scenario."""
     torch.set_num_threads(max(1, min(8, torch.get_num_threads())))
-    torch.use_deterministic_algorithms(True)
+    # The CPU-only network uses explicit per-member seeds and deterministic
+    # operators. Avoid PyTorch's process-global deterministic switch here: on
+    # CPU-only Linux wheels it imports the unused Triton stack and can crash
+    # before training starts (pytorch/pytorch#149735).
     orders = sorted({example.selection_order for example in examples})
     if len(orders) < 3:
         raise ValueError("At least three eligible scenarios are required")
@@ -424,7 +427,6 @@ def qualify_eligible_scenarios(
 
 def qualify(examples: list[RiskExample], config: ActiveRiskConfig) -> dict[str, Any]:
     torch.set_num_threads(max(1, min(8, torch.get_num_threads())))
-    torch.use_deterministic_algorithms(True)
     orders = sorted({example.selection_order for example in examples})
     if orders != list(range(1, 11)):
         counts = {
