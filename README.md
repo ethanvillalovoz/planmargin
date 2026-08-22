@@ -35,10 +35,10 @@ support deployment.
 4. **Inspect** the decision in a local workbench with planning replay, camera
    annotations, LiDAR, 3D Gaussian reconstruction, and sealed evidence.
 
-The interface opens on the scene debugger. Campaign statistics live in the
-Evidence view, behind the workflow they support. Scores are paired with plain
-language such as **tested planner still succeeds**, **outside recorded
-behavior**, and **reference planner failed**.
+The public interface opens on aggregate Evidence. An authenticated local launch
+opens the scene debugger with the retained records already loaded. Scores are
+paired with plain language such as **tested planner still succeeds**, **outside
+recorded behavior**, and **reference planner failed**.
 
 ![PlanMargin real SHARP 3DGS scene with calibrated recorded, JAX, and baseline paths](docs/assets/planmargin-sensor-trajectory-v1.1.png)
 
@@ -60,10 +60,17 @@ Open `http://127.0.0.1:4200`. Evidence provides the real aggregate campaign
 dashboard immediately. Workbench and Sensors explain exactly which licensed
 local capabilities become available after an authenticated launch.
 
+There is intentionally no hosted dashboard in this release: the public bundle
+is aggregate-only, while the useful per-scenario surfaces depend on licensed
+records that must stay on the engineer's machine. The commands above are the
+supported public entry point.
+
 ### Open the complete local workbench
 
 Python 3.11, [uv](https://docs.astral.sh/uv/), Node 24.15, and a C++20 compiler
-are required:
+are required. The tested development platforms are current macOS on Apple
+silicon and Ubuntu Linux on x86-64; CI is the source of truth for the Linux
+contract:
 
 ```bash
 uv sync --frozen
@@ -71,6 +78,11 @@ cd web/debugger && npm ci && cd ../..
 uv run --frozen planmargin-doctor --require full
 uv run --frozen planmargin-workbench
 ```
+
+The lock deliberately excludes PyTorch's optional Triton compiler backend.
+PlanMargin uses eager PyTorch execution and does not call `torch.compile`; the
+exclusion keeps the documented locked install identical to the environment
+tested by Linux CI.
 
 The launcher starts the loopback-only API and the Angular application, opens an
 authenticated ephemeral URL, exchanges its token for an HttpOnly same-site

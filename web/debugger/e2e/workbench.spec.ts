@@ -80,10 +80,7 @@ test('public clone stays honest, usable, and accessible without licensed records
   });
   await page.goto('/');
   await expect(page).toHaveTitle('PlanMargin campaign workbench');
-  await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeVisible();
-  await page.getByRole('button', { name: 'Close local evidence' }).click();
   await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeHidden();
-  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await expect(
     page.getByRole('heading', {
       name: '3,200 counterfactual proposals. Zero qualifying regressions.',
@@ -94,6 +91,13 @@ test('public clone stays honest, usable, and accessible without licensed records
   await expect(page.getByText('14.81 percentage points')).toBeVisible();
   await expect(page.getByText('never substitute or synthetic cases')).toBeVisible();
   await expect(page.getByText('Licensed local only')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Workbench', exact: true }).click();
+  await expect(page.getByText('Replay sealed planner evidence locally.')).toBeVisible();
+  await page.getByRole('button', { name: 'Open local workspace', exact: true }).first().click();
+  await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close local evidence' }).click();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
 
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(accessibility.violations).toEqual([]);

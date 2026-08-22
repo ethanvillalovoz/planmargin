@@ -66,7 +66,10 @@ export class App {
         return;
       } catch (error: unknown) {
         if (!(error instanceof TypeError) || attempt === 1) {
-          this.showLocalEvidence.set(true);
+          // A public clone is useful without the loopback API. Only surface the
+          // connection panel automatically when an explicit launch token fails;
+          // session recovery remains a quiet, best-effort enhancement.
+          if (token !== undefined) this.showLocalEvidence.set(true);
           return;
         }
         await new Promise((resolve) => window.setTimeout(resolve, 250));

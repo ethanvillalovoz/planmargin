@@ -64,6 +64,11 @@ because the system Python may be newer than TensorFlow supports. Environment
 creation compiles the small C++20/pybind11 interaction-metrics extension
 locally; it does not download a platform-specific project binary.
 
+The tested platforms are current Apple-silicon macOS and x86-64 Ubuntu Linux.
+The lock excludes PyTorch's optional Triton compiler backend because PlanMargin
+uses eager execution only; this is part of the project configuration and Linux
+CI runs the same unmodified `uv sync --frozen` environment.
+
 ## 4. Run the deterministic smoke test
 
 ```bash

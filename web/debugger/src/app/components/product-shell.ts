@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   output,
   signal,
@@ -2274,7 +2275,7 @@ export class ProductShell {
     window.location.protocol === 'https:' &&
     window.location.hostname !== 'localhost' &&
     window.location.hostname !== '127.0.0.1';
-  protected readonly view = signal<ProductView>('replay');
+  protected readonly view = signal<ProductView>('investigate');
   protected readonly evidenceView = signal<EvidenceView>('campaign');
   protected readonly sort = signal<ProposalSort>('criticality');
   protected readonly filter = signal<ProposalFilter>('all');
@@ -2285,6 +2286,12 @@ export class ProductShell {
   protected readonly analysisError = signal<string | undefined>(undefined);
   protected readonly replayLoading = signal(false);
   protected readonly replayError = signal<string | undefined>(undefined);
+
+  constructor() {
+    effect(() => {
+      if (this.local.connected() && this.debuggerStore.hasRun()) this.setView('replay');
+    });
+  }
 
   protected readonly rankedProposals = computed(() => {
     const proposals = this.local.proposals().filter((proposal) => {
