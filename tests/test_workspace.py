@@ -9,6 +9,18 @@ import pytest
 from planmargin import workspace
 
 
+def _bootstrap_readiness(value: bool) -> dict[str, bool]:
+    return {
+        "evidence": value,
+        "proposal_replay": value,
+        "sensor": value,
+        "gaussian": value,
+        "beam": value,
+        "trajectory": value,
+        "torch_trajectory": value,
+    }
+
+
 def test_empty_clone_reports_each_private_capability_without_faking_readiness(
     tmp_path: Path,
 ) -> None:
@@ -42,6 +54,17 @@ def test_empty_clone_reports_each_private_capability_without_faking_readiness(
     assert not report.scaled_tensorrt_qualified
     assert not report.research_program_ready
     assert not report.full_workbench_ready
+    details = {item.capability: item.detail for item in report.capabilities}
+    assert details["Campaign investigation"] == (
+        "No authorized local campaign artifacts are present."
+    )
+    assert details["Exact proposal replay"] == (
+        "No retained exact proposal replay is present."
+    )
+    assert details["Planning-linked Gaussian feasibility"] == (
+        "No planning-linked Gaussian study is present."
+    )
+    assert "Errno" not in " ".join(details.values())
     assert {item.scope for item in report.capabilities} >= {
         "public",
         "authorized local",
@@ -101,3 +124,39 @@ def test_verified_download_rejects_wrong_content(
     with pytest.raises(SystemExit, match="SHA-256"):
         workspace._download_verified("https://example.invalid/file", output, "0" * 64)
     assert not output.with_suffix(".bin.partial").exists()
+
+
+def test_full_bootstrap_plan_covers_every_real_data_product_phase(tmp_path: Path) -> None:
+    steps = workspace._bootstrap_workbench_steps(
+        tmp_path,
+        _bootstrap_readiness(False),
+        device="mps",
+        include_frontend=True,
+    )
+    commands = [step.command for step in steps]
+    entrypoints = [command[0] for command in commands]
+
+    assert entrypoints[0] == "npm"
+    assert "planmargin-run-matched-campaign" in entrypoints
+    assert "planmargin-retain-proposal-replay" in entrypoints
+    assert "planmargin-build-beam-features" in entrypoints
+    assert "planmargin-train-trajectory-model" in entrypoints
+    assert "planmargin-bootstrap-sensor" in entrypoints
+    assert "planmargin-build-gaussian-field" in entrypoints
+    assert "planmargin-train-torch-trajectory" in entrypoints
+    assert "planmargin-train-rl-controller" not in entrypoints
+    assert commands[-1][-2:] == ("--require", "full")
+    sensor = commands[entrypoints.index("planmargin-bootstrap-sensor")]
+    assert sensor[-2:] == ("--device", "mps")
+
+
+def test_full_bootstrap_reuses_a_complete_workspace(tmp_path: Path) -> None:
+    steps = workspace._bootstrap_workbench_steps(
+        tmp_path,
+        _bootstrap_readiness(True),
+        device="default",
+        include_frontend=True,
+    )
+
+    assert [step.command[0] for step in steps] == ["npm", "planmargin-doctor"]
+    assert all(not step.authorized for step in steps)

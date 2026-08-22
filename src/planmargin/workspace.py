@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -73,6 +74,15 @@ class ReadinessReport:
     capabilities: tuple[Capability, ...]
 
 
+@dataclass(frozen=True)
+class BootstrapStep:
+    """One deterministic phase in the authorized full-workbench bootstrap."""
+
+    label: str
+    command: tuple[str, ...]
+    authorized: bool = True
+
+
 def _regular_files(paths: tuple[Path, ...]) -> bool:
     return all(path.is_file() and not path.is_symlink() for path in paths)
 
@@ -112,6 +122,8 @@ def _native_build_ready() -> tuple[bool, str]:
 
 
 def _evidence_ready(root: Path) -> tuple[bool, str]:
+    if not (root / "artifacts").is_dir():
+        return False, "No authorized local campaign artifacts are present."
     try:
         EvidenceRepository(EvidencePaths.from_root(root)).open()
     except (FileNotFoundError, NotADirectoryError, ValueError, OSError) as error:
@@ -123,6 +135,8 @@ def _evidence_ready(root: Path) -> tuple[bool, str]:
 
 
 def _proposal_replay_ready(root: Path) -> tuple[bool, str]:
+    if not (root / "artifacts").is_dir():
+        return False, "No retained exact proposal replay is present."
     repository = EvidenceRepository(EvidencePaths.from_root(root))
     try:
         repository.open()
@@ -157,6 +171,8 @@ def _sensor_ready(root: Path) -> tuple[bool, str]:
 
 
 def _gaussian_study_ready(root: Path) -> tuple[bool, str]:
+    if not (root / "artifacts").is_dir():
+        return False, "No planning-linked Gaussian study is present."
     repository = EvidenceRepository(EvidencePaths.from_root(root))
     try:
         summary, _ = repository.gaussian_field()
@@ -665,6 +681,241 @@ def doctor_main() -> None:
     }[args.require]
     if not ready:
         raise SystemExit(1)
+
+
+def _bootstrap_workbench_steps(
+    root: Path,
+    readiness: dict[str, bool],
+    *,
+    device: str,
+    include_frontend: bool,
+) -> tuple[BootstrapStep, ...]:
+    """Build a resumable command plan from capability-level readiness."""
+
+    steps: list[BootstrapStep] = []
+    if include_frontend:
+        steps.append(
+            BootstrapStep(
+                "Install locked frontend dependencies",
+                ("npm", "--prefix", str(root / "web" / "debugger"), "ci"),
+                authorized=False,
+            )
+        )
+
+    private_keys = (
+        "evidence",
+        "proposal_replay",
+        "sensor",
+        "gaussian",
+        "beam",
+        "trajectory",
+        "torch_trajectory",
+    )
+    if not all(readiness[key] for key in private_keys):
+        steps.append(
+            BootstrapStep(
+                "Verify authorized WOD access",
+                ("bash", str(root / "scripts" / "verify_womd_access.sh")),
+            )
+        )
+
+    if not readiness["evidence"]:
+        steps.extend(
+            (
+                BootstrapStep(
+                    "Select deterministic planning scenarios",
+                    (
+                        "planmargin-select-scenarios",
+                        "--output",
+                        "artifacts/stage-0/scenario-selection.json",
+                    ),
+                ),
+                BootstrapStep(
+                    "Build empirical behavior support",
+                    ("planmargin-build-empirical-support",),
+                ),
+                BootstrapStep(
+                    "Validate the lead-braking mutation family",
+                    (
+                        "planmargin-validate-lead-braking-family",
+                        "--manifest",
+                        "artifacts/stage-0/scenario-selection.json",
+                        "--output",
+                        "artifacts/family-validation/lead-braking-family.json",
+                    ),
+                ),
+                BootstrapStep(
+                    "Validate matched-campaign readiness",
+                    ("planmargin-run-matched-campaign", "--readiness-only"),
+                ),
+                BootstrapStep(
+                    "Create the first matched-campaign cell",
+                    ("planmargin-run-matched-campaign", "--max-new-cells", "1"),
+                ),
+                BootstrapStep(
+                    "Resume the complete matched campaign",
+                    ("planmargin-run-matched-campaign", "--resume"),
+                ),
+                BootstrapStep(
+                    "Build the sealed analytics database",
+                    ("planmargin-build-analytics",),
+                ),
+                BootstrapStep(
+                    "Build the retained Stage-0 planner comparison",
+                    ("planmargin-controller-comparison",),
+                ),
+                BootstrapStep(
+                    "Export verified planning rollouts",
+                    ("planmargin-export-rollout-records",),
+                ),
+            )
+        )
+
+    if not readiness["proposal_replay"]:
+        steps.append(
+            BootstrapStep(
+                "Retain and verify one exact campaign proposal replay",
+                (
+                    "planmargin-retain-proposal-replay",
+                    "--method",
+                    "random",
+                    "--seed",
+                    "1",
+                    "--selection-order",
+                    "8",
+                    "--proposal-number",
+                    "12",
+                ),
+            )
+        )
+
+    if not readiness["beam"]:
+        steps.append(
+            BootstrapStep(
+                "Build the Apache Beam feature dataflow",
+                (
+                    "planmargin-build-beam-features",
+                    "--source-mode",
+                    "sealed-support",
+                    "--support-dir",
+                    "artifacts/realism/lead-braking-support-v1",
+                    "--output-dir",
+                    "artifacts/beam-features/lead-braking-v1",
+                ),
+            )
+        )
+
+    if not readiness["trajectory"]:
+        steps.append(
+            BootstrapStep(
+                "Train the real-WOMD JAX trajectory model",
+                ("planmargin-train-trajectory-model", "--epochs", "64"),
+            )
+        )
+
+    if not readiness["sensor"]:
+        steps.append(
+            BootstrapStep(
+                "Build the authorized Camera, LiDAR, and 3DGS Sensor Lab",
+                (
+                    "planmargin-bootstrap-sensor",
+                    "--root",
+                    str(root),
+                    "--accept-waymo-terms",
+                    "--device",
+                    device,
+                ),
+            )
+        )
+
+    if not readiness["gaussian"]:
+        steps.append(
+            BootstrapStep(
+                "Build the planning-linked Gaussian feasibility study",
+                ("planmargin-build-gaussian-field",),
+            )
+        )
+
+    if not readiness["torch_trajectory"]:
+        steps.append(
+            BootstrapStep(
+                "Train and export the real-WOMD PyTorch trajectory model",
+                ("planmargin-train-torch-trajectory",),
+            )
+        )
+
+    steps.append(
+        BootstrapStep(
+            "Verify the complete local workbench",
+            (
+                "planmargin-doctor",
+                "--root",
+                str(root),
+                "--require",
+                "full",
+            ),
+            authorized=False,
+        )
+    )
+    return tuple(steps)
+
+
+def bootstrap_workbench_main() -> None:
+    """Resume every real-data phase required by the complete local product."""
+
+    parser = argparse.ArgumentParser(
+        description="Resume the complete authorized PlanMargin workbench"
+    )
+    parser.add_argument("--root", type=Path, default=Path.cwd())
+    parser.add_argument("--accept-waymo-terms", action="store_true")
+    parser.add_argument(
+        "--device", choices=("default", "cpu", "mps", "cuda"), default="default"
+    )
+    parser.add_argument("--skip-frontend-install", action="store_true")
+    parser.add_argument("--plan", action="store_true")
+    args = parser.parse_args()
+    root = args.root.resolve(strict=True)
+    report = inspect_workspace(root)
+    gaussian_ready, _ = _gaussian_study_ready(root)
+    beam_ready, _ = _beam_study_ready(root)
+    trajectory_ready, _ = _trajectory_model_ready(root)
+    readiness = {
+        "evidence": report.evidence_ready,
+        "proposal_replay": report.proposal_replay_ready,
+        "sensor": report.sensor_ready,
+        "gaussian": gaussian_ready,
+        "beam": beam_ready,
+        "trajectory": trajectory_ready,
+        "torch_trajectory": report.torch_trajectory_ready,
+    }
+    steps = _bootstrap_workbench_steps(
+        root,
+        readiness,
+        device=args.device,
+        include_frontend=not args.skip_frontend_install,
+    )
+    if args.plan:
+        print("PlanMargin full-workbench bootstrap plan")
+        for index, step in enumerate(steps, start=1):
+            print(f"{index:02d}. {step.label}")
+            print(f"    {shlex.join(step.command)}")
+        return
+    if any(step.authorized for step in steps) and not args.accept_waymo_terms:
+        raise SystemExit(
+            "The incomplete workspace requires authorized WOD access. Review the "
+            "current Waymo Open Dataset non-commercial terms, then rerun with "
+            "--accept-waymo-terms."
+        )
+    for index, step in enumerate(steps, start=1):
+        print(f"\n[{index}/{len(steps)}] {step.label}", flush=True)
+        print(f"$ {shlex.join(step.command)}", flush=True)
+        try:
+            subprocess.run(step.command, cwd=root, check=True)
+        except FileNotFoundError as error:
+            raise SystemExit(
+                f"Required command is unavailable: {step.command[0]}. "
+                "Install the locked Python and Node environments first."
+            ) from error
 
 
 def _download_perception(root: Path, *, accept_terms: bool) -> None:

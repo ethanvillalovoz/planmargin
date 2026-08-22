@@ -5,6 +5,9 @@
 <!-- prettier-ignore -->
 [![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![Node 24](https://img.shields.io/badge/Node-24-5FA04E?logo=nodedotjs&logoColor=white) ![C++17/20](https://img.shields.io/badge/C%2B%2B-17%2F20-00599C?logo=cplusplus&logoColor=white) ![TensorRT 11.2](https://img.shields.io/badge/TensorRT-11.2-76B900?logo=nvidia&logoColor=white) [![License](https://img.shields.io/badge/Code-Apache--2.0-blue.svg)](LICENSE)
 
+[Open the live aggregate workbench](https://ethanvillalovoz-planmargin.static.hf.space)
+or clone the repository for authenticated local records.
+
 PlanMargin turns a recorded driving scenario into a reviewable counterfactual:
 change lead-vehicle behavior, replay the tested and reference planners under the
 same conditions, and keep only cases that are realistic, reproducible, and
@@ -60,10 +63,9 @@ Open `http://127.0.0.1:4200`. Evidence provides the real aggregate campaign
 dashboard immediately. Workbench and Sensors explain exactly which licensed
 local capabilities become available after an authenticated launch.
 
-There is intentionally no hosted dashboard in this release: the public bundle
-is aggregate-only, while the useful per-scenario surfaces depend on licensed
-records that must stay on the engineer's machine. The commands above are the
-supported public entry point.
+The hosted application is aggregate-only. Per-scenario surfaces depend on
+licensed records that stay on the engineer's machine; the hosted header links
+back to this repository instead of attempting loopback access from HTTPS.
 
 ### Open the complete local workbench
 
@@ -112,15 +114,18 @@ verified deterministic explanation. See the
 
 If the doctor reports missing licensed artifacts, use the
 [workspace reproduction runbook](docs/reproducing-the-workspace.md). For the
-camera, LiDAR, and 3DGS track, an authorized Waymo Open Dataset account can run:
+complete planning, camera, LiDAR, 3DGS, Beam, JAX, and PyTorch workspace, an
+authorized Waymo Open Dataset account can run one resumable command:
 
 ```bash
-uv run --frozen planmargin-train-trajectory-model --epochs 64
-uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms
+uv run --frozen planmargin-bootstrap-workbench --accept-waymo-terms
 ```
 
-The bootstrap is resumable, uses MPS/CUDA/CPU, downloads only pinned inputs,
-and does not require paid compute.
+Use `--device mps`, `--device cuda`, or `--device cpu` to require a backend.
+The bootstrap installs the locked frontend, verifies authorized access, resumes
+each deterministic evidence phase, downloads only pinned inputs, and finishes
+with `planmargin-doctor --require full`. It requires real compute time but no
+paid compute.
 
 ## What the workbench verifies
 
