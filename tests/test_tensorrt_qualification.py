@@ -7,10 +7,25 @@ import pytest
 from planmargin import tensorrt_qualification
 
 
+class _LegacyTensorRT:
+    class NetworkDefinitionCreationFlag:
+        EXPLICIT_BATCH = 3
+
+
+class _TensorRT11:
+    class NetworkDefinitionCreationFlag:
+        pass
+
+
 def test_latency_summary_reports_required_percentiles() -> None:
     result = tensorrt_qualification.latency_summary([1.0, 2.0, 3.0, 4.0])
 
     assert result == {"mean": 2.5, "p50": 2.5, "p95": 3.85, "p99": 3.97}
+
+
+def test_network_flags_cover_legacy_and_tensorrt_11() -> None:
+    assert tensorrt_qualification._network_creation_flags(_LegacyTensorRT) == 8
+    assert tensorrt_qualification._network_creation_flags(_TensorRT11) == 0
 
 
 @pytest.mark.parametrize("samples", [[], [1.0, float("nan")]])

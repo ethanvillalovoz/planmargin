@@ -53,6 +53,11 @@ def _load_tensorrt() -> Any:
     return trt
 
 
+def _network_creation_flags(trt: Any) -> int:
+    explicit_batch = getattr(trt.NetworkDefinitionCreationFlag, "EXPLICIT_BATCH", None)
+    return 0 if explicit_batch is None else 1 << int(explicit_batch)
+
+
 def build_engine(
     onnx_path: Path,
     engine_path: Path,
@@ -64,9 +69,7 @@ def build_engine(
     trt = _load_tensorrt()
     logger = trt.Logger(trt.Logger.WARNING)
     builder = trt.Builder(logger)
-    network = builder.create_network(
-        1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
-    )
+    network = builder.create_network(_network_creation_flags(trt))
     parser = trt.OnnxParser(network, logger)
     if not parser.parse(onnx_path.read_bytes()):
         errors = [str(parser.get_error(index)) for index in range(parser.num_errors)]
