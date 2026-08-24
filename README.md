@@ -13,7 +13,7 @@ specific to the tested planner.
 It is an engineering workbench, not a benchmark leaderboard or a Waymo Driver
 evaluation.
 
-![PlanMargin 2.0 real-data model and promotion evidence](docs/assets/planmargin-model-runtime-v2.jpg)
+![PlanMargin 2.0 counterfactual investigation console](docs/assets/planmargin-evidence-console-v2.jpg)
 
 The public clone opens a useful aggregate analysis surface over the sealed
 3,200-proposal campaign. It fails closed only for licensed per-scenario data. An
@@ -39,6 +39,12 @@ The public interface opens on aggregate Evidence. An authenticated local launch
 opens the scene debugger with the retained records already loaded. Scores are
 paired with plain language such as **tested planner still succeeds**, **outside
 recorded behavior**, and **reference planner failed**.
+
+Inside the authenticated Evidence workspace, the priority queue, campaign gate
+counts, 100-cell search matrix, ranked proposals, selected-candidate gate
+ladder, comparison, exact replay, grounded analysis, and signed export remain
+visible as one investigation console. The interface is designed for tracing a
+decision, not presenting a marketing dashboard.
 
 ![PlanMargin real SHARP 3DGS scene with calibrated recorded, JAX, and baseline paths](docs/assets/planmargin-sensor-trajectory-v1.1.png)
 
@@ -190,6 +196,8 @@ runner measured 0.124 ms p50. The new model does not inherit those results. Its
 free-T4 notebook now reports both CUDA-event latency and pinned-host end-to-end
 latency (H2D, `enqueueV3`, D2H, and synchronization); its status remains pending
 until that notebook is rerun.
+
+![PlanMargin 2.0 real-data model and promotion evidence](docs/assets/planmargin-model-runtime-v2.jpg)
 
 | Version 2 decision | Evidence | Promotion |
 | --- | --- | --- |
