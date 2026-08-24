@@ -67,6 +67,13 @@ registration.
 
 Choose **Evidence** to inspect the immutable search campaign.
 
+The authenticated surface is an investigation console rather than a report
+page. A compact command bar keeps campaign/runtime scope and record status
+visible. The priority queue, campaign gate counts, matched-cell matrix, ranked
+proposal list, and selected proposal inspector remain in one continuous
+workspace, so selecting a candidate does not discard the surrounding search
+context.
+
 1. Select a queue: **Closest to failure**, **Smallest change**, or **Strongest
    precedent**.
 2. Read **Why it stopped**. This is the first failed gate, expressed in planner
@@ -82,6 +89,11 @@ Choose **Evidence** to inspect the immutable search campaign.
    proposal trajectory. Otherwise the UI keeps the not-retained boundary.
 7. Export the privacy-reduced HTML report when the decision must travel outside
    the running application.
+
+The **Model & runtime** view is read-only evidence by design. It separates the
+real-WOMD holdout metrics from device-only deployment probes and shows stopped
+or pending promotion gates beside successful measurements. A prior model's T4
+numbers are never relabeled as measurements of the scaled model.
 
 ### Metric translations
 

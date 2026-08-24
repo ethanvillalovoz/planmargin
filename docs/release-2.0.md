@@ -46,6 +46,12 @@ but are never attributed to the new model.
 
 ## Product changes
 
+- Evidence is now an operational investigation console: a compact sticky
+  command bar, priority queue, campaign gates, matched-cell navigator, proposal
+  ranking, and persistent candidate inspector replace the earlier oversized
+  presentation-style heading and stacked report layout.
+- Planning callouts turn inward near the viewport boundary, keeping tested,
+  reference, and recorded labels legible at the final frame.
 - The Model & runtime page leads with real-data quality and separates it from
   the earlier measured runtime result.
 - Stopped active-risk and interaction studies appear beside the successful
@@ -54,6 +60,9 @@ but are never attributed to the new model.
   conservative novel views remain explicit alternatives.
 - Desktop and 390 px mobile surfaces have no horizontal overflow, browser
   warnings, or errors in the authenticated local flow.
+- A deterministic desktop/mobile browser journey now covers ranking,
+  comparison, proposal analysis, exact replay, Gemini's grounded response
+  contract, and session recovery after refresh.
 
 ## Reproduce
 

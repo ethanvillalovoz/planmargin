@@ -73,7 +73,7 @@ describe('ProductShell', () => {
     button.click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Review candidate counterfactuals');
+    expect(fixture.nativeElement.textContent).toContain('Published campaign evidence');
     expect(fixture.nativeElement.textContent).toContain('Open local workspace');
   });
 

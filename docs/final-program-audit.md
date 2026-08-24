@@ -1,6 +1,6 @@
 # Release-readiness audit
 
-**Audit date:** August 22, 2026
+**Audit date:** August 24, 2026
 
 **Release:** v2.0.0 candidate
 
@@ -97,13 +97,16 @@ point field, or reconstruction when licensed evidence is absent.
 - Ruff: all checks passed.
 - Python: 270 tests passed. Upstream warnings are identified in the
   CI log and do not suppress failures.
-- Angular/Vitest: 50 tests passed across launch authentication, local evidence,
-  parsers, stores, navigation, reports, and workbench behavior.
+- Angular/Vitest: 53 tests passed across launch authentication, local evidence,
+  parsers, stores, navigation, reports, edge-aware trajectory labels, and
+  workbench behavior.
 - Browser sign-off covers desktop and 390 px mobile evidence surfaces, planning
   playback, ten-frame seek controls, frame-native camera annotation changes,
   and two independently selectable SHARP reconstruction frames.
-- Playwright: four desktop/mobile journeys passed, including meaningful
-  interactions, responsive overflow, and WCAG A/AA axe checks.
+- Playwright: six desktop/mobile journeys passed. The added local-mode journey
+  exercises queue ranking, comparison, candidate inspection, sealed-record
+  analysis, model/runtime navigation, the grounded Gemini response contract,
+  refresh recovery, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
   payload is 338.92 kB raw, while Spark and Three.js viewers remain lazy.
