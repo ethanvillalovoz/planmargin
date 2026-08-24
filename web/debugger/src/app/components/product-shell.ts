@@ -453,8 +453,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                 </div>
                 <div class="campaign-table" role="table" aria-label="Campaign-ranked proposals">
                   <div class="campaign-row campaign-head" role="row">
-                    <span>Rank</span><span>Case</span><span>Change</span><span>Safety result</span
-                    ><span>Recorded precedent</span><span>Why it stopped</span><span></span>
+                    <span role="columnheader">Rank</span><span role="columnheader">Case</span
+                    ><span role="columnheader">Change</span
+                    ><span role="columnheader">Safety result</span
+                    ><span role="columnheader">Recorded precedent</span
+                    ><span role="columnheader">Why it stopped</span
+                    ><span role="columnheader">Actions</span>
                   </div>
                   @for (
                     proposal of campaignRanking();
@@ -462,17 +466,21 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                     let index = $index
                   ) {
                     <div class="campaign-row" role="row">
-                      <span>{{ index + 1 }}</span>
-                      <span class="method" [class.bayesian]="proposal.method === 'bayesian'">
+                      <span role="cell">{{ index + 1 }}</span>
+                      <span
+                        role="cell"
+                        class="method"
+                        [class.bayesian]="proposal.method === 'bayesian'"
+                      >
                         {{ proposal.method }} · S{{ proposal.selectionOrder }} · {{ proposal.seed }}
                       </span>
-                      <span>{{ mutationNarrative(proposal) }}</span>
-                      <span>{{ proximityLabel(proposal.criticality) }}</span>
-                      <span>{{
+                      <span role="cell">{{ mutationNarrative(proposal) }}</span>
+                      <span role="cell">{{ proximityLabel(proposal.criticality) }}</span>
+                      <span role="cell">{{
                         supportLabel(proposal.empiricalSupportProbability, proposal.supportPasses)
                       }}</span>
-                      <span>{{ formatGate(proposal.decisiveGate) }}</span>
-                      <span class="row-actions">
+                      <span role="cell">{{ formatGate(proposal.decisiveGate) }}</span>
+                      <span role="cell" class="row-actions">
                         <button type="button" (click)="openCampaignProposal(proposal)">
                           Inspect
                         </button>

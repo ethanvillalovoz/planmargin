@@ -228,6 +228,11 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
   await expect(page.getByText('Proposal-specific evidence analysis')).toBeVisible();
   await expect(page.getByText('sealed record · cccccccccccccccc')).toBeVisible();
 
+  const investigationAccessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze();
+  expect(investigationAccessibility.violations).toEqual([]);
+
   await page.getByRole('button', { name: 'Model & runtime' }).click();
   await expect(page.getByText('Model qualification')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Real-WOMD prediction quality' })).toBeVisible();
