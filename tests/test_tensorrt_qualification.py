@@ -93,3 +93,31 @@ def test_end_to_end_qualification_schema_is_well_formed() -> None:
     )
 
     jsonschema.Draft202012Validator.check_schema(json.loads(schema_path.read_text()))
+
+
+def test_scaled_t4_no_go_report_is_valid_and_sealed() -> None:
+    root = Path(__file__).parents[1]
+    schema = json.loads(
+        (root / "schemas" / "tensorrt-qualification-public-v2.schema.json").read_text()
+    )
+    report = json.loads(
+        (root / "experiments" / "tensorrt-qualification-v2.json").read_text()
+    )
+
+    jsonschema.validate(report, schema)
+    sealed = dict(report)
+    observed = sealed.pop("report_sha256")
+    canonical = (
+        json.dumps(sealed, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode()
+
+    import hashlib
+
+    assert hashlib.sha256(canonical).hexdigest() == observed
+    assert report["status"] == "no_go"
+    assert not report["gates"]["fp16_max_error_under_7_5e_2_m"]
+    assert all(
+        passed
+        for name, passed in report["gates"].items()
+        if name != "fp16_max_error_under_7_5e_2_m"
+    )

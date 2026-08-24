@@ -236,7 +236,11 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
   await page.getByRole('button', { name: 'Model & runtime' }).click();
   await expect(page.getByText('Model qualification')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Real-WOMD prediction quality' })).toBeVisible();
-  await expect(page.getByText('Scale-model deployment · pending')).toBeVisible();
+  await expect(page.getByText('Scale-model deployment decision · no-go')).toBeVisible();
+  const deploymentAccessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze();
+  expect(deploymentAccessibility.violations).toEqual([]);
 
   await page.getByRole('button', { name: 'Ask analysis' }).click();
   await expect(page.getByText('Gemini analysis')).toBeVisible();

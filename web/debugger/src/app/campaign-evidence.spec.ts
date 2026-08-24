@@ -26,5 +26,8 @@ describe('CAMPAIGN_EVIDENCE', () => {
     );
     expect(CAMPAIGN_EVIDENCE.activeRisk.status).toBe('no-go');
     expect(CAMPAIGN_EVIDENCE.interactionStudy.status).toBe('no-go');
+    expect(CAMPAIGN_EVIDENCE.scaleInference.status).toBe('no-go');
+    expect(CAMPAIGN_EVIDENCE.scaleInference.fp16MaxDriftMeters).toBeGreaterThan(0.075);
+    expect(CAMPAIGN_EVIDENCE.scaleInference.fp32Batch1EndToEndP50Ms).toBeLessThan(0.49);
   });
 });

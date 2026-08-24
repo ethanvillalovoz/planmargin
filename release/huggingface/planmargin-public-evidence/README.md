@@ -26,8 +26,8 @@ downloading scenario-level Waymo Open Dataset data.
 - three preregistered hypothesis decisions;
 - the original 128-scenario and scaled 1,024-scenario trajectory-model results;
 - two active-risk qualification decisions over 2,097 real proposal targets;
-- one sealed TensorRT qualification report from a free-tier Tesla T4;
-- one C++17 TensorRT runtime benchmark;
+- two sealed TensorRT decisions from a free-tier Tesla T4;
+- two C++17 TensorRT runtime benchmarks;
 - a deterministic SHA-256 manifest.
 
 ## What is intentionally excluded
@@ -49,10 +49,11 @@ The active-risk ensemble did not pass promotion: mean scene-held-out Spearman
 was 0.1372, it beat matched random selection at budget eight in 3 of 9 scenes,
 and interval coverage was 0.5451. No learned selector was exported.
 
-The TensorRT record still belongs to the original 128-scenario model: FP16 ran
-at 0.1967 ms batch-1 p50 latency and 1.009M samples/s at batch 256; a separate
-C++17 driver measured 0.1243 ms batch-1 p50 latency. The scaled model does not
-inherit those values and remains pending a free-T4 rerun.
+The original 128-scenario TensorRT model remains qualified: FP16 ran at 0.1967
+ms batch-1 p50 latency and 1.009M samples/s at batch 256; a separate C++17
+driver measured 0.1243 ms. The scaled-model run measured 0.277 ms FP32 batch-1
+end-to-end p50 and 0.153 ms in C++17. FP16 RMSE passed, but 0.101 m maximum drift
+exceeded its frozen 0.075 m gate, so scaled FP16 promotion is a measured no-go.
 
 ## Use
 

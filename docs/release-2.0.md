@@ -40,9 +40,11 @@ builds FP32 and typed-FP16 TensorRT engines. Both Python and C++17 paths report:
 - numerical parity against PyTorch FP32;
 - batch 1, 8, and 256 throughput, exact versions, GPU identity, and hashes.
 
-The scaled model is **pending NVIDIA qualification** until this notebook is run
-on a free T4. Published numbers from the earlier 128-scenario model are retained
-but are never attributed to the new model.
+The scaled model's free-T4 run is complete. FP32 parity and batch-1 end-to-end
+latency passed; FP16 RMSE passed, but batch-256 maximum drift reached 0.101 m
+against a frozen 0.075 m limit. The result is a measured FP16 `no_go`, while
+FP32 remains a measured path. Published numbers from the earlier 128-scenario
+model are retained but are never attributed to the new model.
 
 ## Product changes
 

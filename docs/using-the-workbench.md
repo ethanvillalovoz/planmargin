@@ -91,9 +91,10 @@ context.
    the running application.
 
 The **Model & runtime** view is read-only evidence by design. It separates the
-real-WOMD holdout metrics from device-only deployment probes and shows stopped
-or pending promotion gates beside successful measurements. A prior model's T4
-numbers are never relabeled as measurements of the scaled model.
+real-WOMD holdout metrics from deployment probes and shows stopped gates beside
+successful measurements. The scaled model's FP32 path is measured; its FP16
+path is a no-go because maximum drift exceeded the frozen limit. A prior
+model's T4 numbers are never relabeled as measurements of the scaled model.
 
 ### Metric translations
 

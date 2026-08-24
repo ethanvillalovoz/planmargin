@@ -195,46 +195,68 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                 </div>
                 <div class="deployment-divider">
                   <span
-                    >Released 128-scenario model · {{ local.campaign().inference.gpu }} · 500
+                    >Scaled 1,024-scenario model · {{ local.campaign().scaleInference.gpu }} · 500
                     measured</span
                   >
-                  <b>TensorRT {{ local.campaign().inference.tensorrtVersion }} qualification</b>
+                  <b
+                    >TensorRT {{ local.campaign().scaleInference.tensorrtVersion }} · measured
+                    no-go</b
+                  >
                 </div>
                 <div class="model-metrics" aria-label="Measured NVIDIA inference evidence">
                   <div>
-                    <span>FP32 · batch 1</span>
-                    <strong>{{ local.campaign().inference.fp32Batch1P50Ms.toFixed(3) }} ms</strong>
-                    <small>p50 CUDA-event latency</small>
+                    <span>FP32 · batch 1 E2E</span>
+                    <strong
+                      >{{
+                        local.campaign().scaleInference.fp32Batch1EndToEndP50Ms.toFixed(3)
+                      }}
+                      ms</strong
+                    >
+                    <small>p50 pinned-host latency</small>
                   </div>
                   <div>
-                    <span>FP16 · batch 1</span>
-                    <strong>{{ local.campaign().inference.fp16Batch1P50Ms.toFixed(3) }} ms</strong>
-                    <small>p50 CUDA-event latency</small>
+                    <span>FP16 · batch 1 E2E</span>
+                    <strong
+                      >{{
+                        local.campaign().scaleInference.fp16Batch1EndToEndP50Ms.toFixed(3)
+                      }}
+                      ms</strong
+                    >
+                    <small>p50 pinned-host latency</small>
                   </div>
                   <div>
                     <span>FP16 · batch 256</span>
                     <strong
                       >{{
-                        (local.campaign().inference.fp16Batch256Throughput / 1_000_000).toFixed(2)
+                        (
+                          local.campaign().scaleInference.fp16Batch256Throughput / 1_000_000
+                        ).toFixed(2)
                       }}M/s</strong
                     >
-                    <small>measured throughput</small>
+                    <small>end-to-end throughput</small>
                   </div>
                   <div>
-                    <span>C++17 · batch 1</span>
-                    <strong>{{ local.campaign().inference.cppBatch1P50Ms.toFixed(3) }} ms</strong>
-                    <small>independent enqueueV3 runner</small>
+                    <span>C++17 · batch 1 E2E</span>
+                    <strong
+                      >{{
+                        local.campaign().scaleInference.cppBatch1EndToEndP50Ms.toFixed(3)
+                      }}
+                      ms</strong
+                    >
+                    <small>independent pinned-host runner</small>
                   </div>
                 </div>
               </section>
               <div class="deployment-notes">
-                <article>
-                  <span>Numerical parity</span>
-                  <strong>FP16 stayed inside both preregistered drift gates.</strong>
+                <article class="stopped-gate">
+                  <span>Scale-model FP16 promotion gate · stopped</span>
+                  <strong>One preregistered numerical-drift gate did not pass.</strong>
                   <p>
-                    {{ (local.campaign().inference.fp16RmseMeters * 100).toFixed(2) }} cm RMSE ·
-                    {{ (local.campaign().inference.fp16MaxDriftMeters * 100).toFixed(2) }} cm
-                    maximum drift against PyTorch FP32 at batch 256.
+                    {{ (local.campaign().scaleInference.fp16RmseMeters * 100).toFixed(2) }} cm RMSE
+                    passed;
+                    {{ (local.campaign().scaleInference.fp16MaxDriftMeters * 100).toFixed(2) }} cm
+                    maximum drift exceeded the frozen 7.50 cm limit at batch 256. FP32 parity and
+                    GPU end-to-end latency passed.
                   </p>
                 </article>
                 <article>
@@ -251,6 +273,16 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                   <p>
                     TensorRT engines are rebuilt per GPU; the free-T4 notebook verifies each source
                     hash before engine creation and compiles the C++17 cross-check.
+                  </p>
+                </article>
+                <article>
+                  <span>Earlier model · qualified reference</span>
+                  <strong>The 128-scenario model retains its independent T4 result.</strong>
+                  <p>
+                    FP32 {{ local.campaign().inference.fp32Batch1P50Ms.toFixed(3) }} ms · FP16
+                    {{ local.campaign().inference.fp16Batch1P50Ms.toFixed(3) }} ms · C++17
+                    {{ local.campaign().inference.cppBatch1P50Ms.toFixed(3) }} ms batch-1 device
+                    p50. These numbers are not attributed to the scaled model.
                   </p>
                 </article>
                 <article class="stopped-gate">
@@ -274,13 +306,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                     on the same 102-scenario test split.
                   </p>
                 </article>
-                <article class="pending-gate">
-                  <span>Scale-model deployment · pending</span>
-                  <strong>The 1,024-scenario model does not inherit old runtime results.</strong>
+                <article class="stopped-gate">
+                  <span>Scale-model deployment decision · no-go</span>
+                  <strong>The complete T4 protocol ran; FP16 was not promoted.</strong>
                   <p>
-                    Its weights and ONNX graph are byte-reproducible. The free-T4 notebook must
-                    still measure FP32/FP16 parity and pinned-host end-to-end latency before this
-                    model is deployment-qualified.
+                    FP32 remains a measured deployment path. The failed FP16 max-drift gate is
+                    preserved without relaxing its threshold after observation.
                   </p>
                 </article>
               </div>
@@ -1143,12 +1174,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     }
     .deployment-notes article.stopped-gate span {
       color: #f0a33b;
-    }
-    .deployment-notes article.pending-gate {
-      background: rgb(53 197 211 / 4%);
-    }
-    .deployment-notes article.pending-gate span {
-      color: var(--reference);
     }
     .deployment-notes strong {
       display: block;
