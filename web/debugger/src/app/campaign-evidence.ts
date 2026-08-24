@@ -18,9 +18,24 @@ export interface CampaignEvidence {
   readonly trajectoryModel: TrajectoryModelEvidence;
   readonly scaleTrajectoryModel: TrajectoryModelEvidence;
   readonly inference: InferenceEvidence;
+  readonly scaleInference: ScaleInferenceEvidence;
   readonly activeRisk: ActiveRiskEvidence;
   readonly interactionStudy: InteractionStudyEvidence;
   readonly mode: 'published-aggregate' | 'real-local-redacted';
+}
+
+export interface ScaleInferenceEvidence {
+  readonly gpu: string;
+  readonly tensorrtVersion: string;
+  readonly fp32Batch1DeviceP50Ms: number;
+  readonly fp32Batch1EndToEndP50Ms: number;
+  readonly fp16Batch1DeviceP50Ms: number;
+  readonly fp16Batch1EndToEndP50Ms: number;
+  readonly fp16Batch256Throughput: number;
+  readonly cppBatch1EndToEndP50Ms: number;
+  readonly fp16MaxDriftMeters: number;
+  readonly fp16RmseMeters: number;
+  readonly status: 'no-go';
 }
 
 export interface InferenceEvidence {
@@ -128,6 +143,19 @@ export const CAMPAIGN_EVIDENCE: CampaignEvidence = {
     fp16MaxDriftMeters: 0.05508423,
     fp16RmseMeters: 0.00563178,
     status: 'qualified',
+  },
+  scaleInference: {
+    gpu: 'Tesla T4',
+    tensorrtVersion: '11.2.1.2',
+    fp32Batch1DeviceP50Ms: 0.244368,
+    fp32Batch1EndToEndP50Ms: 0.276828,
+    fp16Batch1DeviceP50Ms: 0.202048,
+    fp16Batch1EndToEndP50Ms: 0.3925,
+    fp16Batch256Throughput: 974_521.59,
+    cppBatch1EndToEndP50Ms: 0.153008,
+    fp16MaxDriftMeters: 0.10103607,
+    fp16RmseMeters: 0.00650152,
+    status: 'no-go',
   },
   activeRisk: {
     examples: 2_097,

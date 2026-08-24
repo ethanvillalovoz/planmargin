@@ -68,6 +68,7 @@ class ReadinessReport:
     sensor_ready: bool
     torch_trajectory_ready: bool
     tensorrt_qualified: bool
+    scaled_tensorrt_measured: bool
     scaled_tensorrt_qualified: bool
     research_program_ready: bool
     full_workbench_ready: bool
@@ -101,6 +102,8 @@ def _public_bundle_ready(root: Path) -> bool:
             directory / "data" / "active-risk-v2.json",
             directory / "data" / "tensorrt-qualification.json",
             directory / "data" / "tensorrt-cpp-benchmark.json",
+            directory / "data" / "tensorrt-qualification-v2.json",
+            directory / "data" / "tensorrt-cpp-benchmark-v2.json",
         )
     )
 
@@ -424,10 +427,11 @@ def _tensorrt_qualified(root: Path) -> tuple[bool, str]:
     )
 
 
-def _scaled_tensorrt_qualified(root: Path) -> tuple[bool, str]:
+def _scaled_tensorrt_decision(root: Path) -> tuple[bool, bool, str]:
     path = root / "experiments" / "tensorrt-qualification-v2.json"
     if path.is_symlink() or not path.is_file():
         return (
+            False,
             False,
             "The 1,024-scenario model has no measured T4 report yet; prior-model "
             "latency is not inherited.",
@@ -441,16 +445,30 @@ def _scaled_tensorrt_qualified(root: Path) -> tuple[bool, str]:
         ).encode()
         if hashlib.sha256(canonical).hexdigest() != expected_seal:
             raise ValueError("The scaled TensorRT report seal is invalid")
-        if (
-            report.get("schema_version") != "2.0.0"
-            or report.get("status") != "qualified"
-            or not all(report.get("gates", {}).values())
-        ):
-            raise ValueError("The scaled TensorRT qualification gates did not all pass")
+        if report.get("schema_version") != "2.0.0":
+            raise ValueError("The scaled TensorRT report schema is invalid")
+        gates = report.get("gates", {})
+        if report.get("status") not in {"qualified", "no_go"} or not gates:
+            raise ValueError("The scaled TensorRT decision is invalid")
+        qualified = report["status"] == "qualified" and all(gates.values())
+        no_go = report["status"] == "no_go" and not all(gates.values())
+        if not qualified and not no_go:
+            raise ValueError("The scaled TensorRT status contradicts its gates")
     except (ValueError, OSError, json.JSONDecodeError, KeyError) as error:
-        return False, str(error)
+        return False, False, str(error)
     fp16 = report["engines"]["fp16"]["batches"]["1"]
+    if not qualified:
+        failed = ", ".join(name for name, passed in gates.items() if not passed)
+        batch_256_parity = report["engines"]["fp16"]["pytorch_fp32_parity"]["256"]
+        return (
+            True,
+            False,
+            "The scaled T4 run completed as a measured no-go: FP16 batch-256 "
+            f"maximum drift was {batch_256_parity['max_absolute_error_m']:.3f} m; "
+            f"failed gate: {failed}. FP32 remains usable.",
+        )
     return (
+        True,
         True,
         "The scaled model passed TensorRT parity and end-to-end gates; FP16 "
         f"batch-1 end-to-end p50 is {fp16['end_to_end_latency_ms']['p50']:.3f} ms.",
@@ -471,9 +489,11 @@ def inspect_workspace(root: Path) -> ReadinessReport:
     trajectory_model_ready, trajectory_model_detail = _trajectory_model_ready(root)
     torch_trajectory_ready, torch_trajectory_detail = _torch_trajectory_ready(root)
     tensorrt_qualified, tensorrt_detail = _tensorrt_qualified(root)
-    scaled_tensorrt_qualified, scaled_tensorrt_detail = _scaled_tensorrt_qualified(
-        root
-    )
+    (
+        scaled_tensorrt_measured,
+        scaled_tensorrt_qualified,
+        scaled_tensorrt_detail,
+    ) = _scaled_tensorrt_decision(root)
     research_program_ready = (
         gaussian_ready
         and beam_ready
@@ -593,11 +613,15 @@ def inspect_workspace(root: Path) -> ReadinessReport:
             "Run notebooks/planmargin_tensorrt_colab.ipynb in a free T4 runtime",
         ),
         Capability(
-            "Scaled-model NVIDIA qualification",
-            scaled_tensorrt_qualified,
-            "free Colab follow-up",
+            "Scaled-model NVIDIA decision",
+            scaled_tensorrt_measured,
+            "public aggregate / free Colab",
             scaled_tensorrt_detail,
-            "Run notebooks/planmargin_tensorrt_colab.ipynb in a free T4 runtime",
+            (
+                None
+                if scaled_tensorrt_measured
+                else "Run notebooks/planmargin_tensorrt_colab.ipynb in a free T4 runtime"
+            ),
         ),
         Capability(
             "Gemini explanation adapter",
@@ -619,6 +643,7 @@ def inspect_workspace(root: Path) -> ReadinessReport:
         sensor_ready=sensor_ready,
         torch_trajectory_ready=torch_trajectory_ready,
         tensorrt_qualified=tensorrt_qualified,
+        scaled_tensorrt_measured=scaled_tensorrt_measured,
         scaled_tensorrt_qualified=scaled_tensorrt_qualified,
         research_program_ready=research_program_ready,
         full_workbench_ready=(

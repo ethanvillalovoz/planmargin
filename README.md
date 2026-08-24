@@ -13,7 +13,7 @@ specific to the tested planner.
 It is an engineering workbench, not a benchmark leaderboard or a Waymo Driver
 evaluation.
 
-![PlanMargin 2.0 real-data model and promotion evidence](docs/assets/planmargin-model-runtime-v2.jpg)
+![PlanMargin 2.0 counterfactual investigation console](docs/assets/planmargin-evidence-console-v2.jpg)
 
 The public clone opens a useful aggregate analysis surface over the sealed
 3,200-proposal campaign. It fails closed only for licensed per-scenario data. An
@@ -21,9 +21,9 @@ authorized local launch adds exact proposal replay, candidate investigation,
 recorded camera annotations, LiDAR, two 3D Gaussian reconstructions, and a
 calibrated real-data JAX trajectory overlay without uploading those artifacts.
 The public Evidence view exposes the 1,024-scenario real-WOMD prediction study,
-the earlier model's measured free-T4 TensorRT result, and every promotion gate—
-including two learned ideas that were stopped because the evidence did not
-support deployment.
+both free-T4 TensorRT decisions, and every promotion gate—including learned and
+reduced-precision ideas that were stopped because the evidence did not support
+deployment.
 
 ## The engineering workflow
 
@@ -39,6 +39,12 @@ The public interface opens on aggregate Evidence. An authenticated local launch
 opens the scene debugger with the retained records already loaded. Scores are
 paired with plain language such as **tested planner still succeeds**, **outside
 recorded behavior**, and **reference planner failed**.
+
+Inside the authenticated Evidence workspace, the priority queue, campaign gate
+counts, 100-cell search matrix, ranked proposals, selected-candidate gate
+ladder, comparison, exact replay, grounded analysis, and signed export remain
+visible as one investigation console. The interface is designed for tracing a
+decision, not presenting a marketing dashboard.
 
 ![PlanMargin real SHARP 3DGS scene with calibrated recorded, JAX, and baseline paths](docs/assets/planmargin-sensor-trajectory-v1.1.png)
 
@@ -183,20 +189,22 @@ scenes, so no learned selector was promoted. An interaction model pooling eight
 nearest actors reached 0.453 m ADE versus 0.434 m for its same-data ego-only
 ablation, so it was also stopped rather than packaged.
 
-The earlier 128-scenario ONNX graph remains the only model with measured NVIDIA
-qualification: on a free Tesla T4 with TensorRT 11.2.1.2, FP32 batch-1 p50 was
-0.247 ms, FP16 batch-1 p50 was 0.197 ms, and the independently compiled C++17
-runner measured 0.124 ms p50. The new model does not inherit those results. Its
-free-T4 notebook now reports both CUDA-event latency and pinned-host end-to-end
-latency (H2D, `enqueueV3`, D2H, and synchronization); its status remains pending
-until that notebook is rerun.
+The scaled ONNX graph was measured on a free Tesla T4 with TensorRT 11.2.1.2.
+FP32 batch-1 end-to-end p50 was 0.277 ms and the independently compiled C++17
+runner measured 0.153 ms. FP16 batch-1 end-to-end p50 was 0.393 ms and batch-256
+throughput was 0.975M samples/s. FP16 RMSE passed at 0.0065 m, but its 0.101 m
+maximum drift exceeded the frozen 0.075 m limit, so FP16 promotion is a measured
+no-go. The earlier 128-scenario model retains its separate qualified result;
+those values are never attributed to the scaled model.
+
+![PlanMargin 2.0 real-data model and promotion evidence](docs/assets/planmargin-model-runtime-v2.jpg)
 
 | Version 2 decision | Evidence | Promotion |
 | --- | --- | --- |
 | Scale the deployable predictor | 1,024 real scenes; model beats constant velocity; byte-identical repeat | Model-only release candidate |
 | Learn which counterfactual to test | 2,097 targets; weak scene-held-out ranking and 3/9 budget wins | Stopped |
 | Add nearest-actor context | Same 102-scene test split; worse than ego-only | Stopped |
-| Qualify the scaled ONNX on NVIDIA | Reproducible free-T4 Python + C++17 protocol is ready | Awaiting measured rerun |
+| Qualify the scaled ONNX on NVIDIA | Free-T4 Python + C++17 run; FP32 and latency gates passed; FP16 max drift 0.101 m | FP16 stopped; FP32 measured |
 
 Read the [aggregate result](docs/natural-development-results.md) and
 [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md) for the
@@ -249,10 +257,9 @@ flowchart LR
 PlanMargin separates public code and aggregate results from licensed local
 evidence:
 
-The independently downloadable
-[PlanMargin public evidence dataset](https://huggingface.co/datasets/ethanvillalovoz/planmargin-public-evidence)
-contains twelve manifest-verified aggregate records and no scene-level WOD
-files.
+The tracked [PlanMargin public evidence bundle](release/huggingface/planmargin-public-evidence)
+contains fourteen manifest-verified aggregate records and no scene-level WOD
+files. Building or running PlanMargin does not publish this staged bundle.
 
 | Surface                              | Public clone      | Authorized local workspace                   |
 | ------------------------------------ | ----------------- | -------------------------------------------- |

@@ -39,6 +39,8 @@ def test_empty_clone_reports_each_private_capability_without_faking_readiness(
         "data/active-risk-v2.json",
         "data/tensorrt-qualification.json",
         "data/tensorrt-cpp-benchmark.json",
+        "data/tensorrt-qualification-v2.json",
+        "data/tensorrt-cpp-benchmark-v2.json",
     ):
         (bundle / relative).write_text("{}\n", encoding="utf-8")
 
@@ -51,6 +53,7 @@ def test_empty_clone_reports_each_private_capability_without_faking_readiness(
     assert not report.sensor_ready
     assert not report.torch_trajectory_ready
     assert not report.tensorrt_qualified
+    assert not report.scaled_tensorrt_measured
     assert not report.scaled_tensorrt_qualified
     assert not report.research_program_ready
     assert not report.full_workbench_ready
@@ -71,6 +74,17 @@ def test_empty_clone_reports_each_private_capability_without_faking_readiness(
         "authorized local derivative",
         "optional external",
     }
+
+
+def test_scaled_t4_no_go_is_a_complete_decision_not_a_missing_run() -> None:
+    root = Path(__file__).parents[1]
+
+    measured, qualified, detail = workspace._scaled_tensorrt_decision(root)
+
+    assert measured
+    assert not qualified
+    assert "measured no-go" in detail
+    assert "0.101 m" in detail
 
 
 def test_download_requires_explicit_terms_acceptance(tmp_path: Path) -> None:
@@ -126,7 +140,9 @@ def test_verified_download_rejects_wrong_content(
     assert not output.with_suffix(".bin.partial").exists()
 
 
-def test_full_bootstrap_plan_covers_every_real_data_product_phase(tmp_path: Path) -> None:
+def test_full_bootstrap_plan_covers_every_real_data_product_phase(
+    tmp_path: Path,
+) -> None:
     steps = workspace._bootstrap_workbench_steps(
         tmp_path,
         _bootstrap_readiness(False),

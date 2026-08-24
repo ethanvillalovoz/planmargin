@@ -50,6 +50,12 @@ def test_public_bundle_hashes_and_scope() -> None:
         "tensorrt-cpp-benchmark.json": ROOT
         / "experiments"
         / "tensorrt-cpp-benchmark-v1.json",
+        "tensorrt-qualification-v2.json": ROOT
+        / "experiments"
+        / "tensorrt-qualification-v2.json",
+        "tensorrt-cpp-benchmark-v2.json": ROOT
+        / "experiments"
+        / "tensorrt-cpp-benchmark-v2.json",
         "trajectory-model-v2.json": ROOT
         / "experiments"
         / "torch-trajectory-model-v2.json",

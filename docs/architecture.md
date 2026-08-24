@@ -159,8 +159,9 @@ ships no private data and does not upload local records.
   learned search selector was exported or used prospectively.
 - The nearest-actor model underperformed its ego-only ablation. Its local model
   and ONNX were not promoted.
-- The scaled model's NVIDIA protocol is implemented, but its T4 result remains
-  pending. Metrics from the earlier 128-scenario model are never inherited.
+- The scaled model's NVIDIA protocol completed on a free T4. FP32 passed; FP16
+  remains stopped because 0.101 m maximum drift exceeded the frozen 0.075 m
+  gate. Metrics from the earlier 128-scenario model are never inherited.
 
 The implemented local API can expose redacted real evidence only to an
 authenticated process on the same machine. It is not a public-data boundary:

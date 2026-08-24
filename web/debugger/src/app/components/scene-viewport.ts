@@ -29,6 +29,9 @@ interface FallbackScene {
     readonly points: string;
     readonly current: Point2d;
     readonly callout: Point2d;
+    readonly calloutStartX: number;
+    readonly labelX: number;
+    readonly labelAnchor: 'start' | 'end';
   }[];
   readonly markerRadius: number;
 }
@@ -63,16 +66,17 @@ interface FallbackScene {
           />
           <line
             class="marker-callout"
-            [attr.x1]="trajectory.current.x + fallbackScene().markerRadius * 1.8"
+            [attr.x1]="trajectory.calloutStartX"
             [attr.y1]="-trajectory.current.y"
             [attr.x2]="trajectory.callout.x"
             [attr.y2]="trajectory.callout.y"
           />
           <text
             class="marker-label"
-            [attr.x]="trajectory.callout.x + fallbackScene().markerRadius * 0.45"
+            [attr.x]="trajectory.labelX"
             [attr.y]="trajectory.callout.y + fallbackScene().markerRadius * 0.35"
             [attr.font-size]="fallbackScene().markerRadius * 1.35"
+            [attr.text-anchor]="trajectory.labelAnchor"
           >
             {{ trajectory.kind }}
           </text>
@@ -350,14 +354,18 @@ export class SceneViewport {
       conflictRegion: conflictRegion.length >= 3 ? points(conflictRegion) : '',
       trajectories: (Object.keys(COLORS) as TrajectoryKind[]).map((kind) => {
         const current = trajectories[kind][index];
+        const calloutDirection = current.x > centerX + viewWidth * 0.18 ? -1 : 1;
         return {
           kind,
           points: points(trajectories[kind]),
           current,
+          calloutStartX: current.x + calloutDirection * markerRadius * 1.8,
           callout: {
-            x: current.x + markerRadius * 4.2,
+            x: current.x + calloutDirection * markerRadius * 4.2,
             y: -current.y + markerRadius * calloutOffsets[kind],
           },
+          labelX: current.x + calloutDirection * markerRadius * (4.2 + 0.45),
+          labelAnchor: calloutDirection === 1 ? 'start' : 'end',
         };
       }),
       markerRadius,

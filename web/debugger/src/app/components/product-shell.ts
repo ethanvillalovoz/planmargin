@@ -96,33 +96,44 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
 
       @if (view() === 'investigate') {
         <main class="investigation-page">
-          <header class="page-heading">
-            <div>
-              <p>Candidate review</p>
-              <h1>Review candidate counterfactuals by the gate that stopped them.</h1>
+          <header class="evidence-commandbar">
+            <div class="evidence-context">
+              <span>Evidence workspace</span>
+              <strong>{{
+                evidenceView() === 'campaign'
+                  ? local.connected()
+                    ? 'Counterfactual investigation'
+                    : 'Published campaign evidence'
+                  : 'Model qualification'
+              }}</strong>
+              <small>{{
+                evidenceView() === 'campaign'
+                  ? local.connected()
+                    ? 'Rank, inspect, compare, replay, and export sealed proposals.'
+                    : 'Inspect reproducible aggregates before opening licensed local records.'
+                  : 'Trace prediction quality through runtime and promotion gates.'
+              }}</small>
             </div>
+            <nav class="evidence-sections" aria-label="Evidence sections">
+              <button
+                type="button"
+                [class.active]="evidenceView() === 'campaign'"
+                (click)="evidenceView.set('campaign')"
+              >
+                Campaign review
+              </button>
+              <button
+                type="button"
+                [class.active]="evidenceView() === 'deployment'"
+                (click)="evidenceView.set('deployment')"
+              >
+                Model & runtime
+              </button>
+            </nav>
             <div class="page-status" [class.connected]="local.connected()">
-              <i></i
-              >{{ local.connected() ? 'Sealed local records verified' : 'Local records required' }}
+              <i></i>{{ local.connected() ? 'Sealed records verified' : 'Local records required' }}
             </div>
           </header>
-
-          <nav class="evidence-sections" aria-label="Evidence sections">
-            <button
-              type="button"
-              [class.active]="evidenceView() === 'campaign'"
-              (click)="evidenceView.set('campaign')"
-            >
-              Campaign review
-            </button>
-            <button
-              type="button"
-              [class.active]="evidenceView() === 'deployment'"
-              (click)="evidenceView.set('deployment')"
-            >
-              Model & runtime
-            </button>
-          </nav>
 
           @if (evidenceView() === 'deployment') {
             <section class="deployment-workbench" aria-labelledby="deployment-workbench-title">
@@ -184,46 +195,68 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                 </div>
                 <div class="deployment-divider">
                   <span
-                    >Released 128-scenario model · {{ local.campaign().inference.gpu }} · 500
+                    >Scaled 1,024-scenario model · {{ local.campaign().scaleInference.gpu }} · 500
                     measured</span
                   >
-                  <b>TensorRT {{ local.campaign().inference.tensorrtVersion }} qualification</b>
+                  <b
+                    >TensorRT {{ local.campaign().scaleInference.tensorrtVersion }} · measured
+                    no-go</b
+                  >
                 </div>
                 <div class="model-metrics" aria-label="Measured NVIDIA inference evidence">
                   <div>
-                    <span>FP32 · batch 1</span>
-                    <strong>{{ local.campaign().inference.fp32Batch1P50Ms.toFixed(3) }} ms</strong>
-                    <small>p50 CUDA-event latency</small>
+                    <span>FP32 · batch 1 E2E</span>
+                    <strong
+                      >{{
+                        local.campaign().scaleInference.fp32Batch1EndToEndP50Ms.toFixed(3)
+                      }}
+                      ms</strong
+                    >
+                    <small>p50 pinned-host latency</small>
                   </div>
                   <div>
-                    <span>FP16 · batch 1</span>
-                    <strong>{{ local.campaign().inference.fp16Batch1P50Ms.toFixed(3) }} ms</strong>
-                    <small>p50 CUDA-event latency</small>
+                    <span>FP16 · batch 1 E2E</span>
+                    <strong
+                      >{{
+                        local.campaign().scaleInference.fp16Batch1EndToEndP50Ms.toFixed(3)
+                      }}
+                      ms</strong
+                    >
+                    <small>p50 pinned-host latency</small>
                   </div>
                   <div>
                     <span>FP16 · batch 256</span>
                     <strong
                       >{{
-                        (local.campaign().inference.fp16Batch256Throughput / 1_000_000).toFixed(2)
+                        (
+                          local.campaign().scaleInference.fp16Batch256Throughput / 1_000_000
+                        ).toFixed(2)
                       }}M/s</strong
                     >
-                    <small>measured throughput</small>
+                    <small>end-to-end throughput</small>
                   </div>
                   <div>
-                    <span>C++17 · batch 1</span>
-                    <strong>{{ local.campaign().inference.cppBatch1P50Ms.toFixed(3) }} ms</strong>
-                    <small>independent enqueueV3 runner</small>
+                    <span>C++17 · batch 1 E2E</span>
+                    <strong
+                      >{{
+                        local.campaign().scaleInference.cppBatch1EndToEndP50Ms.toFixed(3)
+                      }}
+                      ms</strong
+                    >
+                    <small>independent pinned-host runner</small>
                   </div>
                 </div>
               </section>
               <div class="deployment-notes">
-                <article>
-                  <span>Numerical parity</span>
-                  <strong>FP16 stayed inside both preregistered drift gates.</strong>
+                <article class="stopped-gate">
+                  <span>Scale-model FP16 promotion gate · stopped</span>
+                  <strong>One preregistered numerical-drift gate did not pass.</strong>
                   <p>
-                    {{ (local.campaign().inference.fp16RmseMeters * 100).toFixed(2) }} cm RMSE ·
-                    {{ (local.campaign().inference.fp16MaxDriftMeters * 100).toFixed(2) }} cm
-                    maximum drift against PyTorch FP32 at batch 256.
+                    {{ (local.campaign().scaleInference.fp16RmseMeters * 100).toFixed(2) }} cm RMSE
+                    passed;
+                    {{ (local.campaign().scaleInference.fp16MaxDriftMeters * 100).toFixed(2) }} cm
+                    maximum drift exceeded the frozen 7.50 cm limit at batch 256. FP32 parity and
+                    GPU end-to-end latency passed.
                   </p>
                 </article>
                 <article>
@@ -240,6 +273,16 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                   <p>
                     TensorRT engines are rebuilt per GPU; the free-T4 notebook verifies each source
                     hash before engine creation and compiles the C++17 cross-check.
+                  </p>
+                </article>
+                <article>
+                  <span>Earlier model · qualified reference</span>
+                  <strong>The 128-scenario model retains its independent T4 result.</strong>
+                  <p>
+                    FP32 {{ local.campaign().inference.fp32Batch1P50Ms.toFixed(3) }} ms · FP16
+                    {{ local.campaign().inference.fp16Batch1P50Ms.toFixed(3) }} ms · C++17
+                    {{ local.campaign().inference.cppBatch1P50Ms.toFixed(3) }} ms batch-1 device
+                    p50. These numbers are not attributed to the scaled model.
                   </p>
                 </article>
                 <article class="stopped-gate">
@@ -263,13 +306,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                     on the same 102-scenario test split.
                   </p>
                 </article>
-                <article class="pending-gate">
-                  <span>Scale-model deployment · pending</span>
-                  <strong>The 1,024-scenario model does not inherit old runtime results.</strong>
+                <article class="stopped-gate">
+                  <span>Scale-model deployment decision · no-go</span>
+                  <strong>The complete T4 protocol ran; FP16 was not promoted.</strong>
                   <p>
-                    Its weights and ONNX graph are byte-reproducible. The free-T4 notebook must
-                    still measure FP32/FP16 parity and pinned-host end-to-end latency before this
-                    model is deployment-qualified.
+                    FP32 remains a measured deployment path. The failed FP16 max-drift gate is
+                    preserved without relaxing its threshold after observation.
                   </p>
                 </article>
               </div>
@@ -383,8 +425,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
               <section class="campaign-index" aria-labelledby="campaign-index-title">
                 <header>
                   <div>
-                    <p>Verified campaign index</p>
-                    <h2 id="campaign-index-title">Review queue</h2>
+                    <p>Verified campaign · {{ local.cells().length }} cells</p>
+                    <h2 id="campaign-index-title">Priority review queue</h2>
                   </div>
                   <div class="rank-tabs" aria-label="Campaign ranking">
                     <button
@@ -442,8 +484,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                 </div>
                 <div class="campaign-table" role="table" aria-label="Campaign-ranked proposals">
                   <div class="campaign-row campaign-head" role="row">
-                    <span>Rank</span><span>Case</span><span>Change</span><span>Safety result</span
-                    ><span>Recorded precedent</span><span>Why it stopped</span><span></span>
+                    <span role="columnheader">Rank</span><span role="columnheader">Case</span
+                    ><span role="columnheader">Change</span
+                    ><span role="columnheader">Safety result</span
+                    ><span role="columnheader">Recorded precedent</span
+                    ><span role="columnheader">Why it stopped</span
+                    ><span role="columnheader">Actions</span>
                   </div>
                   @for (
                     proposal of campaignRanking();
@@ -451,17 +497,21 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                     let index = $index
                   ) {
                     <div class="campaign-row" role="row">
-                      <span>{{ index + 1 }}</span>
-                      <span class="method" [class.bayesian]="proposal.method === 'bayesian'">
+                      <span role="cell">{{ index + 1 }}</span>
+                      <span
+                        role="cell"
+                        class="method"
+                        [class.bayesian]="proposal.method === 'bayesian'"
+                      >
                         {{ proposal.method }} · S{{ proposal.selectionOrder }} · {{ proposal.seed }}
                       </span>
-                      <span>{{ mutationNarrative(proposal) }}</span>
-                      <span>{{ proximityLabel(proposal.criticality) }}</span>
-                      <span>{{
+                      <span role="cell">{{ mutationNarrative(proposal) }}</span>
+                      <span role="cell">{{ proximityLabel(proposal.criticality) }}</span>
+                      <span role="cell">{{
                         supportLabel(proposal.empiricalSupportProbability, proposal.supportPasses)
                       }}</span>
-                      <span>{{ formatGate(proposal.decisiveGate) }}</span>
-                      <span class="row-actions">
+                      <span role="cell">{{ formatGate(proposal.decisiveGate) }}</span>
+                      <span role="cell" class="row-actions">
                         <button type="button" (click)="openCampaignProposal(proposal)">
                           Inspect
                         </button>
@@ -965,7 +1015,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         opacity: 0.35;
       }
     }
-    .page-heading p,
     .proposal-detail header p {
       margin: 0 0 0.75rem;
       color: var(--reference);
@@ -973,14 +1022,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       font-weight: 750;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-    }
-    .page-heading h1 {
-      max-width: 760px;
-      margin: 0;
-      font-size: clamp(2.35rem, 5vw, 4.8rem);
-      font-weight: 520;
-      line-height: 0.98;
-      letter-spacing: -0.06em;
     }
     .primary,
     .detail-actions button,
@@ -1005,17 +1046,54 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     }
     .investigation-page {
       min-height: calc(100dvh - 64px);
-      padding: 1.7rem;
+      padding: 0;
+    }
+    .evidence-commandbar {
+      position: sticky;
+      z-index: 60;
+      top: 64px;
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto minmax(190px, 1fr);
+      align-items: center;
+      gap: 1rem;
+      min-height: 72px;
+      padding: 0.65rem 1.5rem;
+      border-bottom: 1px solid var(--divider);
+      background: rgb(8 18 26 / 96%);
+      backdrop-filter: blur(16px);
+    }
+    .evidence-context {
+      display: grid;
+      min-width: 0;
+    }
+    .evidence-context span {
+      color: var(--reference);
+      font-size: 0.53rem;
+      font-weight: 750;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+    .evidence-context strong {
+      font-size: 0.83rem;
+      font-weight: 650;
+    }
+    .evidence-context small {
+      overflow: hidden;
+      color: var(--secondary);
+      font-size: 0.56rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .evidence-sections {
       display: flex;
       gap: 0.35rem;
-      margin: -0.8rem 1.5rem 1rem;
-      padding-bottom: 0.8rem;
-      border-bottom: 1px solid var(--divider);
+      padding: 3px;
+      border: 1px solid var(--divider);
+      border-radius: 5px;
+      background: var(--rail);
     }
     .evidence-sections button {
-      min-height: 34px;
+      min-height: 30px;
       padding: 0 0.8rem;
       border: 1px solid transparent;
       border-radius: 4px;
@@ -1025,12 +1103,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       font-weight: 650;
     }
     .evidence-sections button.active {
-      border-color: var(--divider-strong);
-      background: var(--surface-subtle);
+      border-color: transparent;
+      background: #17313b;
       color: var(--primary);
     }
     .deployment-workbench {
-      margin: 0 1.5rem 1.5rem;
+      margin: 1rem 1.5rem 1.5rem;
       border: 1px solid var(--divider);
       background: var(--panel);
     }
@@ -1097,12 +1175,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .deployment-notes article.stopped-gate span {
       color: #f0a33b;
     }
-    .deployment-notes article.pending-gate {
-      background: rgb(53 197 211 / 4%);
-    }
-    .deployment-notes article.pending-gate span {
-      color: var(--reference);
-    }
     .deployment-notes strong {
       display: block;
       font-size: 0.72rem;
@@ -1114,28 +1186,16 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       font-size: 0.6rem;
       line-height: 1.6;
     }
-    .page-heading {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 2rem;
-      padding: 0 0 1.5rem;
-    }
-    .page-heading p {
-      margin-bottom: 0.45rem;
-    }
-    .page-heading h1 {
-      font-size: clamp(1.65rem, 3vw, 2.5rem);
-      line-height: 1.05;
-    }
     .page-status {
       display: flex;
       align-items: center;
+      justify-self: end;
       gap: 0.45rem;
       color: var(--secondary);
       font-size: 0.62rem;
     }
     .public-workbench {
+      margin: 1rem 1.5rem 1.5rem;
       border: 1px solid var(--divider);
       background: var(--surface);
     }
@@ -1356,17 +1416,6 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
-    .public-boundary {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      border-top: 1px solid var(--divider);
-    }
-    .public-boundary div {
-      padding: 1rem 1.5rem;
-    }
-    .public-boundary div:first-child {
-      border-right: 1px solid var(--divider);
-    }
     .locked-workspace {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 300px;
@@ -1479,8 +1528,9 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       font-size: 0.65rem;
     }
     .campaign-index {
-      margin-bottom: 1rem;
+      margin: 1rem 1.5rem 0;
       border: 1px solid var(--divider);
+      border-bottom: 0;
       background: var(--surface);
     }
     .campaign-index > header {
@@ -1488,7 +1538,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      padding: 1rem 1.2rem;
+      min-height: 54px;
+      padding: 0.65rem 0.9rem;
       border-bottom: 1px solid var(--divider);
     }
     .campaign-index > header p {
@@ -1526,7 +1577,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .campaign-funnel div {
       display: grid;
       gap: 0.15rem;
-      padding: 0.75rem 1rem;
+      padding: 0.55rem 0.75rem;
       border-right: 1px solid var(--divider);
     }
     .campaign-funnel div:last-child {
@@ -1544,7 +1595,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       color: var(--tested);
     }
     .campaign-table {
-      max-height: 386px;
+      max-height: 214px;
       overflow: auto;
     }
     .campaign-row {
@@ -1554,7 +1605,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         minmax(148px, 1fr) minmax(170px, 1.1fr) 130px;
       align-items: center;
       min-width: 920px;
-      padding: 0.55rem 0.8rem;
+      min-height: 39px;
+      padding: 0.4rem 0.8rem;
       border-bottom: 1px solid var(--divider);
       color: #bac7cd;
       font-size: 0.58rem;
@@ -1644,7 +1696,8 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .investigation-workspace {
       display: grid;
       grid-template-columns: 250px minmax(0, 1fr);
-      min-height: 680px;
+      min-height: 660px;
+      margin: 0 1.5rem 1.5rem;
       border: 1px solid var(--divider);
       background: var(--surface);
     }
@@ -2086,6 +2139,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         padding: 0;
         font-size: 0;
       }
+      .evidence-commandbar {
+        grid-template-columns: minmax(220px, 1fr) auto;
+      }
+      .evidence-commandbar .page-status {
+        display: none;
+      }
       .investigation-workspace {
         grid-template-columns: 1fr;
       }
@@ -2166,21 +2225,31 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         grid-column: 2;
       }
       .investigation-page {
-        padding: 1.25rem 1rem 4.5rem;
+        padding: 0 0 4.5rem;
       }
-      .evidence-sections,
       .deployment-workbench {
-        margin-right: 0;
-        margin-left: 0;
+        margin-right: 0.75rem;
+        margin-left: 0.75rem;
       }
       .deployment-workbench > header {
         align-items: flex-start;
         flex-direction: column;
       }
-      .page-heading {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 0.6rem;
+      .evidence-commandbar {
+        top: 112px;
+        grid-template-columns: 1fr;
+        gap: 0.55rem;
+        min-height: 110px;
+        padding: 0.65rem 0.75rem;
+      }
+      .evidence-context small {
+        white-space: normal;
+      }
+      .evidence-sections {
+        width: 100%;
+      }
+      .evidence-sections button {
+        flex: 1;
       }
       .public-result {
         align-items: flex-start;
@@ -2222,12 +2291,10 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       .campaign-funnel {
         grid-template-columns: 1fr 1fr;
       }
-      .page-heading {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .page-status {
-        display: none;
+      .campaign-index,
+      .investigation-workspace {
+        margin-right: 0.75rem;
+        margin-left: 0.75rem;
       }
       .cell-grid {
         grid-template-columns: repeat(10, 1fr);

@@ -40,12 +40,20 @@ builds FP32 and typed-FP16 TensorRT engines. Both Python and C++17 paths report:
 - numerical parity against PyTorch FP32;
 - batch 1, 8, and 256 throughput, exact versions, GPU identity, and hashes.
 
-The scaled model is **pending NVIDIA qualification** until this notebook is run
-on a free T4. Published numbers from the earlier 128-scenario model are retained
-but are never attributed to the new model.
+The scaled model's free-T4 run is complete. FP32 parity and batch-1 end-to-end
+latency passed; FP16 RMSE passed, but batch-256 maximum drift reached 0.101 m
+against a frozen 0.075 m limit. The result is a measured FP16 `no_go`, while
+FP32 remains a measured path. Published numbers from the earlier 128-scenario
+model are retained but are never attributed to the new model.
 
 ## Product changes
 
+- Evidence is now an operational investigation console: a compact sticky
+  command bar, priority queue, campaign gates, matched-cell navigator, proposal
+  ranking, and persistent candidate inspector replace the earlier oversized
+  presentation-style heading and stacked report layout.
+- Planning callouts turn inward near the viewport boundary, keeping tested,
+  reference, and recorded labels legible at the final frame.
 - The Model & runtime page leads with real-data quality and separates it from
   the earlier measured runtime result.
 - Stopped active-risk and interaction studies appear beside the successful
@@ -54,6 +62,9 @@ but are never attributed to the new model.
   conservative novel views remain explicit alternatives.
 - Desktop and 390 px mobile surfaces have no horizontal overflow, browser
   warnings, or errors in the authenticated local flow.
+- A deterministic desktop/mobile browser journey now covers ranking,
+  comparison, proposal analysis, exact replay, Gemini's grounded response
+  contract, and session recovery after refresh.
 
 ## Reproduce
 

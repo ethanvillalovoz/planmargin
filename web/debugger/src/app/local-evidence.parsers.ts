@@ -194,6 +194,7 @@ export function parseCampaign(
       trajectoryModel: CAMPAIGN_EVIDENCE.trajectoryModel,
       scaleTrajectoryModel: CAMPAIGN_EVIDENCE.scaleTrajectoryModel,
       inference: CAMPAIGN_EVIDENCE.inference,
+      scaleInference: CAMPAIGN_EVIDENCE.scaleInference,
       activeRisk: CAMPAIGN_EVIDENCE.activeRisk,
       interactionStudy: CAMPAIGN_EVIDENCE.interactionStudy,
       mode: 'real-local-redacted',

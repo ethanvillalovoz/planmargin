@@ -1,6 +1,6 @@
 # Release-readiness audit
 
-**Audit date:** August 22, 2026
+**Audit date:** August 24, 2026
 
 **Release:** v2.0.0 candidate
 
@@ -88,22 +88,25 @@ point field, or reconstruction when licensed evidence is absent.
 | PyTorch trajectory model   | Shipped     | 1,024 real WOMD scenarios; 0.418 m ADE vs 0.870 m constant-velocity baseline; byte-identical repeat |
 | Active-risk qualification  | Stopped     | 2,097 real targets; 0.137 held-out rank correlation; only 3/9 budget-eight wins                  |
 | Interaction model          | Stopped     | 0.453 m ADE with nearest actors vs 0.434 m for same-data ego-only ablation                       |
-| ONNX and TensorRT 11       | Split       | scaled ONNX shipped; prior model has T4 qualification; scaled model rerun remains pending        |
+| ONNX and TensorRT 11       | Split       | scaled FP32 measured; scaled FP16 stopped after 0.101 m max drift exceeded its 0.075 m gate       |
 | C++17 TensorRT runtime     | Shipped     | independent `enqueueV3` runner now reports device and pinned-host end-to-end p50/p95/p99         |
 | Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                 |
 
 ## Verification performed on this revision
 
 - Ruff: all checks passed.
-- Python: 270 tests passed. Upstream warnings are identified in the
+- Python: 275 tests passed. Upstream warnings are identified in the
   CI log and do not suppress failures.
-- Angular/Vitest: 50 tests passed across launch authentication, local evidence,
-  parsers, stores, navigation, reports, and workbench behavior.
+- Angular/Vitest: 53 tests passed across launch authentication, local evidence,
+  parsers, stores, navigation, reports, edge-aware trajectory labels, and
+  workbench behavior.
 - Browser sign-off covers desktop and 390 px mobile evidence surfaces, planning
   playback, ten-frame seek controls, frame-native camera annotation changes,
   and two independently selectable SHARP reconstruction frames.
-- Playwright: four desktop/mobile journeys passed, including meaningful
-  interactions, responsive overflow, and WCAG A/AA axe checks.
+- Playwright: six desktop/mobile journeys passed. The added local-mode journey
+  exercises queue ranking, comparison, candidate inspection, sealed-record
+  analysis, model/runtime navigation, the grounded Gemini response contract,
+  refresh recovery, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
   payload is 338.92 kB raw, while Spark and Three.js viewers remain lazy.
@@ -115,11 +118,11 @@ point field, or reconstruction when licensed evidence is absent.
   responses included `Cache-Control: no-store` and
   `X-Content-Type-Options: nosniff`.
 - Workspace doctor distinguishes the prior TensorRT qualification from the
-  scaled model's pending NVIDIA rerun.
+  scaled model's completed FP16 no-go decision.
 - Python source/wheel distributions and the native C++20 extension built
   successfully for PlanMargin 2.0.0.
-- The twelve-record aggregate-only Hugging Face package was downloaded from its
-  published commit and passed its independent SHA-256 verifier.
+- The fourteen-record aggregate-only distribution candidate passed its
+  independent SHA-256 verifier locally. No hosting change was made.
 
 ## Scientific outcome
 
@@ -133,11 +136,12 @@ after the no-go.
 That negative result is part of the product's credibility: the repository
 preserves what was measured, what failed, and what cannot be claimed.
 
-The Version 2 active-risk and interaction studies add two further negative
-results. Neither is promoted, and no thresholds were relaxed after results were
-observed. The supported positive claim is narrower: the scaled ego-history
-predictor beats constant velocity on its 102-scenario real-WOMD test split and
-reproduces byte-for-byte on the recorded MPS toolchain.
+The Version 2 active-risk, interaction, and scaled-FP16 studies add three
+further negative results. None is promoted, and no thresholds were relaxed
+after results were observed. The supported positive claim is narrower: the
+scaled ego-history predictor beats constant velocity on its 102-scenario
+real-WOMD test split, reproduces byte-for-byte on the recorded MPS toolchain,
+and has a measured FP32 TensorRT path.
 
 ## Remaining operator actions
 
@@ -150,5 +154,6 @@ reproduces byte-for-byte on the recorded MPS toolchain.
 - Re-run the authenticated visual sign-off whenever UI or evidence-contract
   source changes. CI covers a data-free equivalent because licensed evidence
   is deliberately not uploaded.
-- Run the scaled-model TensorRT notebook on a free T4 and publish its aggregate
-  report before changing the scaled model's NVIDIA status from pending.
+- If FP16 promotion is revisited, change the model or mixed-precision export,
+  preregister a new protocol, and rerun it. Do not relax the observed 0.075 m
+  drift gate post hoc.
