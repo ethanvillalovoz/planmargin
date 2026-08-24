@@ -178,6 +178,33 @@ def test_gemini_receives_only_public_tool_packet_and_structured_schema() -> None
     jsonschema.validate(response, SCHEMA)
 
 
+def test_gemini_defensively_clips_overlong_structured_prose() -> None:
+    result = evidence_assistant.PublicEvidenceTools().execute("method_comparison")
+    safe_phrase = "The bounded evidence remains qualitative and scoped to supplied facts. "
+    provider = evidence_assistant.GeminiProvider(
+        api_key="test-key",
+        model=evidence_assistant.DEFAULT_MODEL,
+        confirmed_free_tier=True,
+        client_factory=lambda _: _FakeClient(
+            {
+                "summary": safe_phrase * 8,
+                "interpretation": safe_phrase * 12,
+                "cited_fact_ids": ["method.valid_rate_delta", "method.findings"],
+                "limitation": safe_phrase * 8,
+            }
+        ),
+    )
+
+    draft = provider.explain(result)
+
+    assert len(draft.summary) <= 280
+    assert len(draft.interpretation) <= 500
+    assert len(draft.limitation) <= 280
+    assert draft.summary.endswith("…")
+    assert draft.interpretation.endswith("…")
+    assert draft.limitation.endswith("…")
+
+
 def test_gemini_rejects_private_sources_and_generated_metrics() -> None:
     public = evidence_assistant.PublicEvidenceTools().execute("campaign_overview")
     private = evidence_assistant.ToolResult(
