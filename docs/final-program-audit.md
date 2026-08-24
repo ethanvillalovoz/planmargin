@@ -2,7 +2,7 @@
 
 **Audit date:** August 24, 2026
 
-**Release:** v2.0.0 candidate
+**Release:** v2.0.1
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench

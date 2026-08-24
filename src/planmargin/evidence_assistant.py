@@ -77,6 +77,13 @@ class ExplanationDraft(BaseModel):
     limitation: str = Field(min_length=1, max_length=280)
 
 
+PROVIDER_TEXT_LIMITS = {
+    "summary": 280,
+    "interpretation": 500,
+    "limitation": 280,
+}
+
+
 # Keep the hosted schema inside Gemini's documented JSON Schema subset. Pydantic
 # still enforces the tighter string lengths after the response returns.
 GEMINI_RESPONSE_SCHEMA = {
@@ -820,7 +827,9 @@ class GeminiProvider:
                 "outperformer. A method comparison may say only that eligible-proposal "
                 "yield or feasible hypervolume was higher, and must preserve the fact "
                 "that neither method found a qualifying failure. Cite only supplied "
-                "fact IDs."
+                "fact IDs. Keep summary and limitation under two hundred forty "
+                "characters each, and interpretation under four hundred forty "
+                "characters."
             ),
             "query_id": result.query_id,
             "facts": [
@@ -846,7 +855,9 @@ class GeminiProvider:
                     "schema": GEMINI_RESPONSE_SCHEMA,
                 },
             )
-            draft = ExplanationDraft.model_validate_json(interaction.output_text)
+            draft = ExplanationDraft.model_validate(
+                _normalize_provider_payload(interaction.output_text)
+            )
         except Exception as error:
             raise RuntimeError(
                 "Gemini returned an invalid structured explanation"
@@ -858,6 +869,29 @@ class GeminiProvider:
         _validate_provider_draft(draft, result)
         _validate_hosted_claims(draft)
         return draft
+
+
+def _clip_provider_text(value: Any, limit: int) -> Any:
+    """Bound valid provider prose without inventing or expanding any claim."""
+    if not isinstance(value, str) or len(value) <= limit:
+        return value
+    clipped = value[: limit - 1].rstrip()
+    if " " in clipped:
+        clipped = clipped.rsplit(" ", maxsplit=1)[0]
+    return clipped.rstrip(" ,;:-") + "…"
+
+
+def _normalize_provider_payload(output_text: str) -> dict[str, Any]:
+    """Parse Gemini JSON and defensively enforce host-side text bounds."""
+    payload = json.loads(output_text)
+    if not isinstance(payload, dict):
+        raise ValueError("Gemini response must be a JSON object")
+    return {
+        key: _clip_provider_text(value, PROVIDER_TEXT_LIMITS[key])
+        if key in PROVIDER_TEXT_LIMITS
+        else value
+        for key, value in payload.items()
+    }
 
 
 def _google_client(api_key: str) -> Any:
