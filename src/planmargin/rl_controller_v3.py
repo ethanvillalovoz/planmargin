@@ -1,4 +1,4 @@
-"""Evaluate the frozen Version 2.1 shielded JAX DQN controller."""
+"""Evaluate the frozen Version 3 shielded JAX DQN controller."""
 
 from __future__ import annotations
 

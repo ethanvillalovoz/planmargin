@@ -1,6 +1,6 @@
-# PlanMargin 2.1 release candidate
+# PlanMargin 3 release candidate
 
-PlanMargin 2.1 is a local, unpublished release candidate. It does not create or
+PlanMargin 3 is a local, unpublished release candidate. It does not create or
 update a hosted application, GitHub Pages deployment, Hugging Face repository,
 Git tag, or GitHub release.
 
@@ -45,4 +45,4 @@ operator decision.
 - The macOS accessibility tree exposes named navigation, evidence tabs,
   headings, status text, and primary actions. Keyboard Tab order and Return
   activation were exercised in Chrome. See
-  [the accessibility audit](accessibility-audit-v2.1.md).
+  [the accessibility audit](accessibility-audit-v3.0.md).

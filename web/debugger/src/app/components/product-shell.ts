@@ -2592,6 +2592,9 @@ export class ProductShell {
   }
   protected openReplay(): void {
     this.simulator.selectMode('planning');
+    // Entering a planning replay is an explicit request to inspect its evidence.
+    // Re-open the panel even when the responsive layout collapsed it on startup.
+    this.simulator.controlsOpen.set(true);
     this.view.set('replay');
   }
   protected async openProposalReplay(runId: string): Promise<void> {

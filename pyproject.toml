@@ -1,6 +1,6 @@
 [project]
 name = "planmargin"
-version = "2.1.0"
+version = "3.0.0"
 description = "Counterfactual stress testing for autonomous-driving planners"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"

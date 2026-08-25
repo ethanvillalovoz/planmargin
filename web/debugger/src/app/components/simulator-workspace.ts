@@ -1165,7 +1165,10 @@ export class SimulatorWorkspace {
 
   constructor() {
     afterNextRender(() => {
-      if (window.matchMedia('(max-width: 560px)').matches) {
+      if (
+        window.matchMedia('(max-width: 560px)').matches &&
+        this.simulator.sensorMode() !== 'planning'
+      ) {
         this.simulator.controlsOpen.set(false);
       }
     });

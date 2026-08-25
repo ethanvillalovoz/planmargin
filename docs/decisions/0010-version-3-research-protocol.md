@@ -1,14 +1,14 @@
-# ADR 0010: Version 2.1 bounded research follow-ups
+# ADR 0010: Version 3 bounded research follow-ups
 
 ## Status
 
-Accepted before the Version 2.1 follow-up runs on August 24, 2026.
+Accepted before the Version 3 follow-up runs on August 24, 2026.
 
 ## Context
 
 Version 2 preserved two honest no-go results: the first JAX DQN missed its
 synthetic safety gate, and the scaled TensorRT FP16 graph exceeded its frozen
-maximum-drift gate. Version 2.1 may attempt new designs, but it must not move
+maximum-drift gate. Version 3 may attempt new designs, but it must not move
 the old gates or rewrite either result.
 
 ## Decision
