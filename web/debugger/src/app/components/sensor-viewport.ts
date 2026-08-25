@@ -104,14 +104,21 @@ import { SimulatorStore } from '../simulator.store';
                   [class.active]="reconstructionAsset() === 'reconstruction'"
                   (click)="setReconstructionAsset('reconstruction')"
                 >
-                  Frame 020 · moving
+                  020 · Moving
+                </button>
+                <button
+                  type="button"
+                  [class.active]="reconstructionAsset() === 'reconstruction_context'"
+                  (click)="setReconstructionAsset('reconstruction_context')"
+                >
+                  060 · Approach
                 </button>
                 <button
                   type="button"
                   [class.active]="reconstructionAsset() === 'reconstruction_reference'"
                   (click)="setReconstructionAsset('reconstruction_reference')"
                 >
-                  Frame 099 · stopped
+                  099 · Stopped
                 </button>
               </div>
               <div class="reconstruction-views" aria-label="Reconstruction viewpoint">
@@ -373,7 +380,8 @@ import { SimulatorStore } from '../simulator.store';
       top: 4.65rem;
       right: 1rem;
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: min(330px, calc(100% - 2rem));
       padding: 3px;
       border: 1px solid rgb(129 159 174 / 34%);
       border-radius: 8px;
@@ -481,6 +489,9 @@ import { SimulatorStore } from '../simulator.store';
         top: 4rem;
         right: 0.65rem;
       }
+      .reconstruction-scenes {
+        width: min(330px, calc(100% - 1.3rem));
+      }
       .reconstruction-views {
         top: 7.65rem;
         right: 0.65rem;
@@ -509,9 +520,9 @@ export class SensorViewport {
   protected readonly splatLoading = signal(false);
   protected readonly splatReady = signal(false);
   protected readonly reconstructionView = signal<'path' | 'source' | 'left' | 'right'>('source');
-  protected readonly reconstructionAsset = signal<'reconstruction' | 'reconstruction_reference'>(
-    'reconstruction',
-  );
+  protected readonly reconstructionAsset = signal<
+    'reconstruction' | 'reconstruction_context' | 'reconstruction_reference'
+  >('reconstruction');
   protected readonly error = signal<string | undefined>(undefined);
   protected readonly visibleBoxes = signal<readonly CameraBoxAnnotation[]>([]);
   private readonly surface = viewChild.required<ElementRef<HTMLDivElement>>('surface');
@@ -811,14 +822,18 @@ export class SensorViewport {
     this.applyReconstructionView(this.camera, this.controls, this.center);
   }
 
-  protected setReconstructionAsset(asset: 'reconstruction' | 'reconstruction_reference'): void {
+  protected setReconstructionAsset(
+    asset: 'reconstruction' | 'reconstruction_context' | 'reconstruction_reference',
+  ): void {
     if (asset === this.reconstructionAsset()) return;
     this.reconstructionAsset.set(asset);
     this.reconstructionView.set('source');
     const source =
       asset === 'reconstruction'
         ? this.summary()?.reconstruction
-        : this.summary()?.reconstruction_reference;
+        : asset === 'reconstruction_context'
+          ? this.summary()?.reconstruction_context
+          : this.summary()?.reconstruction_reference;
     if (source !== undefined) this.simulator.setSpatialSourceFrame(source.source_frame_index);
     void this.loadSplat(asset);
   }
@@ -927,6 +942,7 @@ export class SensorViewport {
     this.camera.aspect = Math.max(1, host.clientWidth) / Math.max(1, host.clientHeight);
     if (
       this.currentAsset === 'reconstruction' ||
+      this.currentAsset === 'reconstruction_context' ||
       this.currentAsset === 'reconstruction_reference' ||
       this.simulator.sensorMode() === 'reconstruction'
     ) {

@@ -31,6 +31,9 @@ SCHEMA = json.loads(
         ("What happened to H1, H2, and H3?", "hypothesis_decisions"),
         ("Does this prove the production Waymo Driver is safe?", "claim_boundary"),
         ("How does the Beam to Parquet pipeline work?", "beam_pipeline"),
+        ("How did the real trajectory model perform?", "model_performance"),
+        ("What failed in the FP16 TensorRT run?", "inference_qualification"),
+        ("Which evidence has exact replay provenance?", "workbench_provenance"),
     ),
 )
 def test_offline_answers_execute_one_allowlisted_query_and_validate(
@@ -147,9 +150,13 @@ def test_gemini_receives_only_public_tool_packet_and_structured_schema() -> None
     packet = client.interactions.arguments
     assert packet["model"] == evidence_assistant.DEFAULT_MODEL
     assert packet["response_format"]["mime_type"] == "application/json"
-    assert packet["response_format"]["schema"] == (
-        evidence_assistant.GEMINI_RESPONSE_SCHEMA
-    )
+    schema = packet["response_format"]["schema"]
+    assert schema["properties"]["cited_fact_ids"]["items"]["enum"] == [
+        fact.fact_id
+        for fact in evidence_assistant.PublicEvidenceTools()
+        .execute("method_comparison")
+        .facts
+    ]
     encoded_schema = json.dumps(packet["response_format"]["schema"])
     assert "minLength" not in encoded_schema
     assert "maxLength" not in encoded_schema
@@ -180,7 +187,9 @@ def test_gemini_receives_only_public_tool_packet_and_structured_schema() -> None
 
 def test_gemini_defensively_clips_overlong_structured_prose() -> None:
     result = evidence_assistant.PublicEvidenceTools().execute("method_comparison")
-    safe_phrase = "The bounded evidence remains qualitative and scoped to supplied facts. "
+    safe_phrase = (
+        "The bounded evidence remains qualitative and scoped to supplied facts. "
+    )
     provider = evidence_assistant.GeminiProvider(
         api_key="test-key",
         model=evidence_assistant.DEFAULT_MODEL,

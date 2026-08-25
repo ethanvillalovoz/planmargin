@@ -2,7 +2,7 @@
 
 **Audit date:** August 24, 2026
 
-**Release:** v2.0.1
+**Release candidate:** v2.1.0 (unpublished)
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -35,14 +35,15 @@ gates and remain documented negative results with no deployed model.
    proposal whose fresh tested/reference trajectories reproduce the sealed v1
    hashes, outcomes, interaction metrics, and scenario validation.
 3. Inspect 199 recorded WOD FRONT frames with frame-specific tracked boxes.
-4. Orbit the pinned 1,179,648-primitive Apple SHARP reconstruction and inspect
-   the 50,241-return same-frame LiDAR field.
+4. Orbit three independently generated 1,179,648-primitive Apple SHARP
+   reconstructions and inspect the 50,241-return same-frame LiDAR field.
 5. Rank all 3,200 sealed counterfactual proposals by minimum clearance, edit
    size, or recorded precedent.
 6. Trace the first failed qualification gate and compare tested/reference
    planner outcomes.
 7. Export a privacy-reduced, SHA-256-digested HTML investigation report.
-8. Ask bounded evidence questions through deterministic local tools.
+8. Ask eight bounded evidence questions through deterministic local tools or
+   the optional Gemini explanation adapter.
 9. Inspect measured Tesla T4 latency, throughput, FP32/FP16 drift, environment
    versions, and engine hashes without accessing licensed WOMD records.
 10. Inspect the scaled model's real-data ADE/FDE, active-mining no-go, interaction
@@ -54,7 +55,7 @@ point field, or reconstruction when licensed evidence is absent.
 ## Claim and synchronization boundaries
 
 - The frozen 3,200 campaign proposals retain hashes, outcomes, objectives, and
-  costs, but did not originally retain full trajectories. Five separately
+  costs, but did not originally retain full trajectories. Ten separately
   versioned packages now re-execute and verify selected margin-, edit-, and
   support-ranked proposals across both search methods. The UI labels all
   remaining proposals as not retained and never substitutes the separate
@@ -90,26 +91,28 @@ point field, or reconstruction when licensed evidence is absent.
 | Interaction model          | Stopped     | 0.453 m ADE with nearest actors vs 0.434 m for same-data ego-only ablation                       |
 | ONNX and TensorRT 11       | Split       | scaled FP32 measured; scaled FP16 stopped after 0.101 m max drift exceeded its 0.075 m gate       |
 | C++17 TensorRT runtime     | Shipped     | independent `enqueueV3` runner now reports device and pinned-host end-to-end p50/p95/p99         |
+| Residual FP16 candidate    | Pending GPU | Apple-MPS numerical proxy passed; TensorRT has not been measured and promotion remains blocked    |
+| Shielded RL follow-up      | Stopped     | deterministic synthetic study missed its frozen 1% collision gate at 2.686%                       |
 | Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                 |
 
 ## Verification performed on this revision
 
 - Ruff: all checks passed.
-- Python: 275 tests passed. Upstream warnings are identified in the
-  CI log and do not suppress failures.
-- Angular/Vitest: 53 tests passed across launch authentication, local evidence,
+- Python: 282 tests passed. Upstream warnings are identified in the CI log and
+  do not suppress failures.
+- Angular/Vitest: 56 tests passed across launch authentication, local evidence,
   parsers, stores, navigation, reports, edge-aware trajectory labels, and
   workbench behavior.
 - Browser sign-off covers desktop and 390 px mobile evidence surfaces, planning
   playback, ten-frame seek controls, frame-native camera annotation changes,
-  and two independently selectable SHARP reconstruction frames.
+  and three independently selectable SHARP reconstruction frames.
 - Playwright: six desktop/mobile journeys passed. The added local-mode journey
   exercises queue ranking, comparison, candidate inspection, sealed-record
   analysis, model/runtime navigation, the grounded Gemini response contract,
   refresh recovery, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
-  payload is 338.92 kB raw, while Spark and Three.js viewers remain lazy.
+  payload is 338.68 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
 - Authenticated HTTP: frontend, health, campaign, investigation, planning runs,
@@ -120,8 +123,8 @@ point field, or reconstruction when licensed evidence is absent.
 - Workspace doctor distinguishes the prior TensorRT qualification from the
   scaled model's completed FP16 no-go decision.
 - Python source/wheel distributions and the native C++20 extension built
-  successfully for PlanMargin 2.0.0.
-- The fourteen-record aggregate-only distribution candidate passed its
+  successfully for the unpublished PlanMargin 2.1.0 candidate.
+- The sixteen-record aggregate-only distribution candidate passed its
   independent SHA-256 verifier locally. No hosting change was made.
 
 ## Scientific outcome
@@ -137,8 +140,10 @@ That negative result is part of the product's credibility: the repository
 preserves what was measured, what failed, and what cannot be claimed.
 
 The Version 2 active-risk, interaction, and scaled-FP16 studies add three
-further negative results. None is promoted, and no thresholds were relaxed
-after results were observed. The supported positive claim is narrower: the
+further negative results. Version 2.1 adds a shielded-controller no-go and a
+split-residual FP16 design that passed only its Apple-MPS numerical proxy; it
+still requires an NVIDIA TensorRT measurement. None is promoted, and no
+thresholds were relaxed after results were observed. The supported positive claim is narrower: the
 scaled ego-history predictor beats constant velocity on its 102-scenario
 real-WOMD test split, reproduces byte-for-byte on the recorded MPS toolchain,
 and has a measured FP32 TensorRT path.
@@ -157,3 +162,6 @@ and has a measured FP32 TensorRT path.
 - If FP16 promotion is revisited, change the model or mixed-precision export,
   preregister a new protocol, and rerun it. Do not relax the observed 0.075 m
   drift gate post hoc.
+- Run the preregistered residual-only ONNX candidate on NVIDIA TensorRT before
+  claiming reduced-precision qualification. The checked-in local result is a
+  proxy, not a GPU measurement.

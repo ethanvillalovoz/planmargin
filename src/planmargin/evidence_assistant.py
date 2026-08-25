@@ -133,6 +133,9 @@ def _fact(
 CAMPAIGN = "campaign-results"
 HELD_OUT = "held-out-decision"
 BEAM = "beam-integration"
+MODEL = "trajectory-model-v2"
+INFERENCE = "tensorrt-qualification-v2"
+WORKBENCH = "campaign-investigation-workbench"
 
 PUBLIC_CITATIONS = {
     CAMPAIGN: Citation(
@@ -152,6 +155,24 @@ PUBLIC_CITATIONS = {
         "Beam feature pipeline integration evidence",
         "experiments/platform/beam-feature-integration.json",
         "eba6ac5949e78a4b5a1103868d7f811f1e821b12e2d76b99a833e0276425e099",
+    ),
+    MODEL: Citation(
+        MODEL,
+        "Real-WOMD trajectory-model qualification",
+        "experiments/torch-trajectory-model-v2.json",
+        "29221c77688cd4dc8078b1f18f68bcd0694e13fe00f8d2f07d9328d8131e0f04",
+    ),
+    INFERENCE: Citation(
+        INFERENCE,
+        "Tesla T4 TensorRT qualification",
+        "experiments/tensorrt-qualification-v2.json",
+        "dfb23a7aaf52d6415f44f49a411e84795f578717a33c100fb8586fe94a785269",
+    ),
+    WORKBENCH: Citation(
+        WORKBENCH,
+        "Campaign investigation workbench contract",
+        "docs/campaign-investigation-workbench.md",
+        "d28c48ce5468f9a61298b991b7154250568b914d5020dc1b09ea6991f159d5d3",
     ),
 }
 
@@ -426,6 +447,170 @@ class PublicEvidenceTools:
             ),
         )
 
+    def _query_model_performance(self) -> ToolResult:
+        return ToolResult(
+            "model_performance",
+            "Real-WOMD trajectory-model qualification",
+            self.source_mode,
+            (
+                _fact(
+                    "model.scenarios",
+                    "The model study used 1,024 real WOMD training scenarios.",
+                    1024,
+                    "scenarios",
+                    MODEL,
+                ),
+                _fact(
+                    "model.windows",
+                    "The model study evaluated 126,992 trajectory windows.",
+                    126992,
+                    "windows",
+                    MODEL,
+                ),
+                _fact(
+                    "model.ade",
+                    "The learned model achieved 0.418364 m test ADE.",
+                    0.418364,
+                    "m ADE",
+                    MODEL,
+                ),
+                _fact(
+                    "model.baseline_ade",
+                    "The constant-velocity baseline achieved 0.870479 m test ADE.",
+                    0.870479,
+                    "m ADE",
+                    MODEL,
+                ),
+                _fact(
+                    "model.fde",
+                    "The learned model achieved 1.166769 m test FDE.",
+                    1.166769,
+                    "m FDE",
+                    MODEL,
+                ),
+                _fact(
+                    "model.repeat",
+                    "The repeated training artifact was byte-identical.",
+                    True,
+                    None,
+                    MODEL,
+                ),
+            ),
+            self._citations(MODEL),
+            (
+                "This is a research predictor over WOMD training scenarios, not a driving policy.",
+                "Complete-scenario holdout does not establish deployment readiness.",
+                "The model is not the production Waymo Driver.",
+            ),
+        )
+
+    def _query_inference_qualification(self) -> ToolResult:
+        return ToolResult(
+            "inference_qualification",
+            "Measured NVIDIA TensorRT qualification",
+            self.source_mode,
+            (
+                _fact(
+                    "inference.gpu",
+                    "The scaled run used a Tesla T4 GPU.",
+                    "Tesla T4",
+                    None,
+                    INFERENCE,
+                ),
+                _fact(
+                    "inference.fp32_p50",
+                    "FP32 batch-one end-to-end p50 was 0.276828 ms.",
+                    0.276828,
+                    "ms",
+                    INFERENCE,
+                ),
+                _fact(
+                    "inference.fp16_throughput",
+                    "FP16 batch-256 throughput was 974,521.59 samples per second.",
+                    974521.59,
+                    "samples/s",
+                    INFERENCE,
+                ),
+                _fact(
+                    "inference.fp16_drift",
+                    "FP16 maximum drift reached 0.10103607 m.",
+                    0.10103607,
+                    "m",
+                    INFERENCE,
+                ),
+                _fact(
+                    "inference.fp16_gate",
+                    "The frozen FP16 maximum-drift gate was 0.075 m.",
+                    0.075,
+                    "m",
+                    INFERENCE,
+                ),
+                _fact(
+                    "inference.decision",
+                    "FP16 promotion was stopped while FP32 remained measured and usable.",
+                    "FP16 no-go",
+                    None,
+                    INFERENCE,
+                ),
+            ),
+            self._citations(INFERENCE),
+            (
+                "This is one bounded inference qualification on a free Tesla T4 runtime.",
+                "Latency and numerical parity do not establish autonomy safety.",
+                "The failed FP16 gate must remain visible in every summary.",
+            ),
+        )
+
+    def _query_workbench_provenance(self) -> ToolResult:
+        return ToolResult(
+            "workbench_provenance",
+            "Exact-replay and sensor-scene provenance",
+            self.source_mode,
+            (
+                _fact(
+                    "workbench.campaign_proposals",
+                    "All 3,200 campaign proposals retain sealed metrics, outcomes, and hashes.",
+                    3200,
+                    "proposals",
+                    WORKBENCH,
+                ),
+                _fact(
+                    "workbench.exact_replays",
+                    "Ten selected proposals now have separately retained exact trajectory replays.",
+                    10,
+                    "exact replays",
+                    WORKBENCH,
+                ),
+                _fact(
+                    "workbench.reconstructions",
+                    "The local Sensor Lab provides three real Apple SHARP source-frame reconstructions.",
+                    3,
+                    "reconstructions",
+                    WORKBENCH,
+                ),
+                _fact(
+                    "workbench.separate_records",
+                    "WOMD planning replay and WOD Perception sensor views are separate records.",
+                    True,
+                    None,
+                    WORKBENCH,
+                ),
+                _fact(
+                    "workbench.redistribution",
+                    "Licensed scene-level records and reconstructions are not redistributed.",
+                    False,
+                    "unrestricted redistribution",
+                    WORKBENCH,
+                ),
+            ),
+            self._citations(WORKBENCH),
+            (
+                "Exact replay coverage is deliberate and does not include every campaign proposal.",
+                "Sensor reconstructions are not registered to the separate planning replay.",
+                "Local licensed artifacts remain outside the public repository.",
+            ),
+        )
+
 
 class LocalEvidenceTools:
     """Execute the same closed aggregate queries over verified ignored artifacts."""
@@ -436,7 +621,12 @@ class LocalEvidenceTools:
         self._repository = repository
 
     def execute(self, query_id: str) -> ToolResult:
-        if query_id == "beam_pipeline":
+        if query_id in {
+            "beam_pipeline",
+            "model_performance",
+            "inference_qualification",
+            "workbench_provenance",
+        }:
             return PublicEvidenceTools().execute(query_id)
         if query_id == "campaign_overview":
             campaign = self._repository.campaign()
@@ -580,6 +770,9 @@ QUERY_LABELS = {
     "hypothesis_decisions": "hypothesis decisions",
     "claim_boundary": "claim boundary",
     "beam_pipeline": "data-pipeline evidence",
+    "model_performance": "trajectory-model evidence",
+    "inference_qualification": "NVIDIA inference evidence",
+    "workbench_provenance": "replay and sensor provenance",
 }
 
 
@@ -594,6 +787,18 @@ def classify_question(question: str) -> str:
         raise ValueError("Question contains unsupported control characters")
 
     routes = (
+        (
+            "inference_qualification",
+            ("tensorrt", "fp16", "fp32", "inference", "latency", "throughput", "t4"),
+        ),
+        (
+            "model_performance",
+            ("trajectory model", "predictor", "ade", "fde", "constant velocity"),
+        ),
+        (
+            "workbench_provenance",
+            ("exact replay", "reconstruction", "3dgs", "sensor scene", "provenance"),
+        ),
         (
             "beam_pipeline",
             ("beam", "parquet", "duckdb", "pipeline", "shard", "dataflow"),
@@ -707,6 +912,43 @@ OFFLINE_DRAFTS = {
         ],
         limitation="This is pipeline verification rather than experimental outcome evidence.",
     ),
+    "model_performance": ExplanationDraft(
+        summary="The real-WOMD trajectory predictor improved on the constant-velocity baseline and reproduced deterministically.",
+        interpretation="That qualifies a bounded research prediction responsibility while keeping the model separate from planner control and deployment claims.",
+        cited_fact_ids=[
+            "model.scenarios",
+            "model.ade",
+            "model.baseline_ade",
+            "model.fde",
+            "model.repeat",
+        ],
+        limitation="The study uses WOMD training scenarios and does not evaluate a deployed driving policy.",
+    ),
+    "inference_qualification": ExplanationDraft(
+        summary="The NVIDIA run measured a fast full-precision path and stopped reduced-precision promotion at the frozen drift gate.",
+        interpretation="The result demonstrates honest latency, throughput, and numerical-parity qualification instead of treating speed alone as deployment readiness.",
+        cited_fact_ids=[
+            "inference.gpu",
+            "inference.fp32_p50",
+            "inference.fp16_throughput",
+            "inference.fp16_drift",
+            "inference.fp16_gate",
+            "inference.decision",
+        ],
+        limitation="This bounded accelerator benchmark is not an autonomy or deployment-readiness benchmark.",
+    ),
+    "workbench_provenance": ExplanationDraft(
+        summary="The workbench separates aggregate campaign coverage, selected exact replays, and independently sourced sensor reconstructions.",
+        interpretation="That makes the available evidence inspectable without inventing trajectories or implying that the Perception scene is registered to the planning replay.",
+        cited_fact_ids=[
+            "workbench.campaign_proposals",
+            "workbench.exact_replays",
+            "workbench.reconstructions",
+            "workbench.separate_records",
+            "workbench.redistribution",
+        ],
+        limitation="Licensed scene-level artifacts remain local and exact replay coverage is intentionally selective.",
+    ),
 }
 
 
@@ -780,6 +1022,23 @@ HOSTED_FACT_TEXT = {
     "beam.partitions": "Every deterministic partition was reconciled.",
     "beam.integrity": "Every published pipeline integrity gate passed.",
     "beam.held_out": "The pipeline did not open independent evaluation data.",
+    "model.scenarios": "The model study used its declared real-data scenario set.",
+    "model.windows": "The model study evaluated its declared trajectory-window set.",
+    "model.ade": "The learned model had lower average displacement error than the baseline.",
+    "model.baseline_ade": "The constant-velocity baseline had higher average displacement error than the learned model.",
+    "model.fde": "The learned model completed the declared final-displacement evaluation.",
+    "model.repeat": "The repeated training artifact was byte-identical.",
+    "inference.gpu": "The inference study ran on the declared NVIDIA GPU.",
+    "inference.fp32_p50": "The full-precision path passed the frozen latency gate.",
+    "inference.fp16_throughput": "The reduced-precision path achieved the recorded high-batch throughput.",
+    "inference.fp16_drift": "The reduced-precision path exceeded the frozen maximum-drift boundary.",
+    "inference.fp16_gate": "The reduced-precision maximum-drift boundary was frozen before qualification.",
+    "inference.decision": "Reduced-precision promotion stopped while the measured full-precision path remained available.",
+    "workbench.campaign_proposals": "Every campaign proposal retains sealed aggregate evidence.",
+    "workbench.exact_replays": "Selected proposals have separately verified exact trajectory replays.",
+    "workbench.reconstructions": "The Sensor Lab includes multiple real source-frame reconstructions.",
+    "workbench.separate_records": "Planning replay and sensor views come from separate records.",
+    "workbench.redistribution": "Licensed scene-level artifacts are not redistributed.",
 }
 
 
@@ -844,31 +1103,61 @@ class GeminiProvider:
                 for limitation in result.limitations
             ],
         }
-        client = self._client_factory(self._api_key)
-        try:
-            interaction = client.interactions.create(
-                model=self._model,
-                input=json.dumps(prompt_packet, sort_keys=True, separators=(",", ":")),
-                response_format={
-                    "type": "text",
-                    "mime_type": "application/json",
-                    "schema": GEMINI_RESPONSE_SCHEMA,
+        response_schema = {
+            **GEMINI_RESPONSE_SCHEMA,
+            "properties": {
+                **GEMINI_RESPONSE_SCHEMA["properties"],
+                "cited_fact_ids": {
+                    **GEMINI_RESPONSE_SCHEMA["properties"]["cited_fact_ids"],
+                    "items": {
+                        "type": "string",
+                        "enum": [fact.fact_id for fact in result.facts],
+                    },
                 },
-            )
-            draft = ExplanationDraft.model_validate(
-                _normalize_provider_payload(interaction.output_text)
-            )
-        except Exception as error:
+            },
+        }
+        client = self._client_factory(self._api_key)
+        prior_error: Exception | None = None
+        try:
+            for attempt in range(3):
+                if prior_error is not None:
+                    prompt_packet["retry_correction"] = (
+                        "The prior request failed or did not pass host validation. Use "
+                        "only the exact allowed fact IDs and write entirely qualitative "
+                        "prose with no digits, number words, metric units, version "
+                        "labels, hypothesis codes, or prohibited claim language."
+                    )
+                try:
+                    interaction = client.interactions.create(
+                        model=self._model,
+                        input=json.dumps(
+                            prompt_packet, sort_keys=True, separators=(",", ":")
+                        ),
+                        response_format={
+                            "type": "text",
+                            "mime_type": "application/json",
+                            "schema": response_schema,
+                        },
+                    )
+                    draft = ExplanationDraft.model_validate(
+                        _normalize_provider_payload(interaction.output_text)
+                    )
+                    _validate_provider_draft(draft, result)
+                    _validate_hosted_claims(draft)
+                except Exception as error:
+                    prior_error = error
+                    continue
+                return draft
+            assert prior_error is not None
+            if isinstance(prior_error, ValueError):
+                raise prior_error
             raise RuntimeError(
                 "Gemini returned an invalid structured explanation"
-            ) from error
+            ) from prior_error
         finally:
             close = getattr(client, "close", None)
             if callable(close):
                 close()
-        _validate_provider_draft(draft, result)
-        _validate_hosted_claims(draft)
-        return draft
 
 
 def _clip_provider_text(value: Any, limit: int) -> Any:
@@ -905,7 +1194,7 @@ def _google_client(api_key: str) -> Any:
     return genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
-            timeout=20_000,
+            timeout=6_000,
             retry_options=types.HttpRetryOptions(attempts=1),
         ),
     )

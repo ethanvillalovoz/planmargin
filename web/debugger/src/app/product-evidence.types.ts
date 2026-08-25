@@ -3,7 +3,10 @@ export type AssistantQueryId =
   | 'method_comparison'
   | 'hypothesis_decisions'
   | 'claim_boundary'
-  | 'beam_pipeline';
+  | 'beam_pipeline'
+  | 'model_performance'
+  | 'inference_qualification'
+  | 'workbench_provenance';
 
 export interface AssistantQuestion {
   readonly query_id: AssistantQueryId;
@@ -145,6 +148,7 @@ export interface SensorSceneSummary {
   };
   readonly reconstruction: SensorAssetSummary;
   readonly reconstruction_reference?: SensorAssetSummary;
+  readonly reconstruction_context?: SensorAssetSummary;
   readonly lidar: SensorAssetSummary;
   readonly trajectory?: SensorTrajectoryAssetSummary;
 }
@@ -190,7 +194,8 @@ export interface SensorTrajectoryOverlay {
   readonly claim_boundary: string;
 }
 
-export type SensorAssetName = 'reconstruction' | 'reconstruction_reference' | 'lidar';
+export type SensorAssetName =
+  'reconstruction' | 'reconstruction_reference' | 'reconstruction_context' | 'lidar';
 
 export interface SensorAssetBundle {
   readonly summary: SensorSceneSummary;

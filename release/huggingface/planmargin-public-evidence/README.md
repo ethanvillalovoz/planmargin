@@ -28,6 +28,8 @@ downloading scenario-level Waymo Open Dataset data.
 - two active-risk qualification decisions over 2,097 real proposal targets;
 - two sealed TensorRT decisions from a free-tier Tesla T4;
 - two C++17 TensorRT runtime benchmarks;
+- one residual-only FP16 Apple-MPS proxy awaiting TensorRT measurement;
+- one shielded-controller synthetic qualification no-go;
 - a deterministic SHA-256 manifest.
 
 ## What is intentionally excluded
@@ -54,6 +56,11 @@ ms batch-1 p50 latency and 1.009M samples/s at batch 256; a separate C++17
 driver measured 0.1243 ms. The scaled-model run measured 0.277 ms FP32 batch-1
 end-to-end p50 and 0.153 ms in C++17. FP16 RMSE passed, but 0.101 m maximum drift
 exceeded its frozen 0.075 m gate, so scaled FP16 promotion is a measured no-go.
+
+The residual-only FP16 candidate passed the unchanged numerical gates on Apple
+MPS, but has not been measured by TensorRT and remains unpromoted. The shielded
+RL follow-up reached a 2.686% collision rate in its synthetic evaluation and
+missed its frozen 1% gate, so it did not advance to a real-WOMD campaign.
 
 ## Use
 

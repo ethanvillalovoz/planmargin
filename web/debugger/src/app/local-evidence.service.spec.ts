@@ -130,6 +130,9 @@ describe('LocalEvidenceService', () => {
       if (url.endsWith('/sensor-scene/reconstruction.ply')) {
         return Promise.resolve(new Response(new Uint8Array([112, 108, 121, 51])));
       }
+      if (url.endsWith('/sensor-scene/reconstruction_context.ply')) {
+        return Promise.resolve(new Response(new Uint8Array([112, 108, 121, 67])));
+      }
       if (url.endsWith('/sensor-scene/lidar.ply')) {
         return Promise.resolve(new Response(new Uint8Array([112, 108, 121, 76])));
       }
@@ -145,6 +148,7 @@ describe('LocalEvidenceService', () => {
               bytes: 1_247_497,
             },
             reconstruction: { primitive_count: 1_179_648, source_frame_index: 99 },
+            reconstruction_context: { primitive_count: 1_179_648, source_frame_index: 60 },
             lidar: { primitive_count: 50_241, source_frame_index: 99 },
           }),
         );
@@ -259,6 +263,7 @@ describe('LocalEvidenceService', () => {
     const frame = await service.sensorFrame(99);
     const annotations = await service.sensorAnnotations();
     const reconstruction = await service.sensorAsset('reconstruction');
+    const context = await service.sensorAsset('reconstruction_context');
     const lidar = await service.sensorAsset('lidar');
 
     expect(scene.frame_count).toBe(199);
@@ -266,6 +271,7 @@ describe('LocalEvidenceService', () => {
     expect(annotations.frames[0].boxes[0].track_id).toBe('track-1');
     expect(reconstruction.summary.reconstruction.primitive_count).toBe(1_179_648);
     expect(Array.from(new Uint8Array(reconstruction.bytes))).toEqual([112, 108, 121, 51]);
+    expect(Array.from(new Uint8Array(context.bytes))).toEqual([112, 108, 121, 67]);
     expect(lidar.summary.lidar.primitive_count).toBe(50_241);
     expect(Array.from(new Uint8Array(lidar.bytes))).toEqual([112, 108, 121, 76]);
   });

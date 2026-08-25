@@ -32,7 +32,7 @@ Perception inputs. It is a visual product surface, not campaign evidence.
 Campaign proposal records contain hashes but not replayable trajectories. The
 API represents proposal evidence as a trajectory only when a separate replay
 package reproduces the sealed hashes, outcomes, interaction metrics, and
-scenario validation. The current workspace has five such packages selected for
+scenario validation. The current workspace has ten such packages selected for
 margin, edit-size, support, and method diversity. Stage-0 remains separate and
 is never substituted for an unretained proposal.
 
@@ -149,7 +149,7 @@ disconnect does.
 | `GET /api/v1/runs`                                                 | Stage-0 plus every proposal-linked replay that passes startup validation              |
 | `GET /api/v1/runs/{run_id}`                                        | redacted scene, trajectories, outcomes, and interaction timeline                     |
 | `GET /api/v1/assistant/status`                                     | active explanation provider and input scope                                          |
-| `GET /api/v1/assistant/questions`                                  | five natural-language questions mapped to a closed query allowlist                   |
+| `GET /api/v1/assistant/questions`                                  | eight natural-language questions mapped to a closed query allowlist                  |
 | `GET /api/v1/assistant/{query_id}`                                 | cited facts, bounded explanation, limitations, and privacy receipt                   |
 | `GET /api/v1/gaussian-field`                                       | privacy-reduced geometry metrics and frozen integration gates                        |
 | `GET /api/v1/gaussian-field/field.ply`                             | sealed local Gaussian PLY for in-browser rendering                                   |

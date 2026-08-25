@@ -116,8 +116,11 @@ interface FallbackScene {
     }
     .fallback {
       position: absolute;
-      inset: 0;
-      width: 100%;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 280px;
+      width: calc(100% - 280px);
       height: 100%;
       background: var(--app-bg);
     }
@@ -174,8 +177,8 @@ interface FallbackScene {
     }
     .scene-label {
       position: absolute;
-      top: 0.85rem;
-      left: 1rem;
+      top: 5rem;
+      left: 296px;
       display: flex;
       align-items: baseline;
       gap: 0.75rem;
@@ -191,7 +194,7 @@ interface FallbackScene {
     }
     .orientation {
       position: absolute;
-      top: 0.85rem;
+      top: 5rem;
       right: 1rem;
       display: grid;
       justify-items: center;
@@ -237,14 +240,14 @@ interface FallbackScene {
     }
     .scale {
       position: absolute;
-      left: 1rem;
+      left: 296px;
       bottom: 0.8rem;
       color: #aab9c4;
       font-size: 0.58rem;
     }
     .planning-guide {
       position: absolute;
-      left: 50%;
+      left: calc(50% + 140px);
       bottom: 0.8rem;
       display: grid;
       max-width: 390px;
@@ -274,6 +277,13 @@ interface FallbackScene {
       border-left: 1px solid #aab9c4;
     }
     @media (max-width: 760px) {
+      .fallback {
+        left: 0;
+        width: 100%;
+      }
+      .scene-label {
+        left: 1rem;
+      }
       .legend {
         right: 0.65rem;
         bottom: 4.6rem;
@@ -288,7 +298,14 @@ interface FallbackScene {
         text-align: right;
       }
       .scale {
+        left: 1rem;
         bottom: 4.6rem;
+      }
+    }
+    @media (max-width: 560px) {
+      .scene-label,
+      .orientation {
+        top: 12.9rem;
       }
     }
   `,

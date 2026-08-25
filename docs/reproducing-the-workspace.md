@@ -130,7 +130,7 @@ for redistribution.
 
 Train the real WOMD trajectory model first, then bootstrap the Sensor Lab. The
 bootstrap downloads only the six pinned WOD v2 Perception Parquet components,
-installs Apple SHARP at a pinned revision, predicts both source-frame 3DGS
+installs Apple SHARP at a pinned revision, predicts all three source-frame 3DGS
 assets using MPS/CUDA/CPU, and generates the camera, annotation, LiDAR, and
 calibrated-trajectory manifests:
 

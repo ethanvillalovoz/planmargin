@@ -118,7 +118,7 @@ That override is not part of the reproduction workflow.
 
 The product bootstrap downloads only the six pinned WOD v2 Perception
 components needed by the visual scene, installs Apple SHARP at a pinned
-revision, generates both source-frame 3DGS assets on MPS/CUDA/CPU, and prepares
+revision, generates all three source-frame 3DGS assets on MPS/CUDA/CPU, and prepares
 the camera, native annotation, LiDAR, and calibrated-trajectory manifests. The
 trajectory model must be trained first from the authorized WOMD inputs:
 

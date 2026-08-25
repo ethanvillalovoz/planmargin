@@ -20,7 +20,7 @@ flowchart LR
     F --> G
 ```
 
-The classifier chooses exactly one of five query IDs:
+The classifier chooses exactly one of eight query IDs:
 
 | Query ID | Evidence responsibility |
 | --- | --- |
@@ -29,6 +29,9 @@ The classifier chooses exactly one of five query IDs:
 | `hypothesis_decisions` | Frozen H1, H2, and H3 decisions without reinterpreting censored values |
 | `claim_boundary` | What the development result does and does not establish |
 | `beam_pipeline` | Published Beam ingestion, event, partition, integrity, and privacy evidence |
+| `model_performance` | Real-WOMD trajectory-model accuracy, baseline, and repeatability evidence |
+| `inference_qualification` | Measured NVIDIA latency, throughput, FP32 parity, and FP16 no-go evidence |
+| `workbench_provenance` | Aggregate campaign, exact replay, 3DGS, record-separation, and redistribution boundaries |
 
 Unknown questions fail closed. The question never becomes SQL, a filesystem
 path, a model-selected function, or a network request. Public facts embed the
@@ -67,10 +70,12 @@ result. It receives neither the raw question nor local DuckDB rows, campaign
 records, trajectories, scenario IDs, paths, credentials, or private seals.
 Structured output is validated with Pydantic, unknown fact citations are
 rejected, numeric prose is rejected so the model cannot manufacture metrics,
-and claim-certification phrases fail closed. The client makes at most one
-hosted request and does not retry automatically. If that request fails, the API
-returns the verified deterministic explanation with an explicit provider label
-instead of exposing a raw server error.
+and claim-certification phrases fail closed. The adapter makes at most three
+bounded provider attempts, each with a six-second timeout and SDK retries
+disabled. An attempt is repeated only when transport, parsing, or host-side
+citation validation fails; it never broadens the fact allowlist. If all
+attempts fail, the API returns the verified deterministic explanation with an
+explicit provider label instead of exposing a raw server error.
 
 Google's current documentation identifies `google-genai` as its Python SDK and
 supports JSON-Schema-constrained structured output through the Interactions
@@ -114,7 +119,7 @@ use; PlanMargin never upgrades a project or enables billing.
 
 ## Verified boundary
 
-Data-free tests cover all five routes, JSON Schema validation, source-seal
+Data-free tests cover all eight routes, JSON Schema validation, source-seal
 drift, unknown-query rejection, raw-question exclusion from the simulated
 Gemini payload, public-only provider input, structured-output configuration,
 free-tier confirmation, invalid citations, generated-number rejection, and

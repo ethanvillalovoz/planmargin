@@ -1,0 +1,31 @@
+{
+  "claim_boundary": "Local FP16 numerical proxy only; NVIDIA TensorRT must independently pass before reduced-precision promotion.",
+  "environment": {
+    "device": "mps",
+    "machine": "arm64",
+    "torch": "2.13.0"
+  },
+  "experiment": "v11",
+  "gates": {
+    "fp16_max_error_under_7_5e_2_m": true,
+    "fp16_rmse_under_1e_2_m": true,
+    "host_composition_is_fp32": true,
+    "physical_probe_is_unchanged": true
+  },
+  "input_protocol": "deterministic_physical_probe_v1",
+  "measurement": "local_apple_mps_fp16_proxy",
+  "onnx_sha256": "b6c23eea8b7790e5b11f03634e9d6bdd5400524e24684f765f1aa577f9be8a00",
+  "parity": {
+    "max_absolute_error_m": 0.04598999,
+    "rmse_m": 0.00480654
+  },
+  "protocol_sha256": "28f004340d93c1fabe2bc2573ef85e618583f2fad9b5afa5843ef21c243bf6fc",
+  "record_type": "planmargin.fp16_residual_candidate",
+  "redistribution": "aggregate_only",
+  "sample_count": 256,
+  "schema_version": "1.0.0",
+  "source_model_sha256": "6e557177c57126fc51fb066033147f316d253126aecb165b3f767d4f04ef8660",
+  "status": "tensorrt_required",
+  "synthetic": false,
+  "tensorrt_measured": false
+}

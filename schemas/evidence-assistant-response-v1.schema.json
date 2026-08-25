@@ -124,7 +124,10 @@
         "method_comparison",
         "hypothesis_decisions",
         "claim_boundary",
-        "beam_pipeline"
+        "beam_pipeline",
+        "model_performance",
+        "inference_qualification",
+        "workbench_provenance"
       ]
     },
     "fact": {
