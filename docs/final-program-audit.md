@@ -1,8 +1,8 @@
 # Release-readiness audit
 
-**Audit date:** August 24, 2026
+**Audit date:** August 25, 2026
 
-**Release:** v3.0.0
+**Release:** v3.0.1
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -73,27 +73,27 @@ point field, or reconstruction when licensed evidence is absent.
 
 ## Requirement disposition
 
-| Responsibility             | Disposition | Verified implementation                                                                    |
-| -------------------------- | ----------- | ------------------------------------------------------------------------------------------ |
-| WOMD and Waymax            | Shipped     | deterministic 80-step replay; 14,110 retained physical rollouts and 1,128,800 Waymax steps |
-| Counterfactual search      | Shipped     | matched random and constrained BoTorch qLogNEHVI budgets across 100 cells                  |
-| Python and JAX             | Shipped     | simulation, mutation, orchestration, evidence services, and reproducible RL qualification  |
-| C++20 and pybind11         | Shipped     | native interaction metrics with randomized Python-oracle parity                            |
-| Beam, Parquet, DuckDB, SQL | Shipped     | deterministic partitions, sealed shards, and SQL reconciliation                            |
-| FastAPI                    | Shipped     | loopback-only token authentication, closed response models, `no-store`, and `nosniff`      |
-| Angular and TypeScript     | Shipped     | task-first Workbench, Sensors, and Evidence flows with strict types                        |
-| Three.js and Spark         | Shipped     | lazy-loaded LiDAR/3DGS and planning-scene rendering                                        |
-| 3D Gaussian splatting      | Split       | real SHARP Perception reconstruction shipped; planning-linked study preserved as `no_go`   |
-| Evidence assistant         | Shipped     | deterministic local tools; Gemini is an optional allowlisted explanation adapter           |
-| Proposal replay retention  | Shipped     | exact re-execution linked to the sealed proposal by trajectory, outcome, metric, and seal checks |
+| Responsibility             | Disposition | Verified implementation                                                                             |
+| -------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| WOMD and Waymax            | Shipped     | deterministic 80-step replay; 14,110 retained physical rollouts and 1,128,800 Waymax steps          |
+| Counterfactual search      | Shipped     | matched random and constrained BoTorch qLogNEHVI budgets across 100 cells                           |
+| Python and JAX             | Shipped     | simulation, mutation, orchestration, evidence services, and reproducible RL qualification           |
+| C++20 and pybind11         | Shipped     | native interaction metrics with randomized Python-oracle parity                                     |
+| Beam, Parquet, DuckDB, SQL | Shipped     | deterministic partitions, sealed shards, and SQL reconciliation                                     |
+| FastAPI                    | Shipped     | loopback-only token authentication, closed response models, `no-store`, and `nosniff`               |
+| Angular and TypeScript     | Shipped     | task-first Workbench, Sensors, and Evidence flows with strict types                                 |
+| Three.js and Spark         | Shipped     | lazy-loaded LiDAR/3DGS and planning-scene rendering                                                 |
+| 3D Gaussian splatting      | Split       | real SHARP Perception reconstruction shipped; planning-linked study preserved as `no_go`            |
+| Evidence assistant         | Shipped     | deterministic local tools; Gemini is an optional allowlisted explanation adapter                    |
+| Proposal replay retention  | Shipped     | exact re-execution linked to the sealed proposal by trajectory, outcome, metric, and seal checks    |
 | PyTorch trajectory model   | Shipped     | 1,024 real WOMD scenarios; 0.418 m ADE vs 0.870 m constant-velocity baseline; byte-identical repeat |
-| Active-risk qualification  | Stopped     | 2,097 real targets; 0.137 held-out rank correlation; only 3/9 budget-eight wins                  |
-| Interaction model          | Stopped     | 0.453 m ADE with nearest actors vs 0.434 m for same-data ego-only ablation                       |
-| ONNX and TensorRT 11       | Split       | scaled FP32 measured; scaled FP16 stopped after 0.101 m max drift exceeded its 0.075 m gate       |
-| C++17 TensorRT runtime     | Shipped     | independent `enqueueV3` runner now reports device and pinned-host end-to-end p50/p95/p99         |
-| Residual FP16 candidate    | Pending GPU | Apple-MPS numerical proxy passed; TensorRT has not been measured and promotion remains blocked    |
-| Shielded RL follow-up      | Stopped     | deterministic synthetic study missed its frozen 1% collision gate at 2.686%                       |
-| Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                 |
+| Active-risk qualification  | Stopped     | 2,097 real targets; 0.137 held-out rank correlation; only 3/9 budget-eight wins                     |
+| Interaction model          | Stopped     | 0.453 m ADE with nearest actors vs 0.434 m for same-data ego-only ablation                          |
+| ONNX and TensorRT 11       | Split       | scaled FP32 measured; scaled FP16 stopped after 0.101 m max drift exceeded its 0.075 m gate         |
+| C++17 TensorRT runtime     | Shipped     | independent `enqueueV3` runner now reports device and pinned-host end-to-end p50/p95/p99            |
+| Residual FP16 candidate    | Pending GPU | Apple-MPS numerical proxy passed; TensorRT has not been measured and promotion remains blocked      |
+| Shielded RL follow-up      | Stopped     | deterministic synthetic study missed its frozen 1% collision gate at 2.686%                         |
+| Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                          |
 
 ## Verification performed on this revision
 
@@ -116,6 +116,10 @@ point field, or reconstruction when licensed evidence is absent.
   payload is 339.19 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
+- Python dependency audit: `pip-audit==2.10.1` reported no unreviewed
+  vulnerabilities across all locked extras and groups. Five Apache Beam
+  transitive advisory IDs remain explicit, versioned exceptions under the
+  documented local-DirectRunner reachability boundary.
 - Authenticated HTTP: frontend, health, campaign, investigation, planning runs,
   Sensor metadata, Gaussian metadata, and proposal analysis returned success.
 - Authorization and headers: unauthenticated health returned `401`; private
@@ -124,7 +128,7 @@ point field, or reconstruction when licensed evidence is absent.
 - Workspace doctor distinguishes the prior TensorRT qualification from the
   scaled model's completed FP16 no-go decision.
 - Python source/wheel distributions and the native C++20 extension built
-  successfully for PlanMargin 3.0.0.
+  successfully for PlanMargin 3.0.1.
 - The sixteen-record aggregate-only distribution passed its independent
   SHA-256 verifier locally. No hosted application was deployed.
 
