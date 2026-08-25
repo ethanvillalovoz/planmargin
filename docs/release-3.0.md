@@ -1,8 +1,8 @@
-# PlanMargin 3 release candidate
+# PlanMargin 3.0.0
 
-PlanMargin 3 is a local, unpublished release candidate. It does not create or
-update a hosted application, GitHub Pages deployment, Hugging Face repository,
-Git tag, or GitHub release.
+PlanMargin 3.0.0 is a public source-code and aggregate-evidence release. It does
+not create or update a hosted application, GitHub Pages deployment, or Hugging
+Face repository, and it does not include licensed per-scenario evidence.
 
 ## Product additions
 
@@ -28,10 +28,10 @@ Git tag, or GitHub release.
 
 ## Distribution boundary
 
-The repository contains code, schemas, documentation, and aggregate decisions.
-Exact replay packages, WOD Perception inputs, camera frames, LiDAR, and all
-three 3DGS files remain ignored local evidence. Publishing remains a separate
-operator decision.
+The repository and GitHub source archives contain code, schemas, documentation,
+and aggregate decisions. Exact replay packages, WOD Perception inputs, camera
+frames, LiDAR, and all three 3DGS files remain ignored local evidence and are
+not part of the release.
 
 ## Local sign-off artifacts
 
@@ -45,4 +45,4 @@ operator decision.
 - The macOS accessibility tree exposes named navigation, evidence tabs,
   headings, status text, and primary actions. Keyboard Tab order and Return
   activation were exercised in Chrome. See
-  [the accessibility audit](accessibility-audit-v3.0.md).
+  [the accessibility audit](https://github.com/ethanvillalovoz/planmargin/blob/v3.0.0/docs/accessibility-audit-v3.0.md).

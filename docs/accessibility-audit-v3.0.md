@@ -59,5 +59,5 @@ control remain usable without horizontal overflow.
 Before claiming full screen-reader certification, a human should run one final
 VoiceOver speech pass in Safari or Chrome and judge verbosity, pronunciation,
 and announcement timing for dynamic Gemini and playback updates. That check is
-not a code or repository blocker for the Version 3 release candidate; it is a
+not a code or repository blocker for the Version 3.0.0 release; it is a
 separate perceptual sign-off that this environment cannot honestly simulate.

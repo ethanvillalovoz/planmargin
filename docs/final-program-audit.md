@@ -2,7 +2,7 @@
 
 **Audit date:** August 24, 2026
 
-**Release candidate:** v3.0.0 (unpublished)
+**Release:** v3.0.0
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -124,9 +124,9 @@ point field, or reconstruction when licensed evidence is absent.
 - Workspace doctor distinguishes the prior TensorRT qualification from the
   scaled model's completed FP16 no-go decision.
 - Python source/wheel distributions and the native C++20 extension built
-  successfully for the unpublished PlanMargin 3.0.0 candidate.
-- The sixteen-record aggregate-only distribution candidate passed its
-  independent SHA-256 verifier locally. No hosting change was made.
+  successfully for PlanMargin 3.0.0.
+- The sixteen-record aggregate-only distribution passed its independent
+  SHA-256 verifier locally. No hosted application was deployed.
 
 ## Scientific outcome
 
