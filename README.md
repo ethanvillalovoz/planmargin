@@ -335,7 +335,7 @@ artifacts are present instead of silently degrading the product.
 | [`docs`](docs)                               | architecture, protocols, decisions, results, and runbooks      |
 | [`release/huggingface`](release/huggingface) | aggregate-only package; no WOD scene files                     |
 
-Start with the [PlanMargin 3 release candidate](docs/release-3.0.md),
+Start with the [PlanMargin 3.0.0 release notes](docs/release-3.0.md),
 [final program audit](docs/final-program-audit.md),
 [using the workbench](docs/using-the-workbench.md), the
 [architecture](docs/architecture.md),
