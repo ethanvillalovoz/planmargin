@@ -180,11 +180,16 @@ def _seed_gaussian(root: Path) -> bytes:
     return field
 
 
-def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes, bytes, bytes]:
+def _seed_sensor_scene(
+    root: Path,
+) -> tuple[bytes, bytes, bytes, bytes, bytes, bytes, bytes]:
     frame = b"\xff\xd8real-waymo-frame\xff\xd9"
     reconstruction = b"ply\nformat ascii 1.0\nelement vertex 1\nend_header\n"
     reconstruction_reference = (
         b"ply\nformat ascii 1.0\nelement vertex 1\nend_header\nreference"
+    )
+    reconstruction_context = (
+        b"ply\nformat ascii 1.0\nelement vertex 1\nend_header\ncontext"
     )
     lidar = b"ply\nformat ascii 1.0\nelement vertex 2\nend_header\n"
     trajectory = json.dumps(
@@ -228,6 +233,8 @@ def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes, bytes, b
     reconstruction_path.write_bytes(reconstruction)
     reference_path = root / "artifacts" / "real-3dgs" / "scene-reference.ply"
     reference_path.write_bytes(reconstruction_reference)
+    context_path = root / "artifacts" / "real-3dgs" / "scene-context.ply"
+    context_path.write_bytes(reconstruction_context)
     sensor_directory = root / evidence_api.DEFAULT_SENSOR_SCENE
     sensor_directory.mkdir(parents=True)
     lidar_path = sensor_directory / "lidar.ply"
@@ -281,6 +288,14 @@ def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes, bytes, b
                     "bytes": len(reconstruction_reference),
                     "sha256": hashlib.sha256(reconstruction_reference).hexdigest(),
                 },
+                "reconstruction_context": {
+                    "representation": "apple_sharp_3d_gaussian_splatting",
+                    "source_frame_index": 0,
+                    "primitive_count": 1,
+                    "file": "artifacts/real-3dgs/scene-context.ply",
+                    "bytes": len(reconstruction_context),
+                    "sha256": hashlib.sha256(reconstruction_context).hexdigest(),
+                },
                 "lidar": {
                     "representation": "same_frame_lidar_gaussian_field",
                     "source_frame_index": 0,
@@ -307,6 +322,7 @@ def _seed_sensor_scene(root: Path) -> tuple[bytes, bytes, bytes, bytes, bytes, b
         frame,
         reconstruction,
         reconstruction_reference,
+        reconstruction_context,
         lidar,
         annotations,
         trajectory,
@@ -538,7 +554,7 @@ def test_assistant_and_gaussian_workspaces_are_authenticated(
             "gemini_configured": False,
             "explanation_only": True,
         }
-        assert len(questions.json()) == 5
+        assert len(questions.json()) == 8
         assert answer.status_code == 200
         assert answer.json()["question"]["query_id"] == "method_comparison"
         assert answer.json()["privacy"]["private_data_sent_to_provider"] is False
@@ -554,9 +570,15 @@ def test_assistant_and_gaussian_workspaces_are_authenticated(
 def test_real_sensor_scene_is_authenticated_and_streamed(
     app_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    frame, reconstruction, reconstruction_reference, lidar, annotations, trajectory = (
-        _seed_sensor_scene(app_root)
-    )
+    (
+        frame,
+        reconstruction,
+        reconstruction_reference,
+        reconstruction_context,
+        lidar,
+        annotations,
+        trajectory,
+    ) = _seed_sensor_scene(app_root)
 
     def open_repository(repository: evidence_api.EvidenceRepository) -> None:
         _seed_repository(repository)
@@ -575,6 +597,9 @@ def test_real_sensor_scene_is_authenticated_and_streamed(
         reference = client.get(
             "/api/v1/sensor-scene/reconstruction_reference.ply", headers=headers
         )
+        context = client.get(
+            "/api/v1/sensor-scene/reconstruction_context.ply", headers=headers
+        )
         point_field = client.get("/api/v1/sensor-scene/lidar.ply", headers=headers)
         path_overlay = client.get(
             "/api/v1/sensor-scene/trajectory.json", headers=headers
@@ -583,12 +608,14 @@ def test_real_sensor_scene_is_authenticated_and_streamed(
         assert summary.status_code == 200
         assert summary.json()["evidence_mode"] == "real_local_sensor"
         assert summary.json()["reconstruction"]["primitive_count"] == 1
+        assert summary.json()["reconstruction_context"]["primitive_count"] == 1
         assert summary.json()["trajectory"]["model_status"] == "visualization_qualified"
         assert summary.json()["annotations"]["box_count"] == 1
         assert front.content == frame
         assert boxes.content == annotations
         assert sharp.content == reconstruction
         assert reference.content == reconstruction_reference
+        assert context.content == reconstruction_context
         assert point_field.content == lidar
         assert path_overlay.content == trajectory
         assert client.get("/api/v1/sensor-scene").status_code == 401

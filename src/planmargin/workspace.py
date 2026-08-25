@@ -163,13 +163,14 @@ def _sensor_ready(root: Path) -> tuple[bool, str]:
         repository.sensor_annotations()
         repository.sensor_asset("reconstruction")
         repository.sensor_asset("reconstruction_reference")
+        repository.sensor_asset("reconstruction_context")
         repository.sensor_asset("lidar")
         repository.sensor_trajectory()
     except (FileNotFoundError, NotADirectoryError, ValueError, OSError) as error:
         return False, str(error)
     return (
         True,
-        f"{summary['frame_count']} camera frames, native annotations, 3DGS, and LiDAR verified.",
+        f"{summary['frame_count']} camera frames, native annotations, three 3DGS assets, and LiDAR verified.",
     )
 
 
@@ -505,8 +506,18 @@ def inspect_workspace(root: Path) -> ReadinessReport:
     raw_ready = _regular_files(
         tuple(raw_directory / f"{component}.parquet" for component in WOD_COMPONENTS)
     )
-    sharp_path = (
-        root / "artifacts" / "real-3dgs" / "waymo-front" / "099-1552440205262596.ply"
+    sharp_paths = (
+        root
+        / "artifacts"
+        / "real-3dgs"
+        / "waymo-front-moving"
+        / "020-1552440197361693.ply",
+        root
+        / "artifacts"
+        / "real-3dgs"
+        / "waymo-front-context"
+        / "060-1552440201362569.ply",
+        root / "artifacts" / "real-3dgs" / "waymo-front" / "099-1552440205262596.ply",
     )
     capabilities = (
         Capability(
@@ -554,12 +565,12 @@ def inspect_workspace(root: Path) -> ReadinessReport:
         ),
         Capability(
             "Apple SHARP reconstruction",
-            sharp_path.is_file() and not sharp_path.is_symlink(),
+            _regular_files(sharp_paths),
             "authorized local derivative",
             (
-                "The pinned source-frame SHARP PLY is present."
-                if sharp_path.is_file()
-                else "The source-frame SHARP PLY has not been generated."
+                "All three pinned source-frame SHARP PLY files are present."
+                if _regular_files(sharp_paths)
+                else "The three source-frame SHARP PLY files have not all been generated."
             ),
             "uv run --frozen planmargin-bootstrap-sensor --accept-waymo-terms",
         ),

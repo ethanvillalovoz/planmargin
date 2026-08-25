@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorCaretDown,
@@ -243,7 +250,7 @@ import { SensorViewport } from './sensor-viewport';
                 </div>
               } @else {
                 <p class="evidence-boundary">
-                  Source-frame spatial asset · frame {{ paddedFrame() }} only
+                  Source-frame spatial asset · frame {{ paddedFrame() }} of 3
                 </p>
               }
             }
@@ -1131,7 +1138,6 @@ import { SensorViewport } from './sensor-viewport';
         width: auto;
         transform: none;
       }
-      .scenario-controls,
       .view-controls {
         top: 5.4rem;
       }
@@ -1139,6 +1145,7 @@ import { SensorViewport } from './sensor-viewport';
         max-width: 130px;
       }
       .scenario-controls {
+        top: 9.15rem;
         width: min(220px, calc(100vw - 1.3rem));
       }
       .scenario-controls:not(.collapsed) + .view-controls {
@@ -1155,6 +1162,14 @@ export class SimulatorWorkspace {
   readonly connectRequested = output<void>();
   readonly evidenceRequested = output<void>();
   readonly embedded = input(false);
+
+  constructor() {
+    afterNextRender(() => {
+      if (window.matchMedia('(max-width: 560px)').matches) {
+        this.simulator.controlsOpen.set(false);
+      }
+    });
+  }
 
   protected selectMode(mode: SensorMode): void {
     if (!this.local.connected()) {

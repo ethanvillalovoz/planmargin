@@ -17,9 +17,10 @@ product. This is a licensing and privacy boundary, not a demo-data fallback.
 The staged dataset package is in
 `release/huggingface/planmargin-public-evidence`. It contains six campaign
 records, two trajectory-model results, two active-risk qualification decisions,
-both TensorRT decisions, both C++ benchmarks, and an integrity verifier:
-fourteen aggregate research records in total. Repository setup and verification
-do not publish or update an external dataset.
+both TensorRT decisions, both C++ benchmarks, the residual-FP16 proxy, the
+shielded-controller no-go, and an integrity verifier: sixteen aggregate research
+records in total. Repository setup and verification do not publish or update an
+external dataset.
 This is a review supplement, not the data package for the complete workbench. It
 must not be expanded with ignored artifacts or `data/raw` files.
 

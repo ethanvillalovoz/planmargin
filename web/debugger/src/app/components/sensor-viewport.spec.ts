@@ -23,6 +23,7 @@ describe('SensorViewport', () => {
         bytes: 1_247_497,
       },
       reconstruction: { primitive_count: 1_179_648, source_frame_index: 99 },
+      reconstruction_context: { primitive_count: 1_179_648, source_frame_index: 60 },
       lidar: { primitive_count: 50_241, source_frame_index: 99 },
     } as SensorSceneSummary);
     sensorAnnotations.mockResolvedValue({

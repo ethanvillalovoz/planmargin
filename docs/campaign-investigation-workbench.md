@@ -45,7 +45,7 @@ objectives, constraints, deterministic outcomes, cost, and validated trajectory
 hashes. They did not retain the underlying controller trajectories.
 
 The separately versioned replay-retention protocol closes that gap only for
-explicitly re-executed proposals. The current local workspace contains five:
+explicitly re-executed proposals. The current local workspace contains ten:
 
 | Selection purpose | Method | Seed | Scenario order | Proposal |
 | --- | --- | ---: | ---: | ---: |
@@ -54,6 +54,11 @@ explicitly re-executed proposals. The current local workspace contains five:
 | Small-edit near-margin case | bayesian | 3 | 8 | 20 |
 | Strongest-support Bayesian case | bayesian | 2 | 2 | 27 |
 | Strongest-support random case | random | 3 | 2 | 20 |
+| Scenario-order 1 low-margin case | bayesian | 1 | 1 | 16 |
+| Scenario-order 3 low-margin case | random | 4 | 3 | 30 |
+| Scenario-order 4 low-margin case | bayesian | 0 | 4 | 29 |
+| Scenario-order 5 low-margin case | bayesian | 3 | 5 | 20 |
+| Scenario-order 7 low-margin case | random | 0 | 7 | 13 |
 
 Their fresh trajectories reproduce the sealed v1 hashes and metrics. The UI
 labels all other proposal records as not retained and never substitutes the

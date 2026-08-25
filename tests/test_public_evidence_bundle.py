@@ -65,6 +65,12 @@ def test_public_bundle_hashes_and_scope() -> None:
         "active-risk-v2.json": ROOT
         / "experiments"
         / "active-risk-qualification-v2.json",
+        "fp16-residual-candidate.json": ROOT
+        / "experiments"
+        / "fp16-residual-candidate-v1.json",
+        "shielded-rl-controller.json": ROOT
+        / "experiments"
+        / "shielded-rl-controller-v3.json",
     }
     for name, source in expected_sources.items():
         public = json.loads((BUNDLE / "data" / name).read_text(encoding="utf-8"))

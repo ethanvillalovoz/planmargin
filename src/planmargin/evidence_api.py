@@ -51,6 +51,9 @@ ASSISTANT_QUESTIONS = {
     "hypothesis_decisions": "What happened to H1, H2, and H3?",
     "claim_boundary": "What is the defensible claim and limitation?",
     "beam_pipeline": "What did the Beam feature pipeline process?",
+    "model_performance": "How did the real-WOMD trajectory model perform?",
+    "inference_qualification": "What passed and failed in TensorRT qualification?",
+    "workbench_provenance": "Which evidence has exact replay and sensor provenance?",
 }
 
 
@@ -396,6 +399,7 @@ class SensorSceneEvidence(EvidenceModel):
     annotations: SensorAnnotationEvidence
     reconstruction: SensorAssetEvidence
     reconstruction_reference: SensorAssetEvidence | None = None
+    reconstruction_context: SensorAssetEvidence | None = None
     lidar: SensorAssetEvidence
     trajectory: SensorTrajectoryAssetEvidence | None = None
 
@@ -1346,6 +1350,7 @@ class EvidenceRepository:
         annotations = manifest.get("annotations")
         reconstruction = manifest.get("reconstruction")
         reconstruction_reference = manifest.get("reconstruction_reference")
+        reconstruction_context = manifest.get("reconstruction_context")
         lidar = manifest.get("lidar")
         trajectory = manifest.get("trajectory")
         if (
@@ -1376,6 +1381,10 @@ class EvidenceRepository:
             if not isinstance(reconstruction_reference, dict):
                 raise ValueError("Reference reconstruction is invalid")
             assets.append(reconstruction_reference)
+        if reconstruction_context is not None:
+            if not isinstance(reconstruction_context, dict):
+                raise ValueError("Context reconstruction is invalid")
+            assets.append(reconstruction_context)
         for asset in assets:
             relative = asset.get("file")
             if not isinstance(relative, str):
@@ -1442,6 +1451,16 @@ class EvidenceRepository:
                     "bytes",
                 )
             }
+        if reconstruction_context is not None:
+            summary["reconstruction_context"] = {
+                key: reconstruction_context[key]
+                for key in (
+                    "representation",
+                    "source_frame_index",
+                    "primitive_count",
+                    "bytes",
+                )
+            }
         if trajectory is not None:
             summary["trajectory"] = {
                 key: trajectory[key]
@@ -1476,7 +1495,13 @@ class EvidenceRepository:
         return path
 
     def sensor_asset(
-        self, name: Literal["reconstruction", "reconstruction_reference", "lidar"]
+        self,
+        name: Literal[
+            "reconstruction",
+            "reconstruction_reference",
+            "reconstruction_context",
+            "lidar",
+        ],
     ) -> Path:
         """Return one validated binary sensor representation."""
         _, manifest = self.sensor_scene()
@@ -1949,7 +1974,12 @@ def create_app(
         responses={200: {"content": {"application/octet-stream": {}}}},
     )
     def sensor_asset(
-        asset: Literal["reconstruction", "reconstruction_reference", "lidar"],
+        asset: Literal[
+            "reconstruction",
+            "reconstruction_reference",
+            "reconstruction_context",
+            "lidar",
+        ],
     ) -> FileResponse:
         try:
             path = repository.sensor_asset(asset)

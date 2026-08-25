@@ -181,7 +181,7 @@ dependencies:
 - **FastAPI:** implemented as a localhost-only, read-only boundary over ignored
   sealed records and verified DuckDB/Parquet evidence; the Angular client uses
   its fixed authenticated projections without persistence or export.
-- **Evidence assistant:** implemented with five allowlisted aggregate-query
+- **Evidence assistant:** implemented with eight allowlisted aggregate-query
   tools, a deterministic offline default, sealed citations, and an optional
   public-only Gemini structured-output adapter; never metric generation,
   finding certification, or vehicle control.

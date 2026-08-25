@@ -1,0 +1,44 @@
+{
+  "claim_boundary": "Synthetic car-following qualification only; not a Waymo Driver, real-WOMD, planner-safety, or deployment result.",
+  "evaluation": {
+    "emergency_braking": {
+      "collision_count": 59,
+      "collision_rate": 0.02880859375,
+      "episode_count": 2048,
+      "mean_distance_m": 92.56718291621655,
+      "mean_return": -2.333659056500437
+    },
+    "shielded_rl": {
+      "collision_count": 55,
+      "collision_rate": 0.02685546875,
+      "episode_count": 2048,
+      "mean_distance_m": 85.7951894425787,
+      "mean_return": -0.9921482420850225
+    },
+    "untrained": {
+      "collision_count": 225,
+      "collision_rate": 0.10986328125,
+      "episode_count": 2048,
+      "mean_distance_m": 52.30907364026643,
+      "mean_return": -10.86087059268175
+    }
+  },
+  "evaluation_seed": 2029,
+  "experiment": "v10",
+  "gates": {
+    "deterministic_training": true,
+    "free_local_compute": true,
+    "not_worse_than_emergency_plus_0_25_points": true,
+    "progress_at_least_80_percent_of_emergency": true,
+    "return_at_least_5_above_untrained": true,
+    "synthetic_collision_rate_at_most_1_percent": false
+  },
+  "protocol_sha256": "28f004340d93c1fabe2bc2573ef85e618583f2fad9b5afa5843ef21c243bf6fc",
+  "real_waymax_campaign_run": false,
+  "record_type": "planmargin.shielded_rl_controller_qualification",
+  "redistribution": "aggregate_only",
+  "schema_version": "1.0.0",
+  "status": "synthetic_no_go",
+  "synthetic": true,
+  "training_seed": 2027
+}

@@ -53,9 +53,10 @@ Choose **Sensors** to open the WOD Perception track.
 
 - **Camera** plays 199 recorded FRONT frames. Native boxes change with each
   frame rather than remaining fixed on the video.
-- **3DGS** loads the pinned Apple SHARP reconstruction for one source frame.
-  Drag to orbit and scroll to zoom. It is a spatial asset, so video playback is
-  correctly disabled.
+- **3DGS** switches among three pinned Apple SHARP source-frame
+  reconstructions: moving frame 20, approach frame 60, and stopped frame 99.
+  Drag to orbit and scroll to zoom. These are spatial assets, so video playback
+  is correctly disabled.
 - **LiDAR** loads the same-frame point field as the reconstruction. It is also a
   spatial asset rather than a disguised camera frame.
 

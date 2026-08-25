@@ -28,6 +28,7 @@ SEGMENT_ID = "10023947602400723454_1120_000_1140_000"
 FRONT_CAMERA_NAME = 1
 SOURCE_FRAME_INDEX = 99
 MOVING_SOURCE_FRAME_INDEX = 20
+CONTEXT_SOURCE_FRAME_INDEX = 60
 EXPECTED_FRAME_COUNT = 199
 EXPECTED_GAUSSIANS = 1_179_648
 MAX_LIDAR_PRIMITIVES = 75_000
@@ -451,6 +452,13 @@ def prepare(
         / "waymo-front-moving"
         / "020-1552440197361693.ply"
     )
+    context_gaussian_path = (
+        root
+        / "artifacts"
+        / "real-3dgs"
+        / "waymo-front-context"
+        / "060-1552440201362569.ply"
+    )
     for source in (
         camera_parquet,
         camera_box_parquet,
@@ -543,6 +551,29 @@ def prepare(
             ],
             check=True,
         )
+    if not context_gaussian_path.is_file() and generate_sharp:
+        if sharp_command is None or not sharp_command.is_file():
+            raise ValueError("The Apple SHARP command is unavailable")
+        context_gaussian_path.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                str(sharp_command),
+                "predict",
+                "--input-path",
+                str(frames_directory / frames[CONTEXT_SOURCE_FRAME_INDEX]["file"]),
+                "--output-path",
+                str(context_gaussian_path.parent),
+                "--device",
+                device,
+                "--no-render",
+                *(
+                    ["--checkpoint-path", str(sharp_checkpoint)]
+                    if sharp_checkpoint is not None
+                    else []
+                ),
+            ],
+            check=True,
+        )
     if gaussian_path.is_symlink() or not gaussian_path.is_file():
         raise ValueError(
             "Required SHARP reconstruction is missing; rerun with --generate-sharp"
@@ -556,6 +587,12 @@ def prepare(
     if _vertex_count(moving_gaussian_path) != EXPECTED_GAUSSIANS:
         raise ValueError(
             "The moving-frame SHARP reconstruction has an unexpected count"
+        )
+    if context_gaussian_path.is_symlink() or not context_gaussian_path.is_file():
+        raise ValueError("Required context-frame SHARP reconstruction is missing")
+    if _vertex_count(context_gaussian_path) != EXPECTED_GAUSSIANS:
+        raise ValueError(
+            "The context-frame SHARP reconstruction has an unexpected count"
         )
 
     output_directory = root / "artifacts" / "sensor-scene" / "waymo-front"
@@ -602,6 +639,14 @@ def prepare(
             "file": str(gaussian_path.relative_to(root)),
             "bytes": gaussian_path.stat().st_size,
             "sha256": _sha256(gaussian_path),
+        },
+        "reconstruction_context": {
+            "representation": "apple_sharp_3d_gaussian_splatting",
+            "source_frame_index": CONTEXT_SOURCE_FRAME_INDEX,
+            "primitive_count": EXPECTED_GAUSSIANS,
+            "file": str(context_gaussian_path.relative_to(root)),
+            "bytes": context_gaussian_path.stat().st_size,
+            "sha256": _sha256(context_gaussian_path),
         },
         "lidar": {
             "representation": "same_frame_lidar_gaussian_field",

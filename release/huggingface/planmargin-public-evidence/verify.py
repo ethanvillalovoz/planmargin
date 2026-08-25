@@ -38,10 +38,10 @@ def main() -> None:
     ]
     tensorrt = json.loads((ROOT / "data/tensorrt-qualification.json").read_text())
     cpp = json.loads((ROOT / "data/tensorrt-cpp-benchmark.json").read_text())
-    tensorrt_v2 = json.loads(
-        (ROOT / "data/tensorrt-qualification-v2.json").read_text()
-    )
+    tensorrt_v2 = json.loads((ROOT / "data/tensorrt-qualification-v2.json").read_text())
     cpp_v2 = json.loads((ROOT / "data/tensorrt-cpp-benchmark-v2.json").read_text())
+    residual_fp16 = json.loads((ROOT / "data/fp16-residual-candidate.json").read_text())
+    shielded_rl = json.loads((ROOT / "data/shielded-rl-controller.json").read_text())
     if trajectory.get("synthetic") is not False:
         raise SystemExit("Trajectory result must identify real training data")
     if (
@@ -73,10 +73,26 @@ def main() -> None:
         )
     ):
         raise SystemExit("Scaled TensorRT no-go boundary is incomplete")
-    if cpp_v2.get("schema_version") != "2.0.0" or cpp_v2.get(
-        "measured_iterations"
-    ) != 500:
+    if (
+        cpp_v2.get("schema_version") != "2.0.0"
+        or cpp_v2.get("measured_iterations") != 500
+    ):
         raise SystemExit("Unexpected scaled C++ benchmark protocol")
+    if (
+        residual_fp16.get("status") != "tensorrt_required"
+        or residual_fp16.get("tensorrt_measured") is not False
+        or not all(residual_fp16.get("gates", {}).values())
+    ):
+        raise SystemExit("Residual FP16 proxy boundary is incomplete")
+    if (
+        shielded_rl.get("status") != "synthetic_no_go"
+        or shielded_rl.get("real_waymax_campaign_run") is not False
+        or shielded_rl.get("gates", {}).get(
+            "synthetic_collision_rate_at_most_1_percent"
+        )
+        is not False
+    ):
+        raise SystemExit("Shielded-controller no-go boundary is incomplete")
     restricted = json.dumps(
         (
             rows,
@@ -87,6 +103,8 @@ def main() -> None:
             cpp,
             tensorrt_v2,
             cpp_v2,
+            residual_fp16,
+            shielded_rl,
         ),
         sort_keys=True,
     )
@@ -94,7 +112,7 @@ def main() -> None:
         key in restricted for key in ("scenario_ids", "source_shard", "record_index")
     ):
         raise SystemExit("Restricted provenance field found")
-    print("PlanMargin public evidence verified: 14 aggregate research records")
+    print("PlanMargin public evidence verified: 16 aggregate research records")
 
 
 if __name__ == "__main__":

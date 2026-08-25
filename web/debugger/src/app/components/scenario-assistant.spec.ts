@@ -7,6 +7,9 @@ describe('classifyAssistantQuestion', () => {
     ['What did the Beam feature pipeline process?', 'beam_pipeline'],
     ['What is the defensible safety claim?', 'claim_boundary'],
     ['Summarize the development campaign results', 'campaign_overview'],
+    ['What failed in the FP16 TensorRT qualification?', 'inference_qualification'],
+    ['How did the trajectory model compare on ADE?', 'model_performance'],
+    ['Which proposals have exact replay provenance?', 'workbench_provenance'],
   ] as const)('routes %s to %s', (question, queryId) => {
     expect(classifyAssistantQuestion(question)).toBe(queryId);
   });

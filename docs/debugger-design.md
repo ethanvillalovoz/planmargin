@@ -48,8 +48,8 @@ input source, not affiliation or production-driver access.
 
 - Camera and LiDAR come from one local Waymo Open Dataset v2 Perception
   segment. Camera boxes come from that segment's native `camera_box` component
-  and preserve cross-frame track IDs. The SHARP 3DGS is generated from camera
-  frame 99 of that segment.
+  and preserve cross-frame track IDs. The three SHARP 3DGS assets are generated
+  from camera frames 20, 60, and 99 of that segment.
 - The planning overlay and counterfactual outcome come from a separate,
   privacy-reduced WOMD Motion/Stage-0 evidence path. They are not geometrically
   registered to the visual Perception segment and are labeled as separate.

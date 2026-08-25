@@ -18,7 +18,7 @@ evaluation.
 The public clone opens a useful aggregate analysis surface over the sealed
 3,200-proposal campaign. It fails closed only for licensed per-scenario data. An
 authorized local launch adds exact proposal replay, candidate investigation,
-recorded camera annotations, LiDAR, two 3D Gaussian reconstructions, and a
+recorded camera annotations, LiDAR, three 3D Gaussian reconstructions, and a
 calibrated real-data JAX trajectory overlay without uploading those artifacts.
 The public Evidence view exposes the 1,024-scenario real-WOMD prediction study,
 both free-T4 TensorRT decisions, and every promotion gate—including learned and
@@ -110,10 +110,11 @@ uv run --frozen --extra assistant planmargin-workbench \
 ```
 
 Do not attach billing to the AI Studio project if a hard zero-cost boundary is
-required. The adapter makes at most one hosted request after an explicit
-question, does not retry automatically, and sends public aggregate facts rather
-than local scenario records. A failed hosted request falls back to the labeled,
-verified deterministic explanation. See the
+required. After an explicit question, the adapter makes at most three bounded
+hosted attempts (six seconds each) when the provider returns malformed or
+uncitable structured output. It sends public aggregate facts rather than local
+scenario records. Exhausted attempts fall back to the labeled, verified
+deterministic explanation. See the
 [provider contract](docs/evidence-assistant.md).
 
 If the doctor reports missing licensed artifacts, use the
@@ -157,17 +158,17 @@ remain untestable because neither method found a qualifying failure. No
 validation-backed comparison was opened after that no-go.
 
 The original Stage-0 planning replay is authentic but separate from the
-campaign. PlanMargin now also retains five separately versioned replays: the
-overall and Bayesian closest-margin cases, a small-edit near-margin case, and
-the strongest-support Bayesian and random cases. Each was re-executed from its
-authorized WOMD source, and its tested/reference trajectory hashes, outcomes,
-interaction metrics, scenario validation, and repeated executions match the
-sealed v1 proposal. The other proposal records remain hash-and-metric evidence
-unless they are deliberately re-executed through the same verifier.
+campaign. PlanMargin now also retains ten separately versioned replays: five
+priority cases plus five additional low-margin proposals from distinct scenario
+orders. Each was re-executed from its authorized WOMD source, and its
+tested/reference trajectory hashes, outcomes, interaction metrics, scenario
+validation, and repeated executions match the sealed v1 proposal. The other
+proposal records remain hash-and-metric evidence unless they are deliberately
+re-executed through the same verifier.
 
 The WOD Perception camera and LiDAR remain separate from the WOMD/Waymax
 counterfactual experiment. The Sensor Lab now contains SHARP reconstructions
-for moving frame 20 and stopped frame 99. At frame 20 it registers the recorded
+for moving frame 20, approach frame 60, and stopped frame 99. At frame 20 it registers the recorded
 three-second ego path, a real-WOMD-trained JAX prediction, and a constant-
 velocity baseline into the SHARP source-camera coordinate system. The model is
 held out by scenario and meets its absolute visualization error gates, but does
@@ -197,6 +198,15 @@ maximum drift exceeded the frozen 0.075 m limit, so FP16 promotion is a measured
 no-go. The earlier 128-scenario model retains its separate qualified result;
 those values are never attributed to the scaled model.
 
+Version 2.1 preregistered two bounded follow-ups. A residual-only FP16 graph
+keeps smoothing and composition in host FP32; its unchanged physical probe
+passed locally on Apple MPS at 0.046 m maximum error and 0.0048 m RMSE, but it
+has not run on TensorRT and is not promoted. A deterministically trained DQN
+with a frozen longitudinal safety envelope reduced the synthetic collision
+rate to 2.686%, but missed its 1% gate and was stopped before any real-WOMD
+campaign. Aggregate records preserve both results without shipping models or
+licensed examples.
+
 ![PlanMargin 2.0 real-data model and promotion evidence](docs/assets/planmargin-model-runtime-v2.jpg)
 
 | Version 2 decision | Evidence | Promotion |
@@ -205,6 +215,8 @@ those values are never attributed to the scaled model.
 | Learn which counterfactual to test | 2,097 targets; weak scene-held-out ranking and 3/9 budget wins | Stopped |
 | Add nearest-actor context | Same 102-scene test split; worse than ego-only | Stopped |
 | Qualify the scaled ONNX on NVIDIA | Free-T4 Python + C++17 run; FP32 and latency gates passed; FP16 max drift 0.101 m | FP16 stopped; FP32 measured |
+| Re-architect the FP16 graph | Residual-only MPS proxy passed unchanged drift gates | TensorRT measurement required |
+| Add a shield to the learned controller | Deterministic 2,048-episode synthetic qualification; 2.686% collisions | Stopped at frozen 1% gate |
 
 Read the [aggregate result](docs/natural-development-results.md) and
 [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md) for the
@@ -227,7 +239,7 @@ flowchart LR
     M --> I["Nearest-actor ablation"]
     T --> O["ONNX FP32 · typed FP16"]
     O --> N["TensorRT 11 · Python + C++17"]
-    P["WOD Perception"] --> V["Camera · two SHARP 3DGS scenes · LiDAR"]
+    P["WOD Perception"] --> V["Camera · three SHARP 3DGS views · LiDAR"]
     P --> R["Calibrated recorded ego path"]
     J --> R
     A --> U["Angular workbench"]
@@ -258,7 +270,7 @@ PlanMargin separates public code and aggregate results from licensed local
 evidence:
 
 The tracked [PlanMargin public evidence bundle](release/huggingface/planmargin-public-evidence)
-contains fourteen manifest-verified aggregate records and no scene-level WOD
+contains sixteen manifest-verified aggregate records and no scene-level WOD
 files. Building or running PlanMargin does not publish this staged bundle.
 
 | Surface                              | Public clone      | Authorized local workspace                   |
@@ -323,7 +335,8 @@ artifacts are present instead of silently degrading the product.
 | [`docs`](docs)                               | architecture, protocols, decisions, results, and runbooks      |
 | [`release/huggingface`](release/huggingface) | aggregate-only package; no WOD scene files                     |
 
-Start with the [PlanMargin 2.0 evidence release](docs/release-2.0.md),
+Start with the [PlanMargin 2.1 release candidate](docs/release-2.1.md),
+[final program audit](docs/final-program-audit.md),
 [using the workbench](docs/using-the-workbench.md), the
 [architecture](docs/architecture.md),
 [workspace reproduction](docs/reproducing-the-workspace.md),

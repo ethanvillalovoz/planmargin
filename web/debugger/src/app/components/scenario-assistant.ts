@@ -27,6 +27,15 @@ import { SimulatorStore } from '../simulator.store';
 export function classifyAssistantQuestion(value: string): AssistantQueryId | undefined {
   const question = value.trim().toLowerCase();
   if (!question) return undefined;
+  if (/\b(tensorrt|fp16|fp32|inference|latency|throughput|t4)\b/.test(question)) {
+    return 'inference_qualification';
+  }
+  if (/\b(trajectory model|predictor|ade|fde|constant velocity)\b/.test(question)) {
+    return 'model_performance';
+  }
+  if (/\b(exact replay|reconstruction|3dgs|sensor scene|provenance)\b/.test(question)) {
+    return 'workbench_provenance';
+  }
   if (/\b(method|bayes|bayesian|random|hypervolume)\b/.test(question)) {
     return 'method_comparison';
   }
@@ -90,7 +99,7 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
                 <span></span><span></span><span></span
                 >{{
                   status()?.gemini_configured
-                    ? 'Gemini is reading public evidence · up to 20 s'
+                    ? 'Gemini is reading public evidence · up to 18 s'
                     : 'Reading sealed evidence'
                 }}
               </div>
