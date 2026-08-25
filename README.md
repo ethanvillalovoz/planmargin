@@ -54,9 +54,14 @@ decision, not presenting a marketing dashboard.
 
 The public application contains no fabricated scenario stream:
 
+Node 24.15 and npm 11 are required. The repository includes an `.nvmrc`; with
+`nvm` installed, select the tested runtime before installing dependencies:
+
 ```bash
 git clone https://github.com/ethanvillalovoz/planmargin.git
 cd planmargin
+nvm install
+nvm use
 cd web/debugger
 npm ci
 npm start
@@ -209,14 +214,14 @@ licensed examples.
 
 ![PlanMargin 2.0 real-data model and promotion evidence](docs/assets/planmargin-model-runtime-v2.jpg)
 
-| Version 2 decision | Evidence | Promotion |
-| --- | --- | --- |
-| Scale the deployable predictor | 1,024 real scenes; model beats constant velocity; byte-identical repeat | Model-only release candidate |
-| Learn which counterfactual to test | 2,097 targets; weak scene-held-out ranking and 3/9 budget wins | Stopped |
-| Add nearest-actor context | Same 102-scene test split; worse than ego-only | Stopped |
-| Qualify the scaled ONNX on NVIDIA | Free-T4 Python + C++17 run; FP32 and latency gates passed; FP16 max drift 0.101 m | FP16 stopped; FP32 measured |
-| Re-architect the FP16 graph | Residual-only MPS proxy passed unchanged drift gates | TensorRT measurement required |
-| Add a shield to the learned controller | Deterministic 2,048-episode synthetic qualification; 2.686% collisions | Stopped at frozen 1% gate |
+| Version 2 decision                     | Evidence                                                                          | Promotion                     |
+| -------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------- |
+| Scale the deployable predictor         | 1,024 real scenes; model beats constant velocity; byte-identical repeat           | Model-only release candidate  |
+| Learn which counterfactual to test     | 2,097 targets; weak scene-held-out ranking and 3/9 budget wins                    | Stopped                       |
+| Add nearest-actor context              | Same 102-scene test split; worse than ego-only                                    | Stopped                       |
+| Qualify the scaled ONNX on NVIDIA      | Free-T4 Python + C++17 run; FP32 and latency gates passed; FP16 max drift 0.101 m | FP16 stopped; FP32 measured   |
+| Re-architect the FP16 graph            | Residual-only MPS proxy passed unchanged drift gates                              | TensorRT measurement required |
+| Add a shield to the learned controller | Deterministic 2,048-episode synthetic qualification; 2.686% collisions            | Stopped at frozen 1% gate     |
 
 Read the [aggregate result](docs/natural-development-results.md) and
 [held-out decision](docs/decisions/0003-version-one-heldout-no-go.md) for the
@@ -247,22 +252,22 @@ flowchart LR
     R --> U
 ```
 
-| Responsibility   | Implementation                       | Verification                                            |
-| ---------------- | ------------------------------------ | ------------------------------------------------------- |
-| Simulation       | Python, JAX, Waymax                  | fixed scenario contracts and deterministic reruns       |
-| Search           | PyTorch, BoTorch qLogNEHVI           | equal budgets, five seeds, frozen gates                 |
-| Native metrics   | C++20, pybind11                      | randomized Python-oracle parity                         |
-| Dataflow         | Apache Beam, Parquet, DuckDB         | stable partitions and SQL reconciliation                |
-| Evidence service | FastAPI                              | loopback auth, closed response models, path confinement |
-| Product          | Angular, TypeScript, Three.js, Spark | strict types, component tests, production build         |
-| Reconstruction   | Apple SHARP                          | pinned source, model hash, MPS/CUDA/CPU execution       |
-| Trajectory model | JAX, Optax, real WOMD tracks         | scenario holdout, baseline comparison, sealed checkpoint |
-| Deployable model | PyTorch, ONNX, TensorRT 11           | 1,024-scenario holdout, constant-velocity baseline, byte repeat |
-| Learned mining   | PyTorch ensemble, grouped CV          | rank, budgeted selection, calibration, and no-go gates    |
-| Interaction study | PyTorch nearest-actor pooling        | same-data ego-only ablation and no-go gate                |
-| NVIDIA runtime   | Python and C++17 `enqueueV3`          | device plus pinned-host end-to-end p50/p95/p99 contract   |
-| Assistant        | deterministic tools, optional Gemini | allowlisted evidence and sealed citations               |
-| Replay retention | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching      |
+| Responsibility    | Implementation                       | Verification                                                    |
+| ----------------- | ------------------------------------ | --------------------------------------------------------------- |
+| Simulation        | Python, JAX, Waymax                  | fixed scenario contracts and deterministic reruns               |
+| Search            | PyTorch, BoTorch qLogNEHVI           | equal budgets, five seeds, frozen gates                         |
+| Native metrics    | C++20, pybind11                      | randomized Python-oracle parity                                 |
+| Dataflow          | Apache Beam, Parquet, DuckDB         | stable partitions and SQL reconciliation                        |
+| Evidence service  | FastAPI                              | loopback auth, closed response models, path confinement         |
+| Product           | Angular, TypeScript, Three.js, Spark | strict types, component tests, production build                 |
+| Reconstruction    | Apple SHARP                          | pinned source, model hash, MPS/CUDA/CPU execution               |
+| Trajectory model  | JAX, Optax, real WOMD tracks         | scenario holdout, baseline comparison, sealed checkpoint        |
+| Deployable model  | PyTorch, ONNX, TensorRT 11           | 1,024-scenario holdout, constant-velocity baseline, byte repeat |
+| Learned mining    | PyTorch ensemble, grouped CV         | rank, budgeted selection, calibration, and no-go gates          |
+| Interaction study | PyTorch nearest-actor pooling        | same-data ego-only ablation and no-go gate                      |
+| NVIDIA runtime    | Python and C++17 `enqueueV3`         | device plus pinned-host end-to-end p50/p95/p99 contract         |
+| Assistant         | deterministic tools, optional Gemini | allowlisted evidence and sealed citations                       |
+| Replay retention  | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching              |
 
 ## Data and distribution boundary
 
@@ -273,18 +278,18 @@ The tracked [PlanMargin public evidence bundle](release/huggingface/planmargin-p
 contains sixteen manifest-verified aggregate records and no scene-level WOD
 files. Building or running PlanMargin does not publish this staged bundle.
 
-| Surface                              | Public clone      | Authorized local workspace                   |
-| ------------------------------------ | ----------------- | -------------------------------------------- |
-| Source, schemas, tests, architecture | Included          | Included                                     |
-| Aggregate experiment decision        | Included          | Included                                     |
+| Surface                               | Public clone      | Authorized local workspace                   |
+| ------------------------------------- | ----------------- | -------------------------------------------- |
+| Source, schemas, tests, architecture  | Included          | Included                                     |
+| Aggregate experiment decision         | Included          | Included                                     |
 | Model-only PyTorch and ONNX artifacts | Versioned release | Versioned release                            |
 | TensorRT latency and parity report    | Included          | Included                                     |
 | TensorRT engine binaries              | Rebuilt per GPU   | Rebuilt per GPU                              |
-| Per-proposal records and exact gates | Not redistributed | Seal-verified locally                        |
-| Planning and proposal-linked replays | Not redistributed | Seal- and hash-verified locally               |
-| Camera, annotations, LiDAR, and 3DGS | Not redistributed | Seal-verified locally                        |
-| Deterministic evidence assistant     | Aggregate scope   | Local evidence scope                         |
-| Gemini explanation                   | Optional          | User key and explicit free-tier confirmation |
+| Per-proposal records and exact gates  | Not redistributed | Seal-verified locally                        |
+| Planning and proposal-linked replays  | Not redistributed | Seal- and hash-verified locally              |
+| Camera, annotations, LiDAR, and 3DGS  | Not redistributed | Seal-verified locally                        |
+| Deterministic evidence assistant      | Aggregate scope   | Local evidence scope                         |
+| Gemini explanation                    | Optional          | User key and explicit free-tier confirmation |
 
 This is a licensing boundary, not a synthetic-data fallback.
 
@@ -312,6 +317,12 @@ uv build
 cd web/debugger && npm run check
 ```
 
+CI also audits the complete locked Python environment with `pip-audit`. Five
+temporarily accepted Apache Beam transitive advisories are explicit, versioned
+exceptions; every other advisory fails CI. Their reachability analysis and
+removal conditions are recorded in the
+[dependency security policy](docs/dependency-security.md).
+
 To reproduce the NVIDIA deployment result without downloading WOMD records,
 open [`notebooks/planmargin_tensorrt_colab.ipynb`](notebooks/planmargin_tensorrt_colab.ipynb)
 in a free T4 Colab runtime. It downloads and verifies the model-only release,
@@ -328,14 +339,14 @@ artifacts are present instead of silently degrading the product.
 | Path                                         | Responsibility                                                 |
 | -------------------------------------------- | -------------------------------------------------------------- |
 | [`src/planmargin`](src/planmargin)           | simulation, search, evidence API, assistant, readiness tooling |
-| [`cpp`](cpp)                                 | C++20 metrics kernel and C++17 TensorRT runtime                 |
+| [`cpp`](cpp)                                 | C++20 metrics kernel and C++17 TensorRT runtime                |
 | [`web/debugger`](web/debugger)               | Angular/TypeScript/Three.js/Spark workbench                    |
 | [`schemas`](schemas)                         | versioned experiment and analytics contracts                   |
 | [`tests`](tests)                             | data-free science, parity, API, privacy, and setup checks      |
 | [`docs`](docs)                               | architecture, protocols, decisions, results, and runbooks      |
 | [`release/huggingface`](release/huggingface) | aggregate-only package; no WOD scene files                     |
 
-Start with the [PlanMargin 3.0.0 release notes](docs/release-3.0.md),
+Start with the [PlanMargin 3.0.1 release notes](docs/release-3.0.1.md),
 [final program audit](docs/final-program-audit.md),
 [using the workbench](docs/using-the-workbench.md), the
 [architecture](docs/architecture.md),

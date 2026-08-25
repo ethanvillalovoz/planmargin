@@ -99,7 +99,7 @@ uv run --frozen planmargin-build-beam-features \
   --output-dir artifacts/beam-features/lead-braking-v1
 ```
 
-Apache Beam 2.74.0 runs with local DirectRunner. The resulting source
+Apache Beam 2.75.0 runs with local DirectRunner. The resulting source
 checkpoints, partitioned Parquet, DuckDB file, and private manifest remain under
 the ignored `artifacts/` tree. See [the Beam pipeline contract](beam-feature-pipeline.md)
 before using `womd-direct`, which performs authorized dataset reads.

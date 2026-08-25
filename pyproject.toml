@@ -1,13 +1,13 @@
 [project]
 name = "planmargin"
-version = "3.0.0"
+version = "3.0.1"
 description = "Counterfactual stress testing for autonomous-driving planners"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 dependencies = [
-  "apache-beam==2.74.0",
+  "apache-beam==2.75.0",
   "botorch==0.18.1",
   "duckdb==1.5.5",
   "fastapi>=0.128,<1",
@@ -57,7 +57,7 @@ assistant = [
   "google-genai==2.17.0",
 ]
 nvidia = [
-  "onnx==1.20.0",
+  "onnx==1.22.0",
   "onnxscript==0.7.1",
 ]
 
@@ -65,9 +65,9 @@ nvidia = [
 dev = [
   "httpx2>=2.10,<3",
   "jsonschema>=4.25,<5",
-  "onnx==1.20.0",
+  "onnx==1.22.0",
   "onnxscript==0.7.1",
-  "pytest>=8.4,<9",
+  "pytest>=9.0.3,<10",
   "ruff>=0.12,<0.13",
 ]
 
