@@ -100,19 +100,20 @@ point field, or reconstruction when licensed evidence is absent.
 - Ruff: all checks passed.
 - Python: 282 tests passed. Upstream warnings are identified in the CI log and
   do not suppress failures.
-- Angular/Vitest: 56 tests passed across launch authentication, local evidence,
+- Angular/Vitest: 57 tests passed across launch authentication, local evidence,
   parsers, stores, navigation, reports, edge-aware trajectory labels, and
   workbench behavior.
 - Browser sign-off covers desktop and 390 px mobile evidence surfaces, planning
   playback, ten-frame seek controls, frame-native camera annotation changes,
   and three independently selectable SHARP reconstruction frames.
-- Playwright: six desktop/mobile journeys passed. The added local-mode journey
-  exercises queue ranking, comparison, candidate inspection, sealed-record
-  analysis, model/runtime navigation, the grounded Gemini response contract,
-  refresh recovery, responsive overflow, and WCAG A/AA axe checks.
+- Playwright: seven applicable desktop/mobile journeys passed. The local-mode
+  journey exercises queue ranking, comparison, candidate inspection,
+  sealed-record analysis, a filesystem-verified signed HTML export,
+  model/runtime navigation, the grounded Gemini response contract, refresh
+  recovery, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
-  payload is 338.75 kB raw, while Spark and Three.js viewers remain lazy.
+  payload is 339.19 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
 - Authenticated HTTP: frontend, health, campaign, investigation, planning runs,
