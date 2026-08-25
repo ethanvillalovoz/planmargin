@@ -1,13 +1,13 @@
 # Local screen-recording walkthrough
 
-The Version 2.1 sign-off includes a real 16-second recording of the public
+The Version 3 sign-off includes a real 16-second recording of the public
 aggregate Evidence workflow. The retained copy contains no generated imagery,
 mock UI, or synthetic runtime data.
 
 The recording is deliberately local and ignored:
 
 ```text
-artifacts/demo/planmargin-v2.1-evidence-tour.mov
+artifacts/demo/planmargin-v3.0-evidence-tour.mov
 ```
 
 It is 1064×594 H.264 at 60 fps. Browser chrome was cropped from the retained

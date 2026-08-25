@@ -2,7 +2,7 @@
 
 **Audit date:** August 24, 2026
 
-**Release candidate:** v2.1.0 (unpublished)
+**Release candidate:** v3.0.0 (unpublished)
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -112,7 +112,7 @@ point field, or reconstruction when licensed evidence is absent.
   refresh recovery, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
-  payload is 338.68 kB raw, while Spark and Three.js viewers remain lazy.
+  payload is 338.75 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
 - Authenticated HTTP: frontend, health, campaign, investigation, planning runs,
@@ -123,7 +123,7 @@ point field, or reconstruction when licensed evidence is absent.
 - Workspace doctor distinguishes the prior TensorRT qualification from the
   scaled model's completed FP16 no-go decision.
 - Python source/wheel distributions and the native C++20 extension built
-  successfully for the unpublished PlanMargin 2.1.0 candidate.
+  successfully for the unpublished PlanMargin 3.0.0 candidate.
 - The sixteen-record aggregate-only distribution candidate passed its
   independent SHA-256 verifier locally. No hosting change was made.
 
@@ -140,7 +140,7 @@ That negative result is part of the product's credibility: the repository
 preserves what was measured, what failed, and what cannot be claimed.
 
 The Version 2 active-risk, interaction, and scaled-FP16 studies add three
-further negative results. Version 2.1 adds a shielded-controller no-go and a
+further negative results. Version 3 adds a shielded-controller no-go and a
 split-residual FP16 design that passed only its Apple-MPS numerical proxy; it
 still requires an NVIDIA TensorRT measurement. None is promoted, and no
 thresholds were relaxed after results were observed. The supported positive claim is narrower: the

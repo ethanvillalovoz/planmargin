@@ -1,4 +1,4 @@
-"""Contracts for the Version 2.1 shielded controller."""
+"""Contracts for the Version 3 shielded controller."""
 
 import numpy as np
 

@@ -198,7 +198,7 @@ maximum drift exceeded the frozen 0.075 m limit, so FP16 promotion is a measured
 no-go. The earlier 128-scenario model retains its separate qualified result;
 those values are never attributed to the scaled model.
 
-Version 2.1 preregistered two bounded follow-ups. A residual-only FP16 graph
+Version 3 preregistered two bounded follow-ups. A residual-only FP16 graph
 keeps smoothing and composition in host FP32; its unchanged physical probe
 passed locally on Apple MPS at 0.046 m maximum error and 0.0048 m RMSE, but it
 has not run on TensorRT and is not promoted. A deterministically trained DQN
@@ -335,7 +335,7 @@ artifacts are present instead of silently degrading the product.
 | [`docs`](docs)                               | architecture, protocols, decisions, results, and runbooks      |
 | [`release/huggingface`](release/huggingface) | aggregate-only package; no WOD scene files                     |
 
-Start with the [PlanMargin 2.1 release candidate](docs/release-2.1.md),
+Start with the [PlanMargin 3 release candidate](docs/release-3.0.md),
 [final program audit](docs/final-program-audit.md),
 [using the workbench](docs/using-the-workbench.md), the
 [architecture](docs/architecture.md),

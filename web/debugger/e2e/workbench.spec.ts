@@ -203,8 +203,7 @@ test('retained proposal opens its exact planning replay', async ({ page }) => {
   await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await expect(page.getByText('Exact proposal replay retained and verified.')).toBeVisible();
   await page.getByRole('button', { name: 'Open exact proposal replay' }).click();
-  const expandControls = page.getByRole('button', { name: 'Expand controls' });
-  if (await expandControls.isVisible()) await expandControls.click();
+  await expect(page.getByRole('button', { name: 'Collapse controls' })).toBeVisible();
   const planning = page.getByLabel('Planning evidence', { exact: true });
   await expect(planning.getByText('Exact retained proposal 1').first()).toBeVisible();
   await expect(planning.getByText('Exact campaign link verified', { exact: false })).toBeVisible();
