@@ -48,10 +48,11 @@ The public surface exposed:
 - metric labels adjacent to their values rather than unexplained numbers; and
 - no keyboard trap in the audited primary focus sequence.
 
-At 390 px, the authenticated planning control panel starts collapsed so it no
-longer covers the sensor tabs. The mode tabs, collapsed panel, scene label,
+At 390 px, the authenticated planning control panel opens as a bounded,
+scrollable bottom sheet below the primary trajectory scene. It can be collapsed
+to expose the complete sensor switcher and scene. The mode tabs, scene label,
 legend, planning explanation, playback, one-second jumps, scrubber, and speed
-control remain visible without horizontal overflow.
+control remain usable without horizontal overflow.
 
 ## Remaining human-only check
 

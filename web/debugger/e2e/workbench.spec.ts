@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import {
   API_CAMPAIGN,
   API_CELLS,
@@ -245,6 +246,17 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
   await page.getByRole('button', { name: 'Analyze selected proposal' }).click();
   await expect(page.getByText('Proposal-specific evidence analysis')).toBeVisible();
   await expect(page.getByText('sealed record · cccccccccccccccc')).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export signed HTML' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('planmargin-bayesian-1-0-p1.html');
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  const report = await readFile(downloadPath!, 'utf8');
+  expect(report).toContain('PlanMargin investigation report');
+  expect(report).toContain('Tested planner still succeeds');
+  expect(report).toMatch(/SHA-256[\s\S]*[a-f0-9]{64}/);
 
   const investigationAccessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa'])
