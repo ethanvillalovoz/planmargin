@@ -1145,8 +1145,25 @@ import { SensorViewport } from './sensor-viewport';
         max-width: 130px;
       }
       .scenario-controls {
-        top: 9.15rem;
+        top: auto;
+        right: 0.65rem;
+        bottom: 0.65rem;
+        width: auto;
+        max-height: min(248px, calc(100% - 10.45rem));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      .scenario-controls.collapsed {
+        right: auto;
         width: min(220px, calc(100vw - 1.3rem));
+        max-height: none;
+        overflow: hidden;
+      }
+      .scenario-controls > header {
+        position: sticky;
+        z-index: 1;
+        top: 0;
+        background: rgb(5 13 20 / 98%);
       }
       .scenario-controls:not(.collapsed) + .view-controls {
         opacity: 0;

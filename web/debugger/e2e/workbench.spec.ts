@@ -211,6 +211,23 @@ test('retained proposal opens its exact planning replay', async ({ page }) => {
   await expect(page.getByRole('contentinfo').locator('strong')).toContainText('Step 001');
 });
 
+test('mobile exact replay keeps controls bounded below the scene', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-chromium');
+  await mockExactReplayApi(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
+  await page.getByRole('button', { name: 'Open exact proposal replay' }).click();
+
+  const planning = page.getByLabel('Planning evidence', { exact: true });
+  const panel = await planning.boundingBox();
+  const scene = await page.getByLabel('Real local trajectory scene').boundingBox();
+  expect(panel).not.toBeNull();
+  expect(scene).not.toBeNull();
+  expect(panel!.width).toBeGreaterThan(350);
+  expect(panel!.height).toBeLessThanOrEqual(250);
+  expect(panel!.y).toBeGreaterThan(scene!.y + scene!.height / 2);
+});
+
 test('local workspace supports an end-to-end evidence investigation', async ({ page }) => {
   await mockExactReplayApi(page);
   await page.goto('/');

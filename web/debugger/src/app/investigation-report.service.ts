@@ -99,7 +99,16 @@ div{padding:12px;border-bottom:1px solid #dbe5e9}dt{color:#607683;font-size:12px
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = `planmargin-${input.cell.method}-${input.cell.selectionOrder}-${input.cell.seed}-p${input.proposal.proposalNumber}.html`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    anchor.style.display = 'none';
+    document.body.append(anchor);
+    try {
+      anchor.click();
+      // Keep the object URL alive through the browser's next task. Detached anchors
+      // and immediate revocation can silently cancel downloads in embedded browsers.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    } finally {
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    }
   }
 }
