@@ -1187,7 +1187,7 @@ function initialEvidenceView(): EvidenceView {
       display: inline-flex;
       align-items: center;
       gap: 0.45rem;
-      color: #7be5a6;
+      color: #176b43;
       font-size: 0.58rem;
       font-weight: 700;
       text-transform: uppercase;
@@ -1384,7 +1384,7 @@ function initialEvidenceView(): EvidenceView {
     }
     .decision-card dd.supported {
       background: rgb(86 217 138 / 12%);
-      color: #7be5a6;
+      color: #176b43;
     }
     .model-evidence {
       padding: 1.5rem;
@@ -1411,7 +1411,7 @@ function initialEvidenceView(): EvidenceView {
       font-weight: 600;
     }
     .model-evidence header b {
-      color: #7be5a6;
+      color: #176b43;
       font-size: 0.58rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -1460,7 +1460,7 @@ function initialEvidenceView(): EvidenceView {
       text-transform: uppercase;
     }
     .deployment-divider b {
-      color: #7be5a6;
+      color: #176b43;
       font-size: 0.58rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -2262,7 +2262,7 @@ function initialEvidenceView(): EvidenceView {
       letter-spacing: -0.035em;
     }
     .brand small {
-      color: #78808b;
+      color: #59636f;
       font-size: 0.55rem;
       font-weight: 650;
       letter-spacing: 0.06em;
@@ -2347,7 +2347,7 @@ function initialEvidenceView(): EvidenceView {
       background: rgb(244 246 243 / 96%);
     }
     .evidence-context span {
-      color: #1769ff;
+      color: #0758c7;
       font-size: 0.58rem;
       letter-spacing: 0.08em;
     }
@@ -2359,7 +2359,7 @@ function initialEvidenceView(): EvidenceView {
     }
     .evidence-context small {
       margin-top: 3px;
-      color: #69727d;
+      color: #56606c;
       font-size: 0.64rem;
     }
     .evidence-sections {
@@ -2471,7 +2471,7 @@ function initialEvidenceView(): EvidenceView {
     .controller-comparison span,
     .gate-ladder span,
     .grounded-analysis p {
-      color: #68717c;
+      color: #56606c;
     }
     .rank-tabs,
     .comparison-dock,
@@ -2494,12 +2494,12 @@ function initialEvidenceView(): EvidenceView {
       color: #36404d;
     }
     .rank-tabs button.active {
-      background: #1769ff;
+      background: #0758c7;
       color: #ffffff;
     }
     .campaign-head {
       background: #f0f3ef;
-      color: #68717c;
+      color: #56606c;
     }
     .campaign-row {
       color: #36404d;
@@ -2508,7 +2508,7 @@ function initialEvidenceView(): EvidenceView {
     .comparison-dock article > span,
     .proposal-detail header p,
     .grounded-analysis code {
-      color: #1769ff;
+      color: #0758c7;
     }
     .cell-grid button {
       border-radius: 7px;
@@ -2529,6 +2529,17 @@ function initialEvidenceView(): EvidenceView {
     }
     .grounded-analysis {
       border-radius: 14px;
+    }
+    .public-boundary {
+      border-color: #e7eae7;
+      background: #f7f9f6;
+      color: #141b2d;
+    }
+    .public-boundary strong {
+      color: #141b2d;
+    }
+    .public-boundary p {
+      color: #4d5764;
     }
     .embedded-simulator {
       height: calc(100dvh - 72px);
