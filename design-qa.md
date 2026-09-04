@@ -64,6 +64,10 @@ artwork, proprietary typeface, or generated imagery is included.
     Reworked the standalone HTML artifact around the current PlanMargin
     lockup, evidence decision, cards, integrity block, responsive layout, and
     print behavior.
+12. **P1 — The connection dialog primary action missed WCAG contrast.** The
+    new browser gate measured white text on the green action at 1.77:1 on both
+    desktop and mobile. Switched the button label to dark navy while retaining
+    the established green action fill, then reran the complete gate.
 
 ## Visual comparison result
 

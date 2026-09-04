@@ -86,6 +86,8 @@ connected-only audit.
   action.
 - Brought the manual-token error and exported investigation report into the
   same visual system, covering the last non-simulator product surfaces.
+- Corrected the connection dialog's green primary action after the new
+  desktop/mobile Axe gate found its white label below WCAG AA contrast.
 - Added direct local view parameters (`view`, `panel`, and `section`) for
   reproducible visual review and documentation capture.
 - Replaced the README's Campaign and Coverage screenshots and added a real
