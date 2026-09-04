@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/assistance-handoff-public-v1.schema.json",
+  "claim_boundary": "Independent deterministic assistance-handoff test signal on bounded real WOMD training scenes; not a human-operated remote-assistance system, Waymo Driver behavior, or a safety claim.",
+  "dataset": {
+    "name": "Waymo Open Motion Dataset",
+    "scenario_count": 10,
+    "split": "training",
+    "synthetic": false,
+    "version": "1.3.1"
+  },
+  "gates": {
+    "all_assisted_handoffs_pass": true,
+    "all_baselines_pass": true,
+    "all_scene_gates_pass": true,
+    "all_state_transitions_exact": true,
+    "all_unprotected_faults_manifested": true,
+    "exactly_ten_scenes": true,
+    "real_womd_only": true
+  },
+  "protocol": {
+    "assistance_request": "emitted_at_fault_detection",
+    "assistance_resolution_seconds": 3.0,
+    "assistance_resolution_step": 30,
+    "fallback_behavior": "conservative_idm_until_resolution",
+    "fault": "temporary_primary_command_dropout",
+    "fault_onset_seconds": 2.0,
+    "fault_onset_step": 20,
+    "physical_rollouts": 60,
+    "recovery_behavior": "resume_primary_after_resolution",
+    "waymax_steps": 4800
+  },
+  "record_type": "planmargin.public_assistance_handoff_result",
+  "redistribution": "aggregate_only",
+  "report_sha256": "fec0f41d577f1637c9fd7f6c0a31cc177bc256c5e73b7743eb1dfa4aea2479c6",
+  "schema_version": "1.0.0",
+  "source_report_sha256": "a64b34065b8211e9e72c73d11dd2e6d03f585ca1dc3e305fdcd7f1eb9a22754e",
+  "status": "qualified",
+  "summary": {
+    "assisted_handoff_success_count": 10,
+    "baseline_success_count": 10,
+    "exact_transition_count": 10,
+    "scene_gate_passes": 90,
+    "scene_gate_total": 90,
+    "unprotected_fault_manifestation_count": 10
+  }
+}

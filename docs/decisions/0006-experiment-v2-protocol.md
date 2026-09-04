@@ -129,17 +129,17 @@ search comparison, and cannot authorize a finding.
 
 Every gate must pass:
 
-| Gate | Threshold |
-| --- | --- |
-| Deterministic training | Two clean seed-2027 trainings emit byte-identical checkpoints and identical logical fingerprints. |
-| Free local compute | Each train/evaluate run completes on the M4 Pro in at most 15 minutes with peak RSS at most 8 GiB. |
-| Synthetic safety | Fixed-evaluation collision rate is at most 1.0% and no worse than the emergency-braking baseline by more than 0.25 percentage points. |
-| Synthetic progress | Mean ego distance is at least 80% of the emergency-braking baseline and mean return exceeds the fixed untrained network by at least 5.0. |
-| Waymax originals | The learned controller passes all 10 originals twice with no overlap, off-road state, invalid state, or incomplete rollout. |
-| Nontrivial progress | Across originals, median learned final displacement is at least 80% of default-IDM displacement. |
-| Independent behavior | Learned and default-IDM trajectory hashes differ on at least 8 of 10 originals. |
-| Mutation response | Learned original and fixed-mutation hashes differ on at least 8 of 10 scenarios. |
-| Runtime contract | Every action is finite, belongs to the frozen action set, and repeated greedy Waymax rollouts are byte-identical. |
+| Gate                    | Threshold                                                                                                                                                             |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deterministic training  | Two clean seed-2027 trainings emit byte-identical checkpoints and identical logical fingerprints.                                                                     |
+| Free local compute      | Each train/evaluate run completes on the M4 Pro in at most 15 minutes with peak RSS at most 8 GiB.                                                                    |
+| Synthetic safety        | Fixed-evaluation collision rate is at most 1.0% and no worse than the emergency-braking baseline by more than 0.25 percentage points.                                 |
+| Synthetic progress      | Mean ego distance is at least 80% of the emergency-braking baseline and mean return exceeds the fixed untrained network by at least 5.0.                              |
+| Waymax originals        | The learned controller passes all 10 originals twice with no overlap, off-road state, invalid state, or incomplete rollout.                                           |
+| Nontrivial progress     | Across originals, median learned final displacement is at least 80% of default-IDM displacement.                                                                      |
+| Independent behavior    | Learned and default-IDM trajectory hashes differ on at least 8 of 10 originals.                                                                                       |
+| Mutation response       | Learned original and fixed-mutation hashes differ on at least 8 of 10 scenarios.                                                                                      |
+| Runtime contract        | Every action is finite, belongs to the frozen action set, and repeated greedy Waymax rollouts are byte-identical.                                                     |
 | Privacy and reliability | Checkpoint/report remain ignored; tracked files contain no scenario identity; data-free tests cover training, serialization, inference, limits, and tamper rejection. |
 
 Failure produces a controller `no_go`; the learned policy is not used in a v2
@@ -244,10 +244,10 @@ respectively; peak RSS was 292.2 MiB. The final controller was not selected from
 intermediate checkpoints.
 
 | Synthetic evaluation (2,048 episodes, seed 2028) | Collision rate | Mean distance | Mean return |
-| --- | ---: | ---: | ---: |
-| Learned final DQN | **3.125%** | 93.43 m | -1.44 |
-| Emergency-braking baseline | 1.953% | 92.50 m | -1.40 |
-| Fixed untrained network | 11.475% | 52.20 m | -11.37 |
+| ------------------------------------------------ | -------------: | ------------: | ----------: |
+| Learned final DQN                                |     **3.125%** |       93.43 m |       -1.44 |
+| Emergency-braking baseline                       |         1.953% |       92.50 m |       -1.40 |
+| Fixed untrained network                          |        11.475% |       52.20 m |      -11.37 |
 
 Determinism, free-compute, and progress gates passed. The synthetic-safety gate
 failed because 3.125% exceeds both the absolute 1.0% maximum and the permitted

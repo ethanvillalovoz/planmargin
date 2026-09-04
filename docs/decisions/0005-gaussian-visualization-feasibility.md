@@ -98,18 +98,18 @@ points, frames, fitted primitives, and local reports remain ignored.
 
 All mandatory gates must pass on the frozen scenario:
 
-| Gate | `go` threshold |
-| --- | --- |
-| Authorized exact input | A matching training-split LiDAR record exists, contains 11 frames, and validates against the frozen motion scenario ID without opening held-out data. |
-| Determinism | Two clean fits produce identical logical fingerprints and byte-identical published field files. |
-| Scale | The fitted field contains 5,000–75,000 finite Gaussian primitives and its compressed representation is at most 32 MiB. |
-| Local compute | End-to-end extraction and fit complete on the M4 Pro in at most 15 minutes with peak RSS at most 12 GiB. No paid service is used. |
-| Geometric quality | Across the fixed evaluation frames: median nearest-mean distance at most 0.35 m, 90th percentile at most 0.75 m, and at least 75% of retained points within 0.50 m of a fitted Gaussian mean. |
-| Trajectory linkage | At least 90% of valid SDC, mutation-target, tested, and reference trajectory samples lie inside the Gaussian crop bounds expanded by 2 m, and coordinate-alignment checks pass. |
-| Debugging value | A reviewer can toggle Gaussian context and trajectories independently, inspect field provenance/quality, and return to the existing evidence view without changing a scientific decision. |
-| Browser performance | The exact desktop fixture loads at most 75,000 splats in at most 2 s and sustains at least 20 rendered frames/s during a fixed five-second camera orbit at 1440×900 on the M4 Pro. |
-| Privacy | The authenticated loopback boundary exposes no scenario ID, source URI, raw range image, raw point list, or unrestricted export; a tracked-file leak scan is empty. |
-| Data-free reliability | Synthetic Gaussian fixtures exercise schema, parser, renderer, fallback, limits, and cleanup in CI without WOD credentials. |
+| Gate                   | `go` threshold                                                                                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authorized exact input | A matching training-split LiDAR record exists, contains 11 frames, and validates against the frozen motion scenario ID without opening held-out data.                                         |
+| Determinism            | Two clean fits produce identical logical fingerprints and byte-identical published field files.                                                                                               |
+| Scale                  | The fitted field contains 5,000–75,000 finite Gaussian primitives and its compressed representation is at most 32 MiB.                                                                        |
+| Local compute          | End-to-end extraction and fit complete on the M4 Pro in at most 15 minutes with peak RSS at most 12 GiB. No paid service is used.                                                             |
+| Geometric quality      | Across the fixed evaluation frames: median nearest-mean distance at most 0.35 m, 90th percentile at most 0.75 m, and at least 75% of retained points within 0.50 m of a fitted Gaussian mean. |
+| Trajectory linkage     | At least 90% of valid SDC, mutation-target, tested, and reference trajectory samples lie inside the Gaussian crop bounds expanded by 2 m, and coordinate-alignment checks pass.               |
+| Debugging value        | A reviewer can toggle Gaussian context and trajectories independently, inspect field provenance/quality, and return to the existing evidence view without changing a scientific decision.     |
+| Browser performance    | The exact desktop fixture loads at most 75,000 splats in at most 2 s and sustains at least 20 rendered frames/s during a fixed five-second camera orbit at 1440×900 on the M4 Pro.            |
+| Privacy                | The authenticated loopback boundary exposes no scenario ID, source URI, raw range image, raw point list, or unrestricted export; a tracked-file leak scan is empty.                           |
+| Data-free reliability  | Synthetic Gaussian fixtures exercise schema, parser, renderer, fallback, limits, and cleanup in CI without WOD credentials.                                                                   |
 
 If any input, geometry, trajectory, performance, or privacy gate fails, record a
 `no_go` with the observed aggregate values and do not force the technology into
@@ -124,18 +124,18 @@ The field file
 was byte-identical and the logical fingerprint was identical across clean fits.
 The input, determinism, scale, compute, and geometric-quality gates passed:
 
-| Aggregate | Observed |
-| --- | ---: |
-| Frames | 11 (6 fit / 5 evaluation) |
-| Gaussian primitives | 75,000 |
-| Binary PLY size | 4.86 MiB |
-| Fit-and-score runtime | 3.76 s |
-| Peak RSS | 702.1 MiB |
-| Median nearest-mean distance | 0.105 m |
-| 90th-percentile nearest-mean distance | 0.172 m |
-| Evaluation points within 0.50 m | 98.44% |
-| Median / maximum XY coordinate error | 0.151 m / 0.171 m |
-| Valid trajectory samples inside expanded crop | **23.66%** |
+| Aggregate                                     |                  Observed |
+| --------------------------------------------- | ------------------------: |
+| Frames                                        | 11 (6 fit / 5 evaluation) |
+| Gaussian primitives                           |                    75,000 |
+| Binary PLY size                               |                  4.86 MiB |
+| Fit-and-score runtime                         |                    3.76 s |
+| Peak RSS                                      |                 702.1 MiB |
+| Median nearest-mean distance                  |                   0.105 m |
+| 90th-percentile nearest-mean distance         |                   0.172 m |
+| Evaluation points within 0.50 m               |                    98.44% |
+| Median / maximum XY coordinate error          |         0.151 m / 0.171 m |
+| Valid trajectory samples inside expanded crop |                **23.66%** |
 
 The trajectory-linkage threshold was 90%, so the result is `no_go`. This is not
 a reconstruction failure: the sensor field covers the first 1.1 seconds around

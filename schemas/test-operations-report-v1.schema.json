@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/test-operations-report-v1.schema.json",
+  "title": "PlanMargin test operations report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "record_type",
+    "evidence_mode",
+    "claim_boundary",
+    "campaign",
+    "slo_summary",
+    "slos",
+    "pipeline_stages",
+    "coverage",
+    "issues",
+    "source_seals",
+    "report_sha256"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/test-operations-report-v1.schema.json"
+    },
+    "schema_version": { "const": "1.0.0" },
+    "record_type": { "const": "planmargin.test_operations_report" },
+    "evidence_mode": { "const": "published_aggregate" },
+    "claim_boundary": { "type": "string", "minLength": 1 },
+    "campaign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "campaign_id",
+        "execution_health",
+        "behavior_outcome",
+        "completed_cells",
+        "planned_cells",
+        "proposals",
+        "physical_rollouts",
+        "waymax_steps",
+        "recorded_work_seconds",
+        "real_data_only"
+      ],
+      "properties": {
+        "campaign_id": { "type": "string", "minLength": 1 },
+        "execution_health": { "enum": ["healthy", "degraded"] },
+        "behavior_outcome": { "type": "string", "minLength": 1 },
+        "completed_cells": { "type": "integer", "minimum": 0 },
+        "planned_cells": { "type": "integer", "minimum": 1 },
+        "proposals": { "type": "integer", "minimum": 1 },
+        "physical_rollouts": { "type": "integer", "minimum": 1 },
+        "waymax_steps": { "type": "integer", "minimum": 1 },
+        "recorded_work_seconds": { "type": "number", "minimum": 0 },
+        "real_data_only": { "const": true }
+      }
+    },
+    "slo_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "passing", "total"],
+      "properties": {
+        "status": { "enum": ["healthy", "degraded"] },
+        "passing": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "slos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "target", "observed", "status", "owner"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 },
+          "observed": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["pass", "fail"] },
+          "owner": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "pipeline_stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "status", "observed", "detail"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["healthy", "degraded"] },
+          "observed": { "type": "string", "minLength": 1 },
+          "detail": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_version",
+        "scenario_family",
+        "scenario_count",
+        "seeds",
+        "search_methods",
+        "cells",
+        "mutation_dimensions",
+        "methods",
+        "fault_protection",
+        "assistance_handoff",
+        "known_gaps"
+      ],
+      "properties": {
+        "plan_version": { "type": "string", "minLength": 1 },
+        "scenario_family": { "type": "string", "minLength": 1 },
+        "scenario_count": { "type": "integer", "minimum": 1 },
+        "seeds": { "type": "integer", "minimum": 1 },
+        "search_methods": { "type": "integer", "minimum": 1 },
+        "cells": { "type": "integer", "minimum": 1 },
+        "mutation_dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "methods": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["proposal_count", "eligible_count", "eligible_rate"],
+            "properties": {
+              "proposal_count": { "type": "integer", "minimum": 0 },
+              "eligible_count": { "type": "integer", "minimum": 0 },
+              "eligible_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "fault_protection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "plan_version",
+            "fault",
+            "protected_behavior",
+            "scenario_count",
+            "physical_rollouts",
+            "scene_gate_passes",
+            "scene_gate_total",
+            "status"
+          ],
+          "properties": {
+            "plan_version": { "type": "string", "minLength": 1 },
+            "fault": { "type": "string", "minLength": 1 },
+            "protected_behavior": { "type": "string", "minLength": 1 },
+            "scenario_count": { "type": "integer", "minimum": 1 },
+            "physical_rollouts": { "type": "integer", "minimum": 1 },
+            "scene_gate_passes": { "type": "integer", "minimum": 0 },
+            "scene_gate_total": { "type": "integer", "minimum": 1 },
+            "status": { "enum": ["qualified", "no_go"] }
+          }
+        },
+        "assistance_handoff": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "plan_version",
+            "fault",
+            "protected_behavior",
+            "scenario_count",
+            "physical_rollouts",
+            "scene_gate_passes",
+            "scene_gate_total",
+            "exact_transition_count",
+            "status"
+          ],
+          "properties": {
+            "plan_version": { "type": "string", "minLength": 1 },
+            "fault": { "type": "string", "minLength": 1 },
+            "protected_behavior": { "type": "string", "minLength": 1 },
+            "scenario_count": { "type": "integer", "minimum": 1 },
+            "physical_rollouts": { "type": "integer", "minimum": 1 },
+            "scene_gate_passes": { "type": "integer", "minimum": 0 },
+            "scene_gate_total": { "type": "integer", "minimum": 1 },
+            "exact_transition_count": { "type": "integer", "minimum": 0 },
+            "status": { "enum": ["qualified", "no_go"] }
+          }
+        },
+        "known_gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "status", "next_test"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "status": { "const": "not_covered" },
+              "next_test": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "severity",
+          "state",
+          "component",
+          "title",
+          "evidence",
+          "failed_gates",
+          "next_action",
+          "source"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["high", "medium", "low"] },
+          "state": {
+            "enum": ["active", "blocked", "stopped", "pending_evidence"]
+          },
+          "component": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "string", "minLength": 1 },
+          "failed_gates": { "type": "array", "items": { "type": "string" } },
+          "next_action": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "source_seals": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    },
+    "report_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

@@ -10,12 +10,12 @@ certify findings.
 
 The released CPU stack is resolved exactly in `uv.lock` for Python 3.11:
 
-| Dependency | Resolved version |
-| --- | --- |
-| PyTorch | `2.13.0` |
-| BoTorch | `0.18.1` |
-| GPyTorch | `1.15.2` |
-| linear_operator | `0.6.1` |
+| Dependency      | Resolved version |
+| --------------- | ---------------- |
+| PyTorch         | `2.13.0`         |
+| BoTorch         | `0.18.1`         |
+| GPyTorch        | `1.15.2`         |
+| linear_operator | `0.6.1`          |
 
 BoTorch is a direct exact dependency. The other versions are transitive exact
 resolutions in the lockfile. The proposal core creates tensors only with

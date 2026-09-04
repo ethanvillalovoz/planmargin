@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/assistance-handoff-public-v1.schema.json",
+  "title": "PlanMargin public assistance-handoff result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "record_type",
+    "status",
+    "protocol",
+    "dataset",
+    "summary",
+    "gates",
+    "source_report_sha256",
+    "claim_boundary",
+    "redistribution",
+    "report_sha256"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/assistance-handoff-public-v1.schema.json"
+    },
+    "schema_version": { "const": "1.0.0" },
+    "record_type": { "const": "planmargin.public_assistance_handoff_result" },
+    "status": { "enum": ["qualified", "no_go"] },
+    "protocol": {
+      "type": "object",
+      "required": [
+        "fault",
+        "fault_onset_step",
+        "fault_onset_seconds",
+        "assistance_request",
+        "assistance_resolution_step",
+        "assistance_resolution_seconds",
+        "fallback_behavior",
+        "recovery_behavior",
+        "physical_rollouts",
+        "waymax_steps"
+      ],
+      "properties": {
+        "fault": { "const": "temporary_primary_command_dropout" },
+        "fault_onset_step": { "type": "integer", "minimum": 0 },
+        "fault_onset_seconds": { "type": "number", "minimum": 0 },
+        "assistance_request": { "type": "string", "minLength": 1 },
+        "assistance_resolution_step": { "type": "integer", "minimum": 1 },
+        "assistance_resolution_seconds": { "type": "number", "minimum": 0 },
+        "fallback_behavior": { "type": "string", "minLength": 1 },
+        "recovery_behavior": { "type": "string", "minLength": 1 },
+        "physical_rollouts": { "type": "integer", "minimum": 1 },
+        "waymax_steps": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "split", "synthetic", "scenario_count"],
+      "properties": {
+        "name": { "const": "Waymo Open Motion Dataset" },
+        "version": { "type": "string", "minLength": 1 },
+        "split": { "const": "training" },
+        "synthetic": { "const": false },
+        "scenario_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "summary": { "type": "object", "minProperties": 1 },
+    "gates": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "boolean" }
+    },
+    "source_report_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "claim_boundary": { "type": "string", "minLength": 1 },
+    "redistribution": { "const": "aggregate_only" },
+    "report_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

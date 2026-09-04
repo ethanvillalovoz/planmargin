@@ -3,22 +3,24 @@
 PlanMargin separates a public aggregate product from an authorized local evidence
 product. This is a licensing and privacy boundary, not a demo-data fallback.
 
-| Surface                            | Public clone / Hugging Face | Authorized local store |
-| ---------------------------------- | --------------------------- | ---------------------- |
-| Campaign decision and scale        | Yes                         | Yes                    |
-| Method and hypothesis aggregates   | Yes                         | Yes                    |
-| Aggregate learned-model decisions  | Yes                         | Yes                    |
-| Model-only PyTorch and ONNX files  | GitHub release              | Yes                    |
-| Per-cell and per-proposal records  | No                          | Yes                    |
-| Stage-0 planning replay            | No                          | Yes                    |
-| WOD camera, LiDAR, and 3DGS assets | No                          | Yes                    |
-| Scenario IDs and source provenance | No                          | No UI exposure         |
+| Surface                                       | Public clone / Hugging Face | Authorized local store |
+| --------------------------------------------- | --------------------------- | ---------------------- |
+| Campaign decision and scale                   | Yes                         | Yes                    |
+| Method and hypothesis aggregates              | Yes                         | Yes                    |
+| Aggregate learned-model decisions             | Yes                         | Yes                    |
+| Fault, assistance, and test-health aggregates | Yes                         | Yes                    |
+| Model-only PyTorch and ONNX files             | GitHub release              | Yes                    |
+| Per-cell and per-proposal records             | No                          | Yes                    |
+| Stage-0 planning replay                       | No                          | Yes                    |
+| WOD camera, LiDAR, and 3DGS assets            | No                          | Yes                    |
+| Scenario IDs and source provenance            | No                          | No UI exposure         |
 
 The staged dataset package is in
 `release/huggingface/planmargin-public-evidence`. It contains six campaign
 records, two trajectory-model results, two active-risk qualification decisions,
 both TensorRT decisions, both C++ benchmarks, the residual-FP16 proxy, the
-shielded-controller no-go, and an integrity verifier: sixteen aggregate research
+shielded-controller no-go, fault-protection qualification, assistance-handoff
+qualification, test-operations report, and an integrity verifier: nineteen aggregate research
 records in total. Repository setup and verification do not publish or update an
 external dataset.
 This is a review supplement, not the data package for the complete workbench. It

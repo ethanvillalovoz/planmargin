@@ -23,11 +23,11 @@ result contains aggregate counts, metrics, gates, and model hashes only.
 
 ## Result
 
-| Complete-scenario test evidence | Model | Constant velocity |
-| --- | ---: | ---: |
-| ADE | **0.418 m** | 0.870 m |
-| FDE | **1.167 m** | 2.342 m |
-| Windows | 12,832 | 12,832 |
+| Complete-scenario test evidence |       Model | Constant velocity |
+| ------------------------------- | ----------: | ----------------: |
+| ADE                             | **0.418 m** |           0.870 m |
+| FDE                             | **1.167 m** |           2.342 m |
+| Windows                         |      12,832 |            12,832 |
 
 Across all splits the bounded cache contained 126,992 real-data windows. A
 second clean training run from the same sealed cache produced byte-identical

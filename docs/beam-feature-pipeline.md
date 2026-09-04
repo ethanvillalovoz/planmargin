@@ -22,11 +22,11 @@ flowchart LR
 
 The implementation uses three source modes:
 
-| Mode | Responsibility |
-| --- | --- |
-| `womd-direct` | Run the existing bounded WOMD shard miner and shared behavior-feature extractor inside a Beam transform. |
-| `sealed-support` | Validate and ingest the already-completed private v1 WOMD feature checkpoints without repeating cloud reads. |
-| `fixture` | Exercise feature extraction, rejection accounting, restart, sharding, and tamper behavior in data-free tests. |
+| Mode             | Responsibility                                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| `womd-direct`    | Run the existing bounded WOMD shard miner and shared behavior-feature extractor inside a Beam transform.      |
+| `sealed-support` | Validate and ingest the already-completed private v1 WOMD feature checkpoints without repeating cloud reads.  |
+| `fixture`        | Exercise feature extraction, rejection accounting, restart, sharding, and tamper behavior in data-free tests. |
 
 `fixture` is programmatic only. Public CLI runs accept the two private source
 modes. The direct adapter accepts only a nonempty subset of the 16 frozen

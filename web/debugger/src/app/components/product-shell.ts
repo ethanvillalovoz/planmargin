@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   output,
   signal,
@@ -20,8 +19,9 @@ import { LocalEvidenceService } from '../local-evidence.service';
 import { InvestigationProposal, LocalProposal, ProposalAnalysis } from '../local-evidence.types';
 import { SimulatorStore } from '../simulator.store';
 import { SimulatorWorkspace } from './simulator-workspace';
+import { OperationsWorkspace } from './operations-workspace';
 
-type ProductView = 'investigate' | 'replay' | 'sensor';
+type ProductView = 'operations' | 'investigate' | 'replay' | 'sensor';
 type EvidenceView = 'campaign' | 'deployment';
 type ProposalSort = 'criticality' | 'minimality' | 'support' | 'sequence';
 type ProposalFilter = 'all' | 'eligible' | 'support-rejected' | 'pipeline-rejected';
@@ -29,7 +29,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
 
 @Component({
   selector: 'app-product-shell',
-  imports: [NgIcon, SimulatorWorkspace],
+  imports: [NgIcon, OperationsWorkspace, SimulatorWorkspace],
   providers: [
     provideIcons({
       phosphorDownloadSimple,
@@ -42,13 +42,20 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
   template: `
     <div class="product-shell" [class.sensor-active]="view() === 'sensor' || view() === 'replay'">
       <header class="product-header">
-        <button class="brand" type="button" (click)="setView('replay')">
+        <button class="brand" type="button" (click)="setView('operations')">
           <ng-icon name="phosphorStack" size="23" aria-hidden="true" />
           <strong>PlanMargin</strong>
         </button>
         <nav aria-label="Product sections">
+          <button
+            type="button"
+            [class.active]="view() === 'operations'"
+            (click)="setView('operations')"
+          >
+            Operations
+          </button>
           <button type="button" [class.active]="view() === 'replay'" (click)="setView('replay')">
-            Workbench
+            Scenario lab
           </button>
           <button type="button" [class.active]="view() === 'sensor'" (click)="setView('sensor')">
             Sensors
@@ -58,7 +65,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
             [class.active]="view() === 'investigate'"
             (click)="setView('investigate')"
           >
-            Evidence
+            Research
           </button>
         </nav>
         <div class="header-actions">
@@ -94,7 +101,9 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         </div>
       </header>
 
-      @if (view() === 'investigate') {
+      @if (view() === 'operations') {
+        <app-operations-workspace (openScenarioLab)="setView('replay')" />
+      } @else if (view() === 'investigate') {
         <main class="investigation-page">
           <header class="evidence-commandbar">
             <div class="evidence-context">
@@ -2342,7 +2351,7 @@ export class ProductShell {
     window.location.protocol === 'https:' &&
     window.location.hostname !== 'localhost' &&
     window.location.hostname !== '127.0.0.1';
-  protected readonly view = signal<ProductView>('investigate');
+  protected readonly view = signal<ProductView>('operations');
   protected readonly evidenceView = signal<EvidenceView>('campaign');
   protected readonly sort = signal<ProposalSort>('criticality');
   protected readonly filter = signal<ProposalFilter>('all');
@@ -2353,12 +2362,6 @@ export class ProductShell {
   protected readonly analysisError = signal<string | undefined>(undefined);
   protected readonly replayLoading = signal(false);
   protected readonly replayError = signal<string | undefined>(undefined);
-
-  constructor() {
-    effect(() => {
-      if (this.local.connected() && this.debuggerStore.hasRun()) this.setView('replay');
-    });
-  }
 
   protected readonly rankedProposals = computed(() => {
     const proposals = this.local.proposals().filter((proposal) => {

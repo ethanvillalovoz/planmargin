@@ -2,7 +2,7 @@
 
 **Audit date:** August 25, 2026
 
-**Release:** v3.0.1
+**Release:** v3.1.0
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -48,6 +48,10 @@ gates and remain documented negative results with no deployed model.
    versions, and engine hashes without accessing licensed WOMD records.
 10. Inspect the scaled model's real-data ADE/FDE, active-mining no-go, interaction
     ablation no-go, and NVIDIA rerun status without conflating those tracks.
+11. Monitor seven independently owned release SLOs and inspect an actionable
+    alert contract for every degraded state.
+12. Inspect sustained command-dropout protection and timed assistance-handoff
+    verification over real WOMD scenes.
 
 The product does not invent a scenario, trajectory, camera stream, box track,
 point field, or reconstruction when licensed evidence is absent.
@@ -94,13 +98,16 @@ point field, or reconstruction when licensed evidence is absent.
 | Residual FP16 candidate    | Pending GPU | Apple-MPS numerical proxy passed; TensorRT has not been measured and promotion remains blocked      |
 | Shielded RL follow-up      | Stopped     | deterministic synthetic study missed its frozen 1% collision gate at 2.686%                         |
 | Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                          |
+| Test-health operations     | Shipped     | seven executable SLOs, degraded-state alert fixtures, schema-validated aggregate console            |
+| Command-dropout protection | Shipped     | 60 real-WOMD rollouts; 10/10 protected scenes and 80/80 frozen gates                                |
+| Assistance handoff V&V     | Shipped     | 60 real-WOMD rollouts; 10/10 exact handoffs and 90/90 frozen gates                                  |
 
 ## Verification performed on this revision
 
 - Ruff: all checks passed.
-- Python: 282 tests passed. Upstream warnings are identified in the CI log and
+- Python: 296 tests passed. Upstream warnings are identified in the CI log and
   do not suppress failures.
-- Angular/Vitest: 57 tests passed across launch authentication, local evidence,
+- Angular/Vitest: 61 tests passed across launch authentication, local evidence,
   parsers, stores, navigation, reports, edge-aware trajectory labels, and
   workbench behavior.
 - Browser sign-off covers desktop and 390 px mobile evidence surfaces, planning
@@ -113,7 +120,7 @@ point field, or reconstruction when licensed evidence is absent.
   recovery, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
-  payload is 339.19 kB raw, while Spark and Three.js viewers remain lazy.
+  payload is 377.24 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
 - Python dependency audit: `pip-audit==2.10.1` reported no unreviewed
@@ -128,8 +135,8 @@ point field, or reconstruction when licensed evidence is absent.
 - Workspace doctor distinguishes the prior TensorRT qualification from the
   scaled model's completed FP16 no-go decision.
 - Python source/wheel distributions and the native C++20 extension built
-  successfully for PlanMargin 3.0.1.
-- The sixteen-record aggregate-only distribution passed its independent
+  successfully for PlanMargin 3.1.0.
+- The nineteen-record aggregate-only distribution passed its independent
   SHA-256 verifier locally. No hosted application was deployed.
 
 ## Scientific outcome
@@ -152,6 +159,14 @@ thresholds were relaxed after results were observed. The supported positive clai
 scaled ego-history predictor beats constant velocity on its 102-scenario
 real-WOMD test split, reproduces byte-for-byte on the recorded MPS toolchain,
 and has a measured FP32 TensorRT path.
+
+Version 3.1 adds a positive but bounded systems result. Sustained command loss
+manifested in all ten unprotected real-WOMD scenes, while the conservative
+fallback succeeded in all ten protected scenes and passed 80/80 gates. A
+separate timed assistance contract passed 90/90 gates, including exact fault,
+request, resolution, and primary-recovery transitions. These are deterministic
+research protocols, not production fault-protection, human remote assistance,
+fleet-health, or safety claims.
 
 ## Remaining operator actions
 

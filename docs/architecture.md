@@ -1,10 +1,11 @@
-# Implemented PlanMargin 2.0 architecture
+# Implemented PlanMargin architecture
 
 PlanMargin is a local counterfactual stress-testing workbench with two strict
 boundaries: deterministic code owns scientific decisions, and restricted WOMD
 records never enter the public repository. Experiment v1 is complete at this
-boundary. Version 2 adds separately gated prediction, active-mining, interaction,
-and deployment tracks without changing that frozen scientific result.
+boundary. Later tracks add separately gated prediction, active-mining,
+interaction, deployment, test-health, and fault-protection responsibilities
+without changing that frozen scientific result.
 
 ## System flow
 
@@ -15,12 +16,16 @@ flowchart TB
         B --> C["JAX / Waymax deterministic replay"]
         B --> Q["Apache Beam bounded feature mining"]
         C --> G["Random or constrained Bayesian proposer"]
+        C --> FP["Planner-command dropout + conservative fallback"]
+        FP --> RA["Assistance request + timed recovery"]
         G --> D["Bounded lead-braking mutation"]
         D --> E["Tested and reference controllers"]
         E --> F["Physical, map, behavior, failure, and rerun gates"]
         F -->|"method-neutral outcome"| G
         F --> H["Content-sealed cell records"]
         H --> I["Resumable campaign reconstruction"]
+        FP --> FH["Repeated fault V&V gates"]
+        RA --> FH
         I --> J["Private DuckDB and Parquet analytics"]
         Q --> R["Deterministic partitioned Parquet"]
         R --> J
@@ -29,6 +34,8 @@ flowchart TB
         Y["Real WOMD motion tracks"] --> PT["PyTorch Conv1d predictor"]
         Y --> IA["Nearest-actor ablation"]
         J --> O
+        J --> TH["Six-SLO test-health evaluator"]
+        FH --> TH
         V["WOD Perception camera + LiDAR"] --> W["Ignored sensor-scene manifest"]
         X["Apple SHARP reconstruction"] --> W
         W --> O
@@ -43,12 +50,16 @@ flowchart TB
         T["Offline / optional Gemini explanation"]
         ONNX["Model-only weights + ONNX release"]
         TRT["Free-T4 TensorRT + C++17 protocol"]
+        OPS["Sealed aggregate operations report"]
         L --> M
         K --> N
         L --> S
         S --> T
         PT -->|"aggregate metrics + model only"| ONNX
         ONNX --> TRT
+        TH -->|"health + alerts"| OPS
+        L --> OPS
+        OPS --> M
     end
 
     I -->|"permitted aggregates only"| L
@@ -57,26 +68,29 @@ flowchart TB
 
 ## Component responsibilities
 
-| Layer           | Implementation                   | Responsibility                                                                                                                                      |
-| --------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dataset adapter | Python, TensorFlow records, WOMD | Stream authorized shards, retain source identity privately, and normalize scenario inputs.                                                          |
-| Simulation      | JAX, Waymax                      | Deterministic original and counterfactual closed-loop rollouts.                                                                                     |
-| Mutation        | Python                           | Apply bounded braking-onset and speed changes while retaining the recorded spatial route.                                                           |
-| Controllers     | Waymax IDM configurations        | Compare a tested technical controller with a conservative technical reference under the identical mutation.                                         |
-| Validation      | Python plus C++20/pybind11       | Enforce initial, physical, map, empirical-support, failure, reference-success, and rerun gates; accelerate one profiled interaction-metrics kernel. |
-| Search          | NumPy PCG64, PyTorch, BoTorch    | Produce stateless uniform-random proposals or constrained multi-objective qLogNEHVI proposals under matched budgets.                                |
-| Coordination    | Python, JSON Schema              | Preserve every attempted proposal, account for physical rollout cost, seal checkpoints, and resume without changing decisions.                      |
-| Analytics       | DuckDB, Parquet, SQL             | Normalize sealed campaign summaries privately and independently reconcile published aggregates.                                                     |
-| Feature dataflow | Apache Beam, PyArrow, Parquet    | Mine or ingest bounded training shards, extract the shared behavior features, checkpoint by source, key/group into stable partitions, and reconcile in DuckDB. |
-| Sensor preparation | Python, DuckDB, SciPy, SHARP | Extract recorded camera frames, fit the same-frame LiDAR Gaussian field, and seal fixed ignored asset metadata without downloading or publishing data. |
-| Local API       | FastAPI, read-only DuckDB        | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced evidence plus fixed sensor assets on loopback only.                |
-| Evidence UI     | Angular, TypeScript, Three.js, Spark | Keep Camera and Planning on independent clocks; render calibrated SHARP 3DGS, same-frame LiDAR, sealed planning metrics, and bounded assistance without export. |
-| Evidence assistant | Python, optional Gemini SDK   | Route questions to one closed aggregate tool, cite sealed deterministic facts, and optionally explain public aggregates without sharing the raw question or private records. |
-| Deployable prediction | PyTorch, ONNX             | Train a compact temporal Conv1d model on complete-scenario real-WOMD splits and export a dynamic-batch graph. |
-| Active-risk qualification | PyTorch ensemble      | Rank sealed real outcomes under scenario-grouped cross-validation, calibration, random baselines, and frozen promotion gates. |
-| Interaction ablation | PyTorch                    | Compare nearest-actor pooling against ego-only history on the identical real-data scenario split. |
-| NVIDIA qualification | TensorRT 11, CUDA, C++17  | Measure parity plus device and pinned-host end-to-end latency without requiring WOMD records. |
-| Automation      | uv, npm, GitHub Actions          | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                     |
+| Layer                     | Implementation                       | Responsibility                                                                                                                                                               |
+| ------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dataset adapter           | Python, TensorFlow records, WOMD     | Stream authorized shards, retain source identity privately, and normalize scenario inputs.                                                                                   |
+| Simulation                | JAX, Waymax                          | Deterministic original and counterfactual closed-loop rollouts.                                                                                                              |
+| Mutation                  | Python                               | Apply bounded braking-onset and speed changes while retaining the recorded spatial route.                                                                                    |
+| Controllers               | Waymax IDM configurations            | Compare a tested technical controller with a conservative technical reference under the identical mutation.                                                                  |
+| Validation                | Python plus C++20/pybind11           | Enforce initial, physical, map, empirical-support, failure, reference-success, and rerun gates; accelerate one profiled interaction-metrics kernel.                          |
+| Search                    | NumPy PCG64, PyTorch, BoTorch        | Produce stateless uniform-random proposals or constrained multi-objective qLogNEHVI proposals under matched budgets.                                                         |
+| Coordination              | Python, JSON Schema                  | Preserve every attempted proposal, account for physical rollout cost, seal checkpoints, and resume without changing decisions.                                               |
+| Analytics                 | DuckDB, Parquet, SQL                 | Normalize sealed campaign summaries privately and independently reconcile published aggregates.                                                                              |
+| Test health               | Python, JSON Schema                  | Evaluate seven owned SLOs, emit actionable root-cause alerts, and seal the aggregate operations contract.                                                                    |
+| Fault protection          | JAX, Waymax                          | Inject sustained command dropout and verify deterministic unprotected and conservative-fallback responses on real WOMD scenes.                                               |
+| Assistance V&V            | JAX, Waymax                          | Verify fault, request, fallback, deterministic resolution, and primary recovery as distinct observable states.                                                               |
+| Feature dataflow          | Apache Beam, PyArrow, Parquet        | Mine or ingest bounded training shards, extract the shared behavior features, checkpoint by source, key/group into stable partitions, and reconcile in DuckDB.               |
+| Sensor preparation        | Python, DuckDB, SciPy, SHARP         | Extract recorded camera frames, fit the same-frame LiDAR Gaussian field, and seal fixed ignored asset metadata without downloading or publishing data.                       |
+| Local API                 | FastAPI, read-only DuckDB            | Verify ignored evidence at startup and expose token-authenticated, privacy-reduced evidence plus fixed sensor assets on loopback only.                                       |
+| Evidence UI               | Angular, TypeScript, Three.js, Spark | Keep Camera and Planning on independent clocks; render calibrated SHARP 3DGS, same-frame LiDAR, sealed planning metrics, and bounded assistance without export.              |
+| Evidence assistant        | Python, optional Gemini SDK          | Route questions to one closed aggregate tool, cite sealed deterministic facts, and optionally explain public aggregates without sharing the raw question or private records. |
+| Deployable prediction     | PyTorch, ONNX                        | Train a compact temporal Conv1d model on complete-scenario real-WOMD splits and export a dynamic-batch graph.                                                                |
+| Active-risk qualification | PyTorch ensemble                     | Rank sealed real outcomes under scenario-grouped cross-validation, calibration, random baselines, and frozen promotion gates.                                                |
+| Interaction ablation      | PyTorch                              | Compare nearest-actor pooling against ego-only history on the identical real-data scenario split.                                                                            |
+| NVIDIA qualification      | TensorRT 11, CUDA, C++17             | Measure parity plus device and pinned-host end-to-end latency without requiring WOMD records.                                                                                |
+| Automation                | uv, npm, GitHub Actions              | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                                              |
 
 ## Experiment execution
 
@@ -99,6 +113,9 @@ flowchart TB
 7. Campaign-level aggregates cross the public boundary. Scenario identifiers,
    proposal records, trajectories, controller traces, feature vectors, support
    scores, and cell-level facts do not.
+8. The test-health evaluator reconciles the campaign, analytics, replay, and
+   fault-protection contracts into seven SLOs. Degraded fixtures verify that each
+   failed objective produces an owned, actionable alert.
 
 ## Frozen scientific invariants
 
@@ -136,17 +153,17 @@ See the [analytics contract](analytics.md).
 
 ## Public and private artifacts
 
-| Public and tracked                             | Private and ignored                       |
-| ---------------------------------------------- | ----------------------------------------- |
-| Source code and JSON Schemas                   | Raw or cached WOMD shards                 |
-| Synthetic fixtures and parity cases            | Scenario and object identifiers           |
-| Frozen protocols and decision records          | Original and mutated trajectories         |
-| Campaign-level aggregate results               | Proposal and cell records                 |
-| Aggregate model and no-go reports              | Per-scenario model windows and targets    |
-| Model-only PyTorch and ONNX release             | Local training cache                      |
-| Privacy-reviewed product screenshots           | Feature vectors and support scores        |
-| UI code and data-free renderer tests            | Camera frames, SHARP PLY, and LiDAR PLY   |
-| Data-free CI configuration                     | DuckDB, Parquet, and checkpoint artifacts |
+| Public and tracked                    | Private and ignored                       |
+| ------------------------------------- | ----------------------------------------- |
+| Source code and JSON Schemas          | Raw or cached WOMD shards                 |
+| Synthetic fixtures and parity cases   | Scenario and object identifiers           |
+| Frozen protocols and decision records | Original and mutated trajectories         |
+| Campaign-level aggregate results      | Proposal and cell records                 |
+| Aggregate model and no-go reports     | Per-scenario model windows and targets    |
+| Model-only PyTorch and ONNX release   | Local training cache                      |
+| Privacy-reviewed product screenshots  | Feature vectors and support scores        |
+| UI code and data-free renderer tests  | Camera frames, SHARP PLY, and LiDAR PLY   |
+| Data-free CI configuration            | DuckDB, Parquet, and checkpoint artifacts |
 
 Repository policy tests and `.gitignore` enforce this separation. The debugger
 ships no private data and does not upload local records.

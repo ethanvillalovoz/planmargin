@@ -142,7 +142,7 @@ PUBLIC_CITATIONS = {
         CAMPAIGN,
         "Natural matched-search development results",
         "docs/natural-development-results.md",
-        "c0d579e364b6048cd275fcca273d59eb59d98a55c57f5135412226c81b938fb5",
+        "140efb5903eb5773bb87f6e54ed664a8f56765fda5f9b0977620073e0d395e39",
     ),
     HELD_OUT: Citation(
         HELD_OUT,
@@ -172,7 +172,7 @@ PUBLIC_CITATIONS = {
         WORKBENCH,
         "Campaign investigation workbench contract",
         "docs/campaign-investigation-workbench.md",
-        "d28c48ce5468f9a61298b991b7154250568b914d5020dc1b09ea6991f159d5d3",
+        "7ad99d2f272293d85656ed566e783b614556506e049c274f03ea8144e572e41b",
     ),
 }
 

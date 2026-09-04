@@ -32,13 +32,13 @@ described as general naturalistic realism. See
 
 The repository already retains much of the required evidence:
 
-| Source | Fields already available |
-| --- | --- |
-| Scenario selection | initial gap, lateral offset, heading difference, SDC and lead speed, peak deceleration, peak acceleration and jerk, total and one-second speed drop, and nonincrease fraction |
-| Lead-braking mutation | recorded and shifted onset, peak speed, acceleration and jerk, route length, route progress, and route deviation |
-| Scenario validator | overlap, offroad, validity, completion, and deterministic trajectory hash |
-| Controller comparison | independent outcomes, signed separation, longitudinal TTC, response hash, and rerun determinism |
-| Random-search record | proposal identity, rejection stage, normalized mutation distance, finding classification, and physical cost |
+| Source                | Fields already available                                                                                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario selection    | initial gap, lateral offset, heading difference, SDC and lead speed, peak deceleration, peak acceleration and jerk, total and one-second speed drop, and nonincrease fraction |
+| Lead-braking mutation | recorded and shifted onset, peak speed, acceleration and jerk, route length, route progress, and route deviation                                                              |
+| Scenario validator    | overlap, offroad, validity, completion, and deterministic trajectory hash                                                                                                     |
+| Controller comparison | independent outcomes, signed separation, longitudinal TTC, response hash, and rerun determinism                                                                               |
+| Random-search record  | proposal identity, rejection stage, normalized mutation distance, finding classification, and physical cost                                                                   |
 
 The mutation record does not yet retain total speed drop, one-second speed
 drop, braking nonincrease fraction, current interaction context, or a support

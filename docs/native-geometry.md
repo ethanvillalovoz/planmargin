@@ -10,11 +10,11 @@ longitudinal time to collision across an aligned trace.
 A data-free Apple-silicon profile compared the three plausible validation
 kernels before native code was introduced:
 
-| Python kernel | Representative input | Mean latency |
-| --- | --- | ---: |
-| interaction metrics | 80 aligned states | 10.75 ms |
-| route-to-polyline distance | 80 points × 90 segments | 0.312 ms |
-| empirical behavior features | 61 states | 0.028 ms |
+| Python kernel               | Representative input    | Mean latency |
+| --------------------------- | ----------------------- | -----------: |
+| interaction metrics         | 80 aligned states       |     10.75 ms |
+| route-to-polyline distance  | 80 points × 90 segments |     0.312 ms |
+| empirical behavior features | 61 states               |     0.028 ms |
 
 For 100 interaction traces, `cProfile` attributed about 90% of cumulative time
 to signed oriented-box separation. The largest cost was 166,400 Python/NumPy

@@ -20,9 +20,9 @@ settings. Only the eight-nearest-actor encoder is disabled in the ablation.
 ## Result
 
 | Test metric | Interaction model | Ego-only ablation | Constant velocity |
-| --- | ---: | ---: | ---: |
-| ADE | 0.453 m | **0.434 m** | 0.923 m |
-| FDE | 1.387 m | **1.332 m** | 2.603 m |
+| ----------- | ----------------: | ----------------: | ----------------: |
+| ADE         |           0.453 m |       **0.434 m** |           0.923 m |
+| FDE         |           1.387 m |       **1.332 m** |           2.603 m |
 
 Both learned models beat constant velocity, but the explicit neighbor encoder
 failed both predeclared one-percent ablation gates. The study is therefore

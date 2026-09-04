@@ -19,15 +19,15 @@ are not printed.
 
 ## Tables
 
-| Table | Responsibility |
-| --- | --- |
-| `campaign` | sealed campaign identity, status, total cost, and runtime |
-| `methods` | published random and Bayesian aggregate metrics and costs |
-| `hypotheses` | frozen H1, H2, and H3 decisions and comparison values |
-| `cells` | private per-method, seed, and scenario-order aggregate facts |
-| `hypervolume_trace` | private cell-level feasible hypervolume by proposal count |
-| `status_counts` | private cell-level mutation-pipeline status counts |
-| `integrity_gates` | campaign and cell reconstruction-gate outcomes |
+| Table               | Responsibility                                               |
+| ------------------- | ------------------------------------------------------------ |
+| `campaign`          | sealed campaign identity, status, total cost, and runtime    |
+| `methods`           | published random and Bayesian aggregate metrics and costs    |
+| `hypotheses`        | frozen H1, H2, and H3 decisions and comparison values        |
+| `cells`             | private per-method, seed, and scenario-order aggregate facts |
+| `hypervolume_trace` | private cell-level feasible hypervolume by proposal count    |
+| `status_counts`     | private cell-level mutation-pipeline status counts           |
+| `integrity_gates`   | campaign and cell reconstruction-gate outcomes               |
 
 Every table is stored in one local DuckDB database and exported to a
 Zstandard-compressed Parquet file. The sealed analytics manifest records file

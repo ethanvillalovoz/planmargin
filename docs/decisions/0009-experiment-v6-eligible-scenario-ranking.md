@@ -27,16 +27,16 @@ scenario. No rows from the absent order are manufactured or imputed.
 
 The frozen gates remain:
 
-| Gate | Threshold |
-| --- | --- |
-| Evidence scale | At least 500 unique examples across at least 9 eligible scenarios. |
-| Scenario isolation | Zero train/calibration/test overlap in every fold. |
-| Ranking signal | Mean held-out Spearman correlation at least 0.25. |
-| Budget efficiency | At budget 8, mean random-minus-learned best separation at least 0.25 m. |
-| Scenario consistency | Learned budget-8 ranking matches or beats random median in at least 7 scenarios. |
-| Calibration | Aggregate 90% held-out interval coverage in `[0.75, 0.98]`. |
-| Determinism | Two clean runs have the same logical result and byte-identical model bundle. |
-| Privacy | Tracked/public output contains no scenario identifier, source location, or feature row. |
+| Gate                 | Threshold                                                                               |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| Evidence scale       | At least 500 unique examples across at least 9 eligible scenarios.                      |
+| Scenario isolation   | Zero train/calibration/test overlap in every fold.                                      |
+| Ranking signal       | Mean held-out Spearman correlation at least 0.25.                                       |
+| Budget efficiency    | At budget 8, mean random-minus-learned best separation at least 0.25 m.                 |
+| Scenario consistency | Learned budget-8 ranking matches or beats random median in at least 7 scenarios.        |
+| Calibration          | Aggregate 90% held-out interval coverage in `[0.75, 0.98]`.                             |
+| Determinism          | Two clean runs have the same logical result and byte-identical model bundle.            |
+| Privacy              | Tracked/public output contains no scenario identifier, source location, or feature row. |
 
 If any gate fails, v6 is `qualification_no_go` and no prospective campaign is
 authorized. Passing v6 qualifies the model only for the separately frozen
@@ -49,12 +49,12 @@ The full nine-fold evaluation ran on 2,097 deduplicated real-WOMD/Waymax
 examples with zero scenario overlap. Scale and isolation passed. The learned
 ranker did not generalize sufficiently:
 
-| Aggregate | Observed | Gate |
-| --- | ---: | ---: |
-| Mean held-out Spearman correlation | 0.137 | at least 0.25 |
+| Aggregate                                     | Observed |             Gate |
+| --------------------------------------------- | -------: | ---------------: |
+| Mean held-out Spearman correlation            |    0.137 |    at least 0.25 |
 | Mean budget-8 random-minus-learned separation | -0.475 m | at least +0.25 m |
-| Budget-8 scenarios matching/beating random | 3 of 9 | at least 7 |
-| Calibrated interval coverage | 54.51% | 75–98% |
+| Budget-8 scenarios matching/beating random    |   3 of 9 |       at least 7 |
+| Calibrated interval coverage                  |   54.51% |           75–98% |
 
 The status is `qualification_no_go`. No deployment ensemble or ONNX graph was
 exported and no prospective campaign was authorized. This result indicates

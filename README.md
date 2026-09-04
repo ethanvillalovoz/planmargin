@@ -5,18 +5,22 @@
 <!-- prettier-ignore -->
 [![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![Node 24](https://img.shields.io/badge/Node-24-5FA04E?logo=nodedotjs&logoColor=white) ![C++17/20](https://img.shields.io/badge/C%2B%2B-17%2F20-00599C?logo=cplusplus&logoColor=white) ![TensorRT 11.2](https://img.shields.io/badge/TensorRT-11.2-76B900?logo=nvidia&logoColor=white) [![License](https://img.shields.io/badge/Code-Apache--2.0-blue.svg)](LICENSE)
 
-PlanMargin turns a recorded driving scenario into a reviewable counterfactual:
-change lead-vehicle behavior, replay the tested and reference planners under the
-same conditions, and keep only cases that are realistic, reproducible, and
-specific to the tested planner.
+PlanMargin is a local simulation-test operations system for autonomous-driving
+planners. It monitors campaign health, versions behavior coverage, injects
+off-nominal planner faults, and turns a recorded driving scenario into a
+reviewable counterfactual. A candidate is retained only when it is realistic,
+reproducible, and specific to the planner under test.
 
 It is an engineering workbench, not a benchmark leaderboard or a Waymo Driver
 evaluation.
 
-![PlanMargin 2.0 counterfactual investigation console](docs/assets/planmargin-evidence-console-v2.jpg)
+![PlanMargin simulation test operations console](docs/assets/planmargin-test-operations-overview-v3.1.jpg)
 
-The public clone opens a useful aggregate analysis surface over the sealed
-3,200-proposal campaign. It fails closed only for licensed per-scenario data. An
+The public clone opens an operational console over the sealed 3,200-proposal
+campaign, qualified command-dropout protection study, and assistance-handoff
+verification. Execution health, behavior outcome, coverage gaps, and promotion
+decisions remain separate rather than being compressed into one status score.
+It fails closed only for licensed per-scenario data. An
 authorized local launch adds exact proposal replay, candidate investigation,
 recorded camera annotations, LiDAR, three 3D Gaussian reconstructions, and a
 calibrated real-data JAX trajectory overlay without uploading those artifacts.
@@ -27,16 +31,21 @@ deployment.
 
 ## The engineering workflow
 
-1. **Search** bounded scenario changes with matched random and constrained
+1. **Monitor** seven owned SLOs across selection, generation, simulation,
+   analytics, replay retention, and fault-injection verification.
+2. **Search** bounded scenario changes with matched random and constrained
    Bayesian budgets.
-2. **Reject** physically invalid, unsupported, or non-reproducible candidates.
-3. **Isolate** a regression only when the tested planner fails and the reference
+3. **Reject** physically invalid, unsupported, or non-reproducible candidates.
+4. **Isolate** a regression only when the tested planner fails and the reference
    planner succeeds under the same change.
-4. **Inspect** the decision in a local workbench with planning replay, camera
+5. **Inject** sustained and temporary planner-command dropout; verify a
+   conservative fallback plus fault/request/resolution/recovery transitions
+   across deterministic real-WOMD rollouts.
+6. **Inspect** the decision in a local workbench with planning replay, camera
    annotations, LiDAR, 3D Gaussian reconstruction, and sealed evidence.
 
-The public interface opens on aggregate Evidence. An authenticated local launch
-opens the scene debugger with the retained records already loaded. Scores are
+The public interface opens on Simulation Test Operations. An authenticated
+local launch opens the scene debugger with the retained records already loaded. Scores are
 paired with plain language such as **tested planner still succeeds**, **outside
 recorded behavior**, and **reference planner failed**.
 
@@ -162,6 +171,24 @@ uniform random search, but failure-discovery efficiency and failure minimality
 remain untestable because neither method found a qualifying failure. No
 validation-backed comparison was opened after that no-go.
 
+The `command-dropout-v1` verification then injected sustained primary-command
+loss at 2.0 seconds across the ten selected real WOMD scenes. Baseline,
+unprotected, and protected variants were each repeated, for 60 physical rollouts
+and 4,800 Waymax steps. The fault manifested in 10/10 unprotected scenes; the
+conservative fallback succeeded in 10/10 protected scenes; all 80 frozen
+scene-level gates passed. This is an independent bounded fault model—not a
+Waymo Driver fault-protection or remote-assistance claim.
+
+A separate assistance-handoff protocol injects a temporary command dropout,
+emits a request at fault detection, bridges the fault with the conservative
+fallback, and resumes the primary controller after a deterministic resolution
+signal. Ten of ten real-WOMD scene handoffs succeeded, ten of ten transition
+traces occurred at the frozen timestamps, and all 90 scene gates passed across
+60 additional physical rollouts. It tests assistance-state behavior, not a
+human-operated service.
+
+![PlanMargin versioned behavior, fault-protection, and assistance coverage](docs/assets/planmargin-test-operations-coverage-v3.1.jpg)
+
 The original Stage-0 planning replay is authentic but separate from the
 campaign. PlanMargin now also retains ten separately versioned replays: five
 priority cases plus five additional low-margin proposals from distinct scenario
@@ -233,12 +260,15 @@ frozen claim boundary.
 flowchart LR
     W["WOMD records"] --> X["Waymax closed-loop replay"]
     X --> S["Random + constrained Bayesian search"]
+    X --> F["Command-dropout + assistance-state injection"]
     X --> C["C++20 interaction metrics"]
     S --> E["Content-sealed evidence"]
     C --> E
     E --> Q["Scene-grouped active-risk qualification"]
     E --> D["Beam · Parquet · DuckDB"]
     E --> A["Loopback FastAPI"]
+    F --> E
+    E --> H["SLO evaluation + actionable alerts"]
     M["Real WOMD tracks"] --> J["JAX trajectory predictor"]
     M --> T["PyTorch temporal Conv1d"]
     M --> I["Nearest-actor ablation"]
@@ -247,7 +277,8 @@ flowchart LR
     P["WOD Perception"] --> V["Camera · three SHARP 3DGS views · LiDAR"]
     P --> R["Calibrated recorded ego path"]
     J --> R
-    A --> U["Angular workbench"]
+    A --> U["Angular operations + scenario workbench"]
+    H --> U
     V --> U
     R --> U
 ```
@@ -268,6 +299,9 @@ flowchart LR
 | NVIDIA runtime    | Python and C++17 `enqueueV3`         | device plus pinned-host end-to-end p50/p95/p99 contract         |
 | Assistant         | deterministic tools, optional Gemini | allowlisted evidence and sealed citations                       |
 | Replay retention  | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching              |
+| Test operations   | Python, DuckDB, JSON Schema          | seven SLOs, degraded-state fixtures, sealed aggregate report    |
+| Fault protection  | JAX, Waymax                          | 60 repeated rollouts and 80/80 frozen scene gates               |
+| Assistance V&V    | JAX, Waymax                          | 60 repeated rollouts, exact transitions, 90/90 frozen gates     |
 
 ## Data and distribution boundary
 
@@ -275,7 +309,7 @@ PlanMargin separates public code and aggregate results from licensed local
 evidence:
 
 The tracked [PlanMargin public evidence bundle](release/huggingface/planmargin-public-evidence)
-contains sixteen manifest-verified aggregate records and no scene-level WOD
+contains nineteen manifest-verified aggregate records and no scene-level WOD
 files. Building or running PlanMargin does not publish this staged bundle.
 
 | Surface                               | Public clone      | Authorized local workspace                   |
@@ -336,17 +370,18 @@ artifacts are present instead of silently degrading the product.
 
 ## Repository map
 
-| Path                                         | Responsibility                                                 |
-| -------------------------------------------- | -------------------------------------------------------------- |
-| [`src/planmargin`](src/planmargin)           | simulation, search, evidence API, assistant, readiness tooling |
-| [`cpp`](cpp)                                 | C++20 metrics kernel and C++17 TensorRT runtime                |
-| [`web/debugger`](web/debugger)               | Angular/TypeScript/Three.js/Spark workbench                    |
-| [`schemas`](schemas)                         | versioned experiment and analytics contracts                   |
-| [`tests`](tests)                             | data-free science, parity, API, privacy, and setup checks      |
-| [`docs`](docs)                               | architecture, protocols, decisions, results, and runbooks      |
-| [`release/huggingface`](release/huggingface) | aggregate-only package; no WOD scene files                     |
+| Path                                         | Responsibility                                                   |
+| -------------------------------------------- | ---------------------------------------------------------------- |
+| [`src/planmargin`](src/planmargin)           | simulation, search, evidence API, assistant, readiness tooling   |
+| [`cpp`](cpp)                                 | C++20 metrics kernel and C++17 TensorRT runtime                  |
+| [`web/debugger`](web/debugger)               | Angular/TypeScript/Three.js/Spark workbench                      |
+| [`schemas`](schemas)                         | versioned experiment, fault, operations, and analytics contracts |
+| [`tests`](tests)                             | data-free science, parity, API, privacy, and setup checks        |
+| [`docs`](docs)                               | architecture, protocols, decisions, results, and runbooks        |
+| [`release/huggingface`](release/huggingface) | aggregate-only package; no WOD scene files                       |
 
-Start with the [PlanMargin 3.0.1 release notes](docs/release-3.0.1.md),
+Start with the [simulation test-operations contract](docs/test-operations.md),
+[PlanMargin 3.1.0 release notes](docs/release-3.1.0.md),
 [final program audit](docs/final-program-audit.md),
 [using the workbench](docs/using-the-workbench.md), the
 [architecture](docs/architecture.md),

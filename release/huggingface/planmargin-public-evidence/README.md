@@ -30,6 +30,9 @@ downloading scenario-level Waymo Open Dataset data.
 - two C++17 TensorRT runtime benchmarks;
 - one residual-only FP16 Apple-MPS proxy awaiting TensorRT measurement;
 - one shielded-controller synthetic qualification no-go;
+- one sustained command-dropout protection qualification;
+- one timed assistance-handoff qualification;
+- one sealed simulation test-operations report;
 - a deterministic SHA-256 manifest.
 
 ## What is intentionally excluded
@@ -61,6 +64,18 @@ The residual-only FP16 candidate passed the unchanged numerical gates on Apple
 MPS, but has not been measured by TensorRT and remains unpromoted. The shielded
 RL follow-up reached a 2.686% collision rate in its synthetic evaluation and
 missed its frozen 1% gate, so it did not advance to a real-WOMD campaign.
+
+The off-nominal behavior track used ten deterministic real-WOMD training
+scenes. Sustained command loss manifested in all ten unprotected runs, while the
+conservative fallback succeeded in all ten protected scenes and passed 80/80
+gates. A separate timed assistance contract passed 90/90 gates, including exact
+fault, request, resolution, and recovery transitions. Together they add 120
+physical rollouts and 9,600 Waymax steps. They are bounded research tests, not
+production fault-protection, human remote assistance, or safety claims.
+
+The test-operations record reconciles campaign, analytics, replay, fault, and
+assistance evidence into seven independently owned SLOs. It contains aggregate
+health and issue-triage data only.
 
 ## Use
 

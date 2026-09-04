@@ -3,18 +3,21 @@
   "schema_version": "2.0.0",
   "distribution_scope": "aggregate_only_no_waymo_dataset_files",
   "files": {
-    "README.md": "3b7464f8656dd2c026a236fd61558c162446ca1c1446a174ee129123e8d01802",
+    "README.md": "da2c02436c8162366eb95e11abd4bbcc7e9471829ef3b48871b4a3295da41c1e",
     "data/active-risk-v1.json": "b530ade8193ba22349bd26f21689dc16a706c6b54d9d210c5e72284c15662d19",
     "data/active-risk-v2.json": "df0ab0f71519d6e0e85f95507de673f47a3953c04b1a997febe4ae95106fc0cf",
+    "data/assistance-handoff-command-recovery.json": "46259a5af924d4ad691150fce751bc95a3cd7a93f2fbc31e253e70ac0c1fd6c2",
     "data/campaign.jsonl": "af133e08e3aa7816cb6089a5467ba90ab469f52346e3d8536aca3b00fc4d0eae",
+    "data/fault-protection-command-dropout.json": "f7dafcb4fea26c3ddf86e85c6ded565422b2761d7e0d1a04a9821838c909a2ec",
     "data/fp16-residual-candidate.json": "055304751d6b0a81714a76190332f9d7094223b13c12a7dfe9b9c8866fe7865b",
     "data/shielded-rl-controller.json": "a2e5911012edf2d36b651a5bb1fbc8a2167efd9bf0a20994a38bde6feadf97c5",
     "data/tensorrt-cpp-benchmark.json": "85b7c17ac59c869e451dc9c3f8cc31a15a47c9b0218d5526d29534947fab095f",
     "data/tensorrt-cpp-benchmark-v2.json": "50768b9733bb5ccdd2093d2f71df661556f810e1f7dbbd3fac8ed32a869ce574",
     "data/tensorrt-qualification.json": "7ae51921cf7e242c5bdca3ce74c50c8961602720d8dd9cde000c51e57c596c8e",
     "data/tensorrt-qualification-v2.json": "dfb23a7aaf52d6415f44f49a411e84795f578717a33c100fb8586fe94a785269",
+    "data/test-operations.json": "277ded6d2b2286ffde60b20dc8e5ea489f6bb7ef4480e0db250348335b941023",
     "data/trajectory-model-v2.json": "29221c77688cd4dc8078b1f18f68bcd0694e13fe00f8d2f07d9328d8131e0f04",
     "data/trajectory-model.json": "9162a976b65a7c1c79ec001aa8d168def1af3d91c6879c35cb1c8049d3674181",
-    "verify.py": "48ab661416ac66c7473af0bd9a22bbf26dab46a41d3369969d8a95b87d4e7ee3"
+    "verify.py": "7ddf0d25404818458dd83ea5269345507ed3a0308d48c59a05a5ac327f216c08"
   }
 }
