@@ -8,7 +8,7 @@ collapsed into a single green or red badge:
 2. **What did the tested behavior do?**
 
 A healthy campaign can find no regression. A broken pipeline can also appear to
-find nothing. The Operations workspace keeps those outcomes separate.
+find nothing. The Campaign workspace keeps those outcomes separate.
 
 ## Evidence flow
 
@@ -23,7 +23,7 @@ flowchart LR
     H --> A["Actionable alerts"]
     V --> R["Aggregate operations report"]
     R --> API["Authenticated FastAPI"]
-    R --> UI["Angular operations console"]
+    R --> UI["Angular campaign workstation"]
 ```
 
 `planmargin-build-test-operations` reconstructs the report from the private,

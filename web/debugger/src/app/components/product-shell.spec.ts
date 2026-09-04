@@ -30,24 +30,24 @@ describe('ProductShell', () => {
     fixture.detectChanges();
 
     let text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Operations');
-    expect(text).toContain('Campaign health and release evidence');
-    expect(text).toContain('Execution healthy100/100');
-    expect(text).toContain('Integrity checks passevidence pipeline100%807 of 807Pass');
-    expect(text).toContain('Promotion queue3');
-    expect(text).not.toContain('Replay sealed planner evidence locally');
+    expect(text).toContain('Campaign');
+    expect(text).toContain('Behavior test / lead-braking-v1');
+    expect(text).toContain('Executionhealthy100/100 cells complete');
+    expect(text).toContain('Release contract7/7');
+    expect(text).toContain('Review queue3');
+    expect(text).not.toContain('No retained replay loaded');
     const workbench = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Scenario lab'))!;
+    ).find((candidate) => candidate.textContent?.includes('Replay'))!;
     workbench.click();
     fixture.detectChanges();
     text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Replay sealed planner evidence locally');
-    expect(text).toContain('Public proposals3,200');
+    expect(text).toContain('No retained replay loaded');
+    expect(text).toContain('Campaign proposals3,200');
 
     const evidence = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Research'))!;
+    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
     evidence.click();
     fixture.detectChanges();
     const runtime = Array.from(
@@ -77,7 +77,7 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Research'))!;
+    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
     button.click();
     fixture.detectChanges();
 
@@ -96,7 +96,7 @@ describe('ProductShell', () => {
         '.product-header nav button',
       ) as NodeListOf<HTMLButtonElement>,
     );
-    navigation.find((candidate) => candidate.textContent?.includes('Research'))!.click();
+    navigation.find((candidate) => candidate.textContent?.includes('Evidence'))!.click();
     fixture.detectChanges();
     const runtime = Array.from(
       fixture.nativeElement.querySelectorAll(
@@ -125,7 +125,7 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     expect(simulator.sensorMode()).toBe('camera');
 
-    buttons.find((candidate) => candidate.textContent?.includes('Scenario lab'))!.click();
+    buttons.find((candidate) => candidate.textContent?.includes('Replay'))!.click();
     fixture.detectChanges();
     expect(simulator.sensorMode()).toBe('planning');
   });
@@ -195,7 +195,7 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Research'))!;
+    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
     button.click();
     fixture.detectChanges();
 

@@ -52,10 +52,10 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
             [class.active]="view() === 'operations'"
             (click)="setView('operations')"
           >
-            Operations
+            Campaign
           </button>
           <button type="button" [class.active]="view() === 'replay'" (click)="setView('replay')">
-            Scenario lab
+            Replay
           </button>
           <button type="button" [class.active]="view() === 'sensor'" (click)="setView('sensor')">
             Sensors
@@ -65,7 +65,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
             [class.active]="view() === 'investigate'"
             (click)="setView('investigate')"
           >
-            Research
+            Evidence
           </button>
         </nav>
         <div class="header-actions">
@@ -843,46 +843,64 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         </main>
       } @else if (!local.connected()) {
         <main class="locked-workspace">
-          <div>
-            <span>{{
-              view() === 'sensor' ? 'Recorded sensor lab' : 'Planning replay workbench'
-            }}</span>
-            <h1>
-              {{
-                view() === 'sensor'
-                  ? 'Inspect real camera, LiDAR, and 3DGS locally.'
-                  : 'Replay sealed planner evidence locally.'
-              }}
-            </h1>
-            <p>
-              This surface requires the licensed records on the engineer's machine. The public
-              campaign analysis remains available without them.
-            </p>
+          <aside class="locked-rail">
+            <header><span>Workspace</span><b>OFFLINE</b></header>
+            <button class="selected" type="button">
+              {{ view() === 'sensor' ? 'Perception scene' : 'Planning replay' }}
+            </button>
+            <section>
+              <span>Available after connection</span>
+              <p>Camera frames</p>
+              <p>LiDAR point cloud</p>
+              <p>3DGS reconstruction</p>
+              <p>Exact trajectories</p>
+            </section>
+          </aside>
+          <section class="locked-canvas">
             <div>
+              <span>LOCAL EVIDENCE REQUIRED</span>
+              <h1>
+                {{
+                  view() === 'sensor' ? 'No perception scene loaded' : 'No retained replay loaded'
+                }}
+              </h1>
+              <p>
+                PlanMargin never substitutes generated or synthetic media for licensed Waymo Open
+                Dataset records.
+              </p>
               @if (publicHosted) {
                 <a class="primary" [href]="repositoryUrl">Clone for local workspace</a>
               } @else {
                 <button class="primary" type="button" (click)="connectRequested.emit()">
-                  Open local workspace
+                  Connect sealed records
                 </button>
               }
-              <button type="button" (click)="setView('investigate')">Review public evidence</button>
             </div>
-          </div>
-          <dl>
-            <div>
-              <dt>Public proposals</dt>
-              <dd>{{ local.campaign().proposals.toLocaleString() }}</dd>
-            </div>
-            <div>
-              <dt>Physical rollouts</dt>
-              <dd>{{ local.campaign().physicalRollouts.toLocaleString() }}</dd>
-            </div>
-            <div>
-              <dt>Synthetic substitutes</dt>
-              <dd>None</dd>
-            </div>
-          </dl>
+          </section>
+          <aside class="locked-inspector">
+            <header><span>Data boundary</span><b>READ ONLY</b></header>
+            <dl>
+              <div>
+                <dt>Campaign proposals</dt>
+                <dd>{{ local.campaign().proposals.toLocaleString() }}</dd>
+              </div>
+              <div>
+                <dt>Physical rollouts</dt>
+                <dd>{{ local.campaign().physicalRollouts.toLocaleString() }}</dd>
+              </div>
+              <div>
+                <dt>Local sensor record</dt>
+                <dd>Not connected</dd>
+              </div>
+              <div>
+                <dt>Synthetic substitutes</dt>
+                <dd>None</dd>
+              </div>
+            </dl>
+            <button type="button" (click)="setView('investigate')">
+              Inspect aggregate evidence
+            </button>
+          </aside>
         </main>
       } @else {
         <app-simulator-workspace
@@ -913,13 +931,12 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       z-index: 80;
       top: 0;
       display: grid;
-      grid-template-columns: 220px minmax(0, 1fr) 220px;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      min-height: 64px;
-      padding: 0 1.4rem;
+      min-height: 52px;
+      padding: 0 0.8rem;
       border-bottom: 1px solid var(--divider);
-      background: rgb(7 16 24 / 94%);
-      backdrop-filter: blur(16px);
+      background: rgb(15 16 18 / 97%);
     }
     .header-actions {
       display: flex;
@@ -930,7 +947,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     .brand {
       display: flex;
       align-items: center;
-      gap: 0.65rem;
+      gap: 0.5rem;
       width: max-content;
       padding: 0;
       border: 0;
@@ -941,24 +958,29 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       color: var(--reference);
     }
     .brand strong {
-      font-size: 0.92rem;
+      font-size: 0.78rem;
       letter-spacing: -0.025em;
     }
     .product-header nav {
       display: flex;
       align-self: stretch;
-      justify-content: center;
-      gap: 1.7rem;
+      justify-content: flex-start;
+      gap: 0;
+      margin-left: 1rem;
+      border-left: 1px solid var(--divider);
     }
     .product-header nav button {
       position: relative;
       border: 0;
       background: transparent;
       color: var(--secondary);
-      font-size: 0.69rem;
+      padding: 0 0.9rem;
+      border-right: 1px solid var(--divider);
+      font-size: 0.62rem;
       font-weight: 650;
     }
     .product-header nav button.active {
+      background: #1b1d1f;
       color: var(--primary);
     }
     .product-header nav button.active:after {
@@ -967,7 +989,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       bottom: 0;
       left: 0;
       height: 2px;
-      background: var(--reference);
+      background: #e7dd55;
       content: '';
     }
     .connection,
@@ -976,10 +998,10 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       align-items: center;
       justify-content: center;
       gap: 0.45rem;
-      min-height: 34px;
+      min-height: 30px;
       padding: 0 0.75rem;
       border: 1px solid var(--divider);
-      border-radius: 4px;
+      border-radius: 2px;
       background: var(--surface-subtle);
       color: var(--secondary);
       font-size: 0.63rem;
@@ -1054,13 +1076,13 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       color: #071218;
     }
     .investigation-page {
-      min-height: calc(100dvh - 64px);
+      min-height: calc(100dvh - 52px);
       padding: 0;
     }
     .evidence-commandbar {
       position: sticky;
       z-index: 60;
-      top: 64px;
+      top: 52px;
       display: grid;
       grid-template-columns: minmax(260px, 1fr) auto minmax(190px, 1fr);
       align-items: center;
@@ -1427,74 +1449,124 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     }
     .locked-workspace {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 300px;
-      align-items: center;
-      min-height: calc(100dvh - 64px);
-      gap: 4rem;
-      padding: clamp(2rem, 8vw, 8rem);
-      background:
-        linear-gradient(120deg, rgb(7 16 24 / 96%), rgb(7 16 24 / 82%)),
-        radial-gradient(circle at 75% 40%, rgb(53 197 211 / 16%), transparent 36%);
+      grid-template-columns: 210px minmax(0, 1fr) 280px;
+      min-height: calc(100dvh - 52px);
+      background: #090a0b;
     }
-    .locked-workspace > div > span {
-      color: var(--reference);
-      font-size: 0.6rem;
-      font-weight: 750;
-      letter-spacing: 0.1em;
+    .locked-rail,
+    .locked-inspector {
+      background: #101113;
+    }
+    .locked-rail {
+      border-right: 1px solid var(--divider);
+    }
+    .locked-inspector {
+      border-left: 1px solid var(--divider);
+    }
+    .locked-rail header,
+    .locked-inspector header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 34px;
+      padding: 0 0.7rem;
+      border-bottom: 1px solid var(--divider);
+      background: #151618;
+      color: #85888b;
+      font:
+        600 0.55rem ui-monospace,
+        monospace;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
-    .locked-workspace h1 {
-      max-width: 760px;
-      margin: 0.7rem 0;
-      font-size: clamp(2rem, 5vw, 4.4rem);
-      font-weight: 520;
-      line-height: 0.98;
-      letter-spacing: -0.055em;
-    }
-    .locked-workspace p {
-      max-width: 620px;
-      color: var(--secondary);
-      font-size: 0.72rem;
-      line-height: 1.7;
-    }
-    .locked-workspace > div > div {
-      display: flex;
-      gap: 0.6rem;
-      margin-top: 1.4rem;
-    }
-    .locked-workspace > div > div > button:not(.primary) {
-      min-height: 42px;
-      padding: 0 1rem;
-      border: 1px solid var(--divider-strong);
-      border-radius: 5px;
+    .locked-rail > button {
+      width: 100%;
+      padding: 0.8rem;
+      border: 0;
+      border-bottom: 1px solid var(--divider-soft);
       background: transparent;
       color: var(--primary);
-      font-size: 0.69rem;
+      font-size: 0.65rem;
+      text-align: left;
     }
-    .locked-workspace > dl {
+    .locked-rail > button.selected {
+      background: #1b1d1f;
+      box-shadow: inset 2px 0 #e7dd55;
+    }
+    .locked-rail section {
+      padding: 0.8rem;
+      color: #7f8285;
+      font-size: 0.56rem;
+    }
+    .locked-rail section span {
+      font:
+        600 0.5rem ui-monospace,
+        monospace;
+      text-transform: uppercase;
+    }
+    .locked-rail section p {
+      margin: 0.65rem 0 0;
+    }
+    .locked-canvas {
+      display: grid;
+      min-width: 0;
+      padding: 2rem;
+      place-items: center;
+    }
+    .locked-canvas > div {
+      max-width: 470px;
+    }
+    .locked-canvas span {
+      color: #e7dd55;
+      font:
+        600 0.58rem ui-monospace,
+        monospace;
+      letter-spacing: 0.08em;
+    }
+    .locked-canvas h1 {
+      margin: 0.8rem 0;
+      font-size: 1.65rem;
+      font-weight: 560;
+      line-height: 1.2;
+      letter-spacing: -0.03em;
+    }
+    .locked-canvas p {
+      margin: 0 0 1.2rem;
+      color: var(--secondary);
+      font-size: 0.68rem;
+      line-height: 1.6;
+    }
+    .locked-inspector dl {
       margin: 0;
-      border: 1px solid var(--divider);
-      background: rgb(9 20 29 / 80%);
     }
-    .locked-workspace > dl div {
+    .locked-inspector dl div {
       display: flex;
       justify-content: space-between;
-      padding: 1rem;
-      border-bottom: 1px solid var(--divider);
+      gap: 1rem;
+      padding: 0.72rem;
+      border-bottom: 1px solid var(--divider-soft);
     }
-    .locked-workspace > dl div:last-child {
-      border-bottom: 0;
+    .locked-inspector dt,
+    .locked-inspector dd {
+      font-size: 0.56rem;
     }
-    .locked-workspace dt,
-    .locked-workspace dd {
-      font-size: 0.65rem;
-    }
-    .locked-workspace dt {
+    .locked-inspector dt {
       color: var(--secondary);
     }
-    .locked-workspace dd {
+    .locked-inspector dd {
       margin: 0;
       font-weight: 650;
+      text-align: right;
+    }
+    .locked-inspector > button {
+      width: calc(100% - 1.4rem);
+      min-height: 32px;
+      margin: 0.7rem;
+      border: 1px solid var(--divider-strong);
+      border-radius: 2px;
+      background: #1a1c1e;
+      color: var(--primary);
+      font-size: 0.6rem;
     }
     .public-result {
       display: flex;
@@ -2128,7 +2200,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
     }
     .embedded-simulator {
       display: block;
-      height: calc(100dvh - 64px);
+      height: calc(100dvh - 52px);
     }
     @media (max-width: 900px) {
       .product-header {
@@ -2186,6 +2258,10 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       .public-analysis,
       .locked-workspace {
         grid-template-columns: 1fr;
+      }
+      .locked-rail,
+      .locked-inspector {
+        display: none;
       }
       .deployment-notes {
         grid-template-columns: 1fr;
@@ -2286,9 +2362,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         grid-template-columns: 120px minmax(80px, 1fr) 55px;
       }
       .locked-workspace {
-        min-height: calc(100dvh - 112px);
-        gap: 2rem;
-        padding: 2rem 1rem;
+        min-height: calc(100dvh - 52px);
       }
       .rank-tabs {
         width: 100%;
@@ -2335,7 +2409,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         flex-direction: column;
       }
       .embedded-simulator {
-        height: calc(100dvh - 112px);
+        height: calc(100dvh - 52px);
       }
     }
   `,

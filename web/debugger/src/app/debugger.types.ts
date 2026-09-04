@@ -17,6 +17,11 @@ export interface TrajectorySet {
   readonly recorded: readonly Point2d[];
 }
 
+export interface MutationTarget {
+  readonly original: readonly Point2d[];
+  readonly counterfactual: readonly Point2d[];
+}
+
 export interface ControllerOutcome {
   readonly tested: 'fails' | 'succeeds';
   readonly reference: 'fails' | 'succeeds';
@@ -45,6 +50,7 @@ export interface DebuggerRun {
   readonly synthetic: boolean;
   readonly stepSeconds: number;
   readonly roadCenterlines: readonly (readonly Point2d[])[];
+  readonly mutationTarget: MutationTarget;
   readonly conflictRegion: readonly Point2d[];
   readonly hypotheses: readonly DebuggerHypothesis[];
 }

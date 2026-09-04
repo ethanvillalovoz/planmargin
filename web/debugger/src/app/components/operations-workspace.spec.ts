@@ -1,4 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { DebuggerStore } from '../debugger.store';
+import { LocalEvidenceService } from '../local-evidence.service';
+import { parseLocalRun } from '../local-evidence.parsers';
+import { API_RUN } from '../local-evidence.test-fixtures';
 import { OperationsWorkspace } from './operations-workspace';
 
 describe('OperationsWorkspace', () => {
@@ -8,9 +12,9 @@ describe('OperationsWorkspace', () => {
     const fixture = TestBed.createComponent(OperationsWorkspace);
     fixture.detectChanges();
     let text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Execution healthy100/100');
-    expect(text).toContain('Behavior outcome0qualifying regressions');
-    expect(text).toContain('7/7 stages healthy');
+    expect(text).toContain('Executionhealthy100/100 cells complete');
+    expect(text).toContain('Behavior outcome0 qualifying regressions');
+    expect(text).toContain('Pipeline7/7');
     expect(text).toContain('Scaled FP16 drift exceeds the promotion gate');
 
     const coverage = Array.from(
@@ -41,11 +45,33 @@ describe('OperationsWorkspace', () => {
     ).find((button) => button.textContent?.includes('Pending evidence'))!;
     pending.click();
     fixture.detectChanges();
-    const text = fixture.nativeElement.textContent as string;
+    const text = fixture.nativeElement.querySelector('.issue-workspace').textContent as string;
     expect(text).toContain('Local numerical proxy passed');
     expect(text).toContain('PM-TRT-011');
     expect(text).toContain('No gate is marked failed');
     expect(text).not.toContain('Scaled FP16 drift exceeds');
     expect(text).not.toContain('Learned ranker did not generalize');
+  });
+
+  it('moves the real planning replay in one-second increments', () => {
+    const fixture = TestBed.createComponent(OperationsWorkspace);
+    const local = TestBed.inject(LocalEvidenceService);
+    const store = TestBed.inject(DebuggerStore);
+    local.state.set('connected');
+    const run = parseLocalRun(API_RUN);
+    store.loadRun(run);
+    fixture.detectChanges();
+
+    const forward = Array.from(
+      fixture.nativeElement.querySelectorAll('.transport button') as NodeListOf<HTMLButtonElement>,
+    ).find((button) => button.textContent?.includes('+1 s'))!;
+    forward.click();
+    fixture.detectChanges();
+
+    const expectedIndex = Math.min(store.sampleCount() - 1, Math.round(1 / run.stepSeconds));
+    expect(store.timestepIndex()).toBe(expectedIndex);
+    expect(fixture.nativeElement.textContent).toContain(
+      `${(expectedIndex * run.stepSeconds).toFixed(1)} s`,
+    );
   });
 });

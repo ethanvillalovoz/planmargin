@@ -233,6 +233,7 @@ export function parseLocalRun(value: unknown): DebuggerRun {
     throw new Error('Run is not a supported real local evidence record');
   }
   const hypothesisValue = object(run['hypothesis'], 'run.hypothesis');
+  const mutationTargetValue = object(run['mutation_target'], 'run.mutation_target');
   const trajectoriesValue = object(hypothesisValue['trajectories'], 'run.hypothesis.trajectories');
   const outcomeValue = object(
     hypothesisValue['controller_outcome'],
@@ -298,6 +299,19 @@ export function parseLocalRun(value: unknown): DebuggerRun {
   for (const trajectory of Object.values(hypothesis.trajectories)) {
     if (trajectory.length !== metrics.length) throw new Error('Run trajectories are not aligned');
   }
+  const mutationTarget = {
+    original: points(mutationTargetValue['original'], 'run.mutation_target.original'),
+    counterfactual: points(
+      mutationTargetValue['counterfactual'],
+      'run.mutation_target.counterfactual',
+    ),
+  };
+  if (
+    mutationTarget.original.length !== metrics.length ||
+    mutationTarget.counterfactual.length !== metrics.length
+  ) {
+    throw new Error('Mutation target trajectories are not aligned');
+  }
   return {
     schemaVersion: 'planmargin.debugger.v1',
     runId: text(run['run_id'], 'run.run_id'),
@@ -308,6 +322,7 @@ export function parseLocalRun(value: unknown): DebuggerRun {
     roadCenterlines: array(run['road_centerlines'], 'run.road_centerlines').map((line, index) =>
       points(line, `run.road_centerlines[${index}]`),
     ),
+    mutationTarget,
     conflictRegion: [],
     hypotheses: [hypothesis],
   };

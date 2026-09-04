@@ -10,8 +10,8 @@ visible in one synchronized engineering surface.
 
 The simulator uses one full-bleed scene rather than separate product pages:
 
-1. The **product bar** switches among Workbench, Sensors, and Evidence and
-   shows the authenticated local-record state without a setup wizard.
+1. The **product bar** switches among Campaign, Replay, Sensors, and Evidence
+   and shows the authenticated local-record state without a setup wizard.
 2. **View-specific controls** expose only real actions or sealed facts: native
    tracked boxes in Camera, read-only mutation/outcome/metric evidence in
    Planning, and source-frame provenance in 3DGS/LiDAR.
@@ -33,12 +33,12 @@ functional rather than decorative.
 
 ## Visual system
 
-The visual system is an original dark engineering instrument inspired by
-autonomous-vehicle simulation tools, not a copy of Waymo product chrome.
-Near-black surfaces preserve focus on sensor imagery; cyan identifies selected
-controls and candidate paths; green identifies observed paths; coral identifies
-counterfactual paths or conflicts. Corners, borders, and shadows remain
-restrained so dense evidence reads as an operational tool.
+The visual system is an original dark engineering instrument informed by the
+public Waymax and Waymo Open Dataset visual language, not a copy of private
+Waymo product chrome. Near-black surfaces preserve focus on spatial evidence;
+green identifies the tested ego planner, yellow the reference planner, gray the
+recorded ego path, and pink the real mutated lead vehicle. The global chrome is
+flat and compact, with thin dividers and color reserved for measured semantics.
 
 The PlanMargin mark is original repository artwork. No Waymo logo, proprietary
 UI, map tile, or brand asset is copied. “Waymo Open Dataset” describes the
@@ -68,9 +68,12 @@ input source, not affiliation or production-driver access.
 
 ## Component ownership
 
-- `SimulatorWorkspace`: the unified scene, top bar, controls, modes, timeline,
-  and stress replay.
-- `ProductShell`: task navigation and the candidate-evidence review surface.
+- `OperationsWorkspace`: campaign selection, scene-first retained replay,
+  versioned coverage, issue triage, transport, and release inspector.
+- `SimulatorWorkspace`: the dedicated replay and sensor modes, timeline, and
+  stress replay.
+- `ProductShell`: global task navigation and the candidate-evidence review
+  surface.
 - `SimulatorStore`: sensor mode, independent Camera and Planning clocks,
   source-frame spatial lock, scene layers, and replay state.
 - `SensorViewport`: authenticated camera lifecycle, Spark/Three.js renderers,
@@ -80,7 +83,8 @@ input source, not affiliation or production-driver access.
   and privacy disclosure.
 - `LocalEvidenceService`: fixed authenticated reads, HttpOnly browser-session
   handshake, `no-store` requests, and binary sensor loading.
-- `DebuggerStore`: the existing validated planning evidence and metric samples.
+- `DebuggerStore`: validated ego-planner trajectories, real mutation-target
+  tracks, and aligned metric samples.
 
 ## Verification contract
 

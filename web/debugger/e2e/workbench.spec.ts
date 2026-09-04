@@ -165,25 +165,24 @@ test('public clone stays honest, usable, and accessible without licensed records
   await page.goto('/');
   await expect(page).toHaveTitle('PlanMargin simulation test operations');
   await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeHidden();
+  await expect(page.getByLabel('Current campaign state')).toContainText('100/100');
+  await expect(page.getByLabel('Current campaign state')).toContainText('0 qualifying regressions');
+  await expect(page.getByLabel('Campaign explorer')).toContainText('Pipeline');
+  await expect(page.getByLabel('Release evidence inspector')).toContainText('7/7');
   await expect(
-    page.getByRole('heading', { name: 'Campaign health and release evidence' }),
+    page.getByRole('heading', { name: 'No qualifying regression found.' }),
   ).toBeVisible();
-  await expect(page.getByLabel('Campaign status summary')).toContainText('100/100');
-  await expect(page.getByLabel('Campaign status summary')).toContainText('7/7');
-  await expect(page.getByRole('heading', { name: 'Pipeline stages' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Service-level objectives' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Coverage', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Behavior coverage' })).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: 'Protection and assistance protocols' }),
-  ).toBeVisible();
+  await expect(page.getByText('Behavior coverage', { exact: true })).toBeVisible();
+  await expect(page.getByText('Off-nominal behavior V&V')).toBeVisible();
+  await expect(page.getByText('Mutation contract frozen')).toBeVisible();
+  await expect(page.getByText('Known unknowns')).toBeVisible();
   await page.getByRole('button', { name: /^Issues/ }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Promotion and test-health queue' }),
-  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pending evidence' })).toBeVisible();
+  await expect(page.getByText('Measured evidence')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await expect(
     page.getByRole('heading', {
       name: '3,200 counterfactual proposals. Zero qualifying regressions.',
@@ -195,12 +194,12 @@ test('public clone stays honest, usable, and accessible without licensed records
   await expect(page.getByText('never substitute or synthetic cases')).toBeVisible();
   await expect(page.getByText('Licensed local only')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Scenario lab', exact: true }).click();
-  await expect(page.getByText('Replay sealed planner evidence locally.')).toBeVisible();
-  await page.getByRole('button', { name: 'Open local workspace', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Replay', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No retained replay loaded' })).toBeVisible();
+  await page.getByRole('button', { name: 'Connect sealed records', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeVisible();
   await page.getByRole('button', { name: 'Close local evidence' }).click();
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
 
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(accessibility.violations).toEqual([]);
@@ -220,7 +219,7 @@ test('retained proposal opens its exact planning replay', async ({ page }) => {
   await mockExactReplayApi(page);
   await page.goto('/');
   await expect(page.getByText('Local records verified')).toBeVisible();
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await expect(page.getByText('Exact proposal replay retained and verified.')).toBeVisible();
   await page.getByRole('button', { name: 'Open exact proposal replay' }).click();
   await expect(page.getByRole('button', { name: 'Collapse controls' })).toBeVisible();
@@ -235,7 +234,7 @@ test('mobile exact replay keeps controls bounded below the scene', async ({ page
   test.skip(testInfo.project.name !== 'mobile-chromium');
   await mockExactReplayApi(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await page.getByRole('button', { name: 'Open exact proposal replay' }).click();
 
   const planning = page.getByLabel('Planning evidence', { exact: true });
@@ -252,7 +251,7 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
   await mockExactReplayApi(page);
   await page.goto('/');
   await expect(page.getByText('Local records verified')).toBeVisible();
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await page.getByRole('button', { name: 'Evidence', exact: true }).click();
 
   await expect(page.getByText('Counterfactual investigation')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Priority review queue' })).toBeVisible();
@@ -303,7 +302,7 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
 
   await page.reload();
   await expect(page.getByText('Local records verified')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Operations', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Campaign', exact: true })).toBeVisible();
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

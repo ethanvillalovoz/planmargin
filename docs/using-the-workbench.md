@@ -1,6 +1,6 @@
 # Using the PlanMargin workbench
 
-PlanMargin has three task surfaces. They intentionally preserve different
+PlanMargin has four task surfaces. They intentionally preserve different
 evidence scopes instead of pretending every artifact is synchronized.
 
 ## Launch
@@ -28,14 +28,20 @@ local tabs reconnect automatically without exposing the credential to
 JavaScript. Disconnecting or closing the browser session clears access. Use the
 manual connection dialog only when automatic launch did not complete.
 
-## Workbench: inspect the retained planning replay
+## Campaign: triage a run and its release evidence
 
-The default surface is the planning workbench.
+The default surface is the scene-first campaign workstation. Select an issue in
+the left review queue, inspect its measured evidence and release contract on the
+right, and use the center Replay, Coverage, and Issues tabs without losing the
+active campaign context.
+
+## Replay: inspect the retained planning run
 
 1. Read the decision banner first. It says whether the tested planner failed,
    the reference planner failed, or the tested planner retained margin.
-2. Press play or drag the timeline. The tested, reference, and recorded paths
-   advance on the same retained WOMD run.
+2. Press play or drag the timeline. The tested, reference, and recorded ego
+   paths advance with the real mutated lead vehicle on the same retained WOMD
+   run.
 3. Use **−1 s** and **+1 s** to move by a visible interval; the step counter and
    metrics update with the scene.
 4. Read signed separation and time-to-collision together. A raw value is never

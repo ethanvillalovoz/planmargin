@@ -52,11 +52,15 @@ describe('SceneViewport', () => {
             callout: { x: number };
             labelAnchor: string;
           }[];
+          leadTrajectory: string;
+          leadCurrent: { x: number };
         };
       }
     ).fallbackScene();
 
     expect(scene.trajectories).toHaveLength(3);
+    expect(scene.leadTrajectory).toContain('10');
+    expect(scene.leadCurrent.x).toBeGreaterThan(0);
     for (const trajectory of scene.trajectories) {
       expect(trajectory.callout.x).toBeLessThan(trajectory.current.x);
       expect(trajectory.labelAnchor).toBe('end');

@@ -1,397 +1,390 @@
-import { ChangeDetectionStrategy, Component, computed, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  output,
+  signal,
+} from '@angular/core';
+import { DebuggerStore } from '../debugger.store';
+import { LocalEvidenceService } from '../local-evidence.service';
 import { TEST_OPERATIONS, TestOperationIssue } from '../test-operations';
+import { SceneViewport } from './scene-viewport';
 
 type OperationsSection = 'overview' | 'coverage' | 'issues';
 type IssueFilter = 'all' | 'active' | 'blocked' | 'pending_evidence';
 
 @Component({
   selector: 'app-operations-workspace',
+  imports: [SceneViewport],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="ops-shell">
-      <header class="ops-commandbar">
-        <div>
-          <span class="eyebrow">Simulation test operations</span>
-          <h1>Campaign health and release evidence</h1>
-          <p>
-            Monitor execution, inspect coverage, and triage promotion gates from one sealed run.
-          </p>
+    <main class="ops-workstation">
+      <header class="runbar">
+        <div class="run-context">
+          <span class="run-kicker">Behavior test / {{ report.coverage.plan_version }}</span>
+          <strong>{{ report.coverage.scenario_family }}</strong>
+          <small>Campaign {{ report.campaign.campaign_id }} · report {{ shortSeal() }}</small>
         </div>
-        <div class="ops-actions">
-          <span class="data-boundary"><i></i>Real WOMD · aggregate view</span>
-          <button type="button" (click)="openScenarioLab.emit()">Open scenario lab</button>
+        <div class="run-facts" aria-label="Current campaign state">
+          <span
+            ><i class="ok"></i>{{ report.campaign.completed_cells }}/{{
+              report.campaign.planned_cells
+            }}
+            cells</span
+          >
+          <span>{{ compact(report.campaign.physical_rollouts) }} rollouts</span>
+          <span>{{ compact(report.campaign.waymax_steps) }} Waymax steps</span>
+          <span class="decision"><i></i>0 qualifying regressions</span>
         </div>
+        <button type="button" class="primary-action" (click)="openScenarioLab.emit()">
+          Open retained replay
+        </button>
       </header>
 
-      <nav class="ops-tabs" aria-label="Operations views">
-        @for (item of sections; track item.id) {
-          <button
-            type="button"
-            [class.active]="section() === item.id"
-            (click)="section.set(item.id)"
-          >
-            {{ item.label }}
-            @if (item.id === 'issues') {
-              <span>{{ report.issues.length }}</span>
-            }
-          </button>
-        }
-        <small>Report {{ shortSeal() }}</small>
-      </nav>
-
-      @if (section() === 'overview') {
-        <section class="status-strip" aria-label="Campaign status summary">
-          <div class="primary-status">
-            <span
-              class="status-label"
-              [class.degraded]="report.campaign.execution_health === 'degraded'"
-              ><i></i>Execution {{ report.campaign.execution_health }}</span
-            >
-            <strong
-              >{{ report.campaign.completed_cells }}/{{ report.campaign.planned_cells }}</strong
-            >
-            <small>campaign cells completed</small>
-          </div>
-          <div>
-            <span>SLOs passing</span>
-            <strong>{{ report.slo_summary.passing }}/{{ report.slo_summary.total }}</strong>
-            <small>no pipeline alert active</small>
-          </div>
-          <div>
-            <span>Closed-loop work</span>
-            <strong>{{ compact(report.campaign.physical_rollouts) }}</strong>
-            <small>{{ compact(report.campaign.waymax_steps) }} Waymax steps</small>
-          </div>
-          <div>
-            <span>Behavior outcome</span>
-            <strong class="neutral">0</strong>
-            <small>qualifying regressions</small>
-          </div>
-          <div class="attention-status">
-            <span>Promotion queue</span>
-            <strong>{{ report.issues.length }}</strong>
-            <small>measured decisions need review</small>
-          </div>
-        </section>
-
-        <div class="ops-grid">
-          <section class="panel pipeline-panel" aria-labelledby="pipeline-title">
-            <header class="panel-heading">
-              <div>
-                <span>Current run</span>
-                <h2 id="pipeline-title">Pipeline stages</h2>
-              </div>
-              <b
-                ><i></i>{{ healthyStageCount() }}/{{ report.pipeline_stages.length }} stages
-                healthy</b
-              >
+      <div class="workstation-grid">
+        <aside class="campaign-rail" aria-label="Campaign explorer">
+          <section class="rail-section campaign-summary">
+            <header><span>Campaign</span><b>ACTIVE</b></header>
+            <button type="button" class="campaign-row selected">
+              <span><i class="ok"></i>{{ report.campaign.campaign_id }}</span>
+              <small>Real WOMD · matched search</small>
+            </button>
+          </section>
+          <section class="rail-section">
+            <header>
+              <span>Review queue</span><b>{{ report.issues.length }}</b>
             </header>
-            <ol class="stage-list">
+            @for (issue of report.issues; track issue.id) {
+              <button
+                type="button"
+                class="rail-issue"
+                [class.selected]="selectedIssue().id === issue.id"
+                (click)="openIssue(issue)"
+              >
+                <i [class.high]="issue.severity === 'high'"></i>
+                <span
+                  ><strong>{{ issue.id }}</strong
+                  ><small>{{ issue.title }}</small></span
+                >
+              </button>
+            }
+          </section>
+          <section class="rail-section pipeline">
+            <header>
+              <span>Pipeline</span
+              ><b>{{ healthyStageCount() }}/{{ report.pipeline_stages.length }}</b>
+            </header>
+            <ol>
               @for (stage of report.pipeline_stages; track stage.id; let index = $index) {
                 <li>
-                  <div class="stage-index">0{{ index + 1 }}</div>
-                  <div class="stage-copy">
+                  <span>{{ index + 1 }}</span>
+                  <div>
                     <strong>{{ stage.name }}</strong
-                    ><span>{{ stage.detail }}</span>
+                    ><small>{{ stage.observed }}</small>
                   </div>
-                  <div class="stage-measure">
-                    <b>{{ stage.observed }}</b
-                    ><span [class.degraded]="stage.status === 'degraded'"
-                      ><i></i>{{ stage.status === 'healthy' ? 'Healthy' : 'Degraded' }}</span
-                    >
-                  </div>
+                  <i [class.degraded]="stage.status === 'degraded'"></i>
                 </li>
               }
             </ol>
           </section>
+        </aside>
 
-          <section class="panel slo-panel" aria-labelledby="slo-title">
-            <header class="panel-heading">
-              <div>
-                <span>Release contract</span>
-                <h2 id="slo-title">Service-level objectives</h2>
-              </div>
-              <button type="button" (click)="section.set('coverage')">Coverage →</button>
-            </header>
-            <div class="slo-table" role="table" aria-label="Service-level objectives">
-              <div class="slo-row head" role="row">
-                <span>Objective</span><span>Target</span><span>Observed</span><span>State</span>
-              </div>
-              @for (slo of report.slos; track slo.id) {
-                <div class="slo-row" role="row">
-                  <span
-                    ><strong>{{ slo.name }}</strong
-                    ><small>{{ slo.owner }}</small></span
-                  >
-                  <span>{{ slo.target }}</span
-                  ><span>{{ slo.observed }}</span
-                  ><span
-                    [class.pass]="slo.status === 'pass'"
-                    [class.fail]="slo.status === 'fail'"
-                    >{{ slo.status === 'pass' ? 'Pass' : 'Fail' }}</span
-                  >
-                </div>
-              }
+        <section class="review-surface">
+          <header class="review-toolbar">
+            <div>
+              <span>Selected evidence</span
+              ><strong>{{
+                debuggerStore.hasRun()
+                  ? debuggerStore.run().scenarioLabel
+                  : 'No retained scene loaded'
+              }}</strong>
             </div>
-          </section>
-
-          <section class="panel issue-preview" aria-labelledby="attention-title">
-            <header class="panel-heading">
-              <div>
-                <span>Engineering decisions</span>
-                <h2 id="attention-title">Attention queue</h2>
-              </div>
-              <button type="button" (click)="section.set('issues')">View all →</button>
-            </header>
-            @for (issue of report.issues; track issue.id) {
-              <button class="issue-row" type="button" (click)="openIssue(issue)">
-                <span class="severity" [class.high]="issue.severity === 'high'"></span>
-                <span
-                  ><small>{{ issue.id }} · {{ stateLabel(issue.state) }}</small
-                  ><strong>{{ issue.title }}</strong></span
-                >
-                <b>{{ issue.component }}</b
-                ><i>→</i>
-              </button>
-            }
-          </section>
-        </div>
-      }
-
-      @if (section() === 'coverage') {
-        <section class="coverage-layout">
-          <div class="panel coverage-map">
-            <header class="panel-heading">
-              <div>
-                <span>Versioned test plan</span>
-                <h2>Behavior coverage</h2>
-              </div>
-              <b>{{ report.coverage.plan_version }}</b>
-            </header>
-            <div class="coverage-facts">
-              <div>
-                <span>Scenario family</span><strong>Lead-vehicle braking</strong
-                ><small>real WOMD training scenes</small>
-              </div>
-              <div>
-                <span>Scenarios</span><strong>{{ report.coverage.scenario_count }}</strong
-                ><small>deterministically selected</small>
-              </div>
-              <div>
-                <span>Seeds</span><strong>{{ report.coverage.seeds }}</strong
-                ><small>per scenario and method</small>
-              </div>
-              <div>
-                <span>Test cells</span><strong>{{ report.coverage.cells }}</strong
-                ><small>complete and sealed</small>
-              </div>
-            </div>
-            <div class="coverage-contract">
-              <span>Mutation contract</span>
-              @for (dimension of report.coverage.mutation_dimensions; track dimension) {
-                <b>{{ dimension }}</b>
-              }
-            </div>
-            <section class="fault-verification" aria-labelledby="fault-verification-title">
-              <header>
-                <div>
-                  <span>Off-nominal behavior V&amp;V</span>
-                  <h3 id="fault-verification-title">Protection and assistance protocols</h3>
-                </div>
-                <b>2 protocols qualified</b>
-              </header>
-              <div class="protocol-heading">
-                <strong>01 · Sustained command dropout</strong>
-                <b>
-                  {{ report.coverage.fault_protection.scene_gate_passes }}/{{
-                    report.coverage.fault_protection.scene_gate_total
-                  }}
-                  gates
-                </b>
-              </div>
-              <div class="protocol-facts">
-                <p>
-                  <span>Injected fault</span
-                  ><strong>{{ report.coverage.fault_protection.fault }}</strong
-                  ><small>triggered at 2.0 seconds</small>
-                </p>
-                <p>
-                  <span>Protected response</span
-                  ><strong>{{ report.coverage.fault_protection.protected_behavior }}</strong
-                  ><small
-                    >{{ report.coverage.fault_protection.scenario_count }}/{{
-                      report.coverage.fault_protection.scenario_count
-                    }}
-                    real scenes passed</small
-                  >
-                </p>
-                <p>
-                  <span>Verification work</span
-                  ><strong
-                    >{{ report.coverage.fault_protection.physical_rollouts }} physical
-                    rollouts</strong
-                  ><small>baseline, unprotected, and protected · repeated</small>
-                </p>
-              </div>
-              <div class="protocol-heading secondary">
-                <strong>02 · Assistance handoff recovery</strong>
-                <b>
-                  {{ report.coverage.assistance_handoff.scene_gate_passes }}/{{
-                    report.coverage.assistance_handoff.scene_gate_total
-                  }}
-                  gates
-                </b>
-              </div>
-              <div class="protocol-facts">
-                <p>
-                  <span>State sequence</span><strong>Fault → request → fallback</strong
-                  ><small>deterministic resolution at 3.0 seconds</small>
-                </p>
-                <p>
-                  <span>Recovery</span><strong>Primary resumes after resolution</strong
-                  ><small>
-                    {{ report.coverage.assistance_handoff.exact_transition_count }}/{{
-                      report.coverage.assistance_handoff.scenario_count
-                    }}
-                    exact transition traces
-                  </small>
-                </p>
-                <p>
-                  <span>Verification work</span
-                  ><strong>
-                    {{ report.coverage.assistance_handoff.physical_rollouts }} physical rollouts
-                  </strong>
-                  <small>10 real scenes · 90/90 gates passed</small>
-                </p>
-              </div>
-            </section>
-            <div class="method-comparison">
-              @for (method of methods(); track method.name) {
-                <div>
-                  <span>{{ method.name }}</span
-                  ><strong
-                    >{{ method.value.eligible_count.toLocaleString() }} /
-                    {{ method.value.proposal_count.toLocaleString() }}</strong
-                  >
-                  <div><i [style.width.%]="method.value.eligible_rate * 100"></i></div>
-                  <small
-                    >{{ (method.value.eligible_rate * 100).toFixed(2) }}% empirically supported +
-                    pipeline valid</small
-                  >
-                </div>
-              }
-            </div>
-          </div>
-          <aside class="panel gap-panel">
-            <header class="panel-heading">
-              <div>
-                <span>Known unknowns</span>
-                <h2>Coverage gaps</h2>
-              </div>
-              <b>{{ report.coverage.known_gaps.length }} open</b>
-            </header>
-            <p>These are explicit omissions, not claims hidden behind a green campaign status.</p>
-            @for (gap of report.coverage.known_gaps; track gap.id) {
-              <article>
-                <span>Not covered</span>
-                <h3>{{ gap.label }}</h3>
-                <p>{{ gap.next_test }}</p>
-              </article>
-            }
-          </aside>
-        </section>
-      }
-
-      @if (section() === 'issues') {
-        <section class="issues-layout">
-          <div class="panel issues-list">
-            <header class="panel-heading">
-              <div>
-                <span>Measured evidence only</span>
-                <h2>Promotion and test-health queue</h2>
-              </div>
-            </header>
-            <div class="filter-row">
-              @for (filterItem of filters; track filterItem.id) {
+            <nav class="ops-tabs" aria-label="Operations views">
+              @for (item of sections; track item.id) {
                 <button
                   type="button"
-                  [class.active]="filter() === filterItem.id"
-                  (click)="setFilter(filterItem.id)"
+                  [class.active]="section() === item.id"
+                  (click)="section.set(item.id)"
                 >
-                  {{ filterItem.label }}
+                  {{ item.label }}
+                  @if (item.id === 'issues') {
+                    <span>{{ report.issues.length }}</span>
+                  }
                 </button>
               }
-            </div>
-            @for (issue of filteredIssues(); track issue.id) {
-              <button
-                class="issue-card"
-                type="button"
-                [class.selected]="selectedIssue().id === issue.id"
-                (click)="selectedIssue.set(issue)"
-              >
-                <span class="severity" [class.high]="issue.severity === 'high'"></span>
-                <span
-                  ><small>{{ issue.id }} · {{ issue.component }}</small
-                  ><strong>{{ issue.title }}</strong>
-                  <p>{{ issue.evidence }}</p></span
-                >
-                <b>{{ stateLabel(issue.state) }}</b>
-              </button>
-            }
-          </div>
-          <aside class="panel issue-detail">
-            <header>
-              <span>{{ selectedIssue().id }}</span
-              ><b>{{ stateLabel(selectedIssue().state) }}</b>
-            </header>
-            <h2>{{ selectedIssue().title }}</h2>
-            <dl>
-              <div>
-                <dt>Component</dt>
-                <dd>{{ selectedIssue().component }}</dd>
-              </div>
-              <div>
-                <dt>Measured evidence</dt>
-                <dd>{{ selectedIssue().evidence }}</dd>
-              </div>
-              <div>
-                <dt>Next action</dt>
-                <dd>{{ selectedIssue().next_action }}</dd>
-              </div>
-              <div>
-                <dt>Source record</dt>
-                <dd>
-                  <code>{{ selectedIssue().source }}</code>
-                </dd>
-              </div>
-            </dl>
-            @if (selectedIssue().failed_gates.length > 0) {
-              <div class="failed-gates">
-                <span>Failed gates</span>
-                @for (gate of selectedIssue().failed_gates; track gate) {
-                  <code>{{ humanize(gate) }}</code>
-                }
-              </div>
-            } @else {
-              <div class="pending-note">
-                No gate is marked failed. Promotion waits on external TensorRT evidence.
-              </div>
-            }
-          </aside>
-        </section>
-      }
+            </nav>
+          </header>
 
-      <footer class="claim-boundary">
-        <strong>Evidence boundary</strong><span>{{ report.claim_boundary }}</span>
-      </footer>
+          @if (section() === 'overview') {
+            <div class="scene-frame">
+              @if (local.connected() && debuggerStore.hasRun()) {
+                <app-scene-viewport />
+              } @else {
+                <div class="scene-unavailable">
+                  <span>LOCAL REPLAY OFFLINE</span>
+                  <h1>Connect sealed records to inspect the synchronized scene.</h1>
+                  <p>
+                    Aggregate campaign health remains available. Camera frames, LiDAR, 3DGS, and
+                    exact trajectories stay on the engineer's machine.
+                  </p>
+                  <button type="button" (click)="openScenarioLab.emit()">
+                    Open replay workspace
+                  </button>
+                </div>
+              }
+            </div>
+            <div class="time-readout" aria-label="Replay status">
+              @if (local.connected() && debuggerStore.hasRun()) {
+                <div class="transport">
+                  <button type="button" (click)="togglePlayback()">
+                    {{ debuggerStore.playing() ? 'Pause' : 'Play' }}
+                  </button>
+                  <button type="button" title="Back one second" (click)="jumpSeconds(-1)">
+                    −1 s
+                  </button>
+                  <button type="button" title="Forward one second" (click)="jumpSeconds(1)">
+                    +1 s
+                  </button>
+                </div>
+              }
+              <span class="timecode">{{ currentTime() }}</span>
+              <div>
+                <strong>{{
+                  debuggerStore.hasRun() ? 'Retained planning replay' : 'Aggregate campaign only'
+                }}</strong
+                ><small>{{
+                  local.connected() ? 'Local evidence verified' : 'Local evidence not connected'
+                }}</small>
+              </div>
+              @if (local.connected() && debuggerStore.hasRun()) {
+                <input
+                  type="range"
+                  min="0"
+                  [max]="debuggerStore.sampleCount() - 1"
+                  step="1"
+                  [value]="debuggerStore.timestepIndex()"
+                  (input)="seek($event)"
+                  aria-label="Planning replay timeline"
+                />
+              }
+              <span class="source">WOMD Motion · sealed evidence</span>
+            </div>
+            <section class="evidence-strip" aria-label="Campaign evidence summary">
+              <div>
+                <span>Execution</span><strong>healthy</strong
+                ><small
+                  >{{ report.campaign.completed_cells }}/{{ report.campaign.planned_cells }} cells
+                  complete</small
+                >
+              </div>
+              <div>
+                <span>SLO state</span
+                ><strong
+                  >{{ report.slo_summary.passing }}/{{ report.slo_summary.total }} pass</strong
+                ><small>no pipeline alert active</small>
+              </div>
+              <div>
+                <span>Search yield</span><strong>{{ bayesianYield() }}</strong
+                ><small>Bayesian valid proposals</small>
+              </div>
+              <div>
+                <span>Behavior outcome</span><strong>0 qualifying regressions</strong
+                ><small>tested planner succeeds</small>
+              </div>
+            </section>
+          }
+
+          @if (section() === 'coverage') {
+            <div class="coverage-workspace">
+              <section>
+                <header>
+                  <span>Versioned test plan</span><strong>Behavior coverage</strong
+                  ><b>{{ report.coverage.plan_version }}</b>
+                </header>
+                <dl class="coverage-facts">
+                  <div>
+                    <dt>Scenario family</dt>
+                    <dd>{{ report.coverage.scenario_family }}</dd>
+                  </div>
+                  <div>
+                    <dt>Scenarios</dt>
+                    <dd>{{ report.coverage.scenario_count }} deterministically selected</dd>
+                  </div>
+                  <div>
+                    <dt>Seeds</dt>
+                    <dd>{{ report.coverage.seeds }} per scenario and method</dd>
+                  </div>
+                  <div>
+                    <dt>Test cells</dt>
+                    <dd>{{ report.coverage.cells }} complete and sealed</dd>
+                  </div>
+                </dl>
+                <div class="protocol">
+                  <span>01</span>
+                  <div>
+                    <strong>Off-nominal behavior V&amp;V</strong
+                    ><small
+                      >Sustained command dropout ·
+                      {{ report.coverage.fault_protection.physical_rollouts }} physical
+                      rollouts</small
+                    >
+                  </div>
+                  <b>80/80 gates</b>
+                </div>
+                <div class="protocol">
+                  <span>02</span>
+                  <div>
+                    <strong>Assistance handoff recovery</strong
+                    ><small
+                      >Fault → request → fallback ·
+                      {{ report.coverage.assistance_handoff.physical_rollouts }} physical
+                      rollouts</small
+                    >
+                  </div>
+                  <b>90/90 gates</b>
+                </div>
+                <div class="protocol">
+                  <span>03</span>
+                  <div>
+                    <strong>Mutation contract frozen</strong
+                    ><small
+                      >Reference and tested planners share the same recorded intervention</small
+                    >
+                  </div>
+                  <b>verified</b>
+                </div>
+              </section>
+              <aside>
+                <header><span>Known unknowns</span><strong>Not covered</strong></header>
+                @for (gap of report.coverage.known_gaps; track gap.id) {
+                  <article>
+                    <b>{{ gap.label }}</b>
+                    <p>{{ gap.next_test }}</p>
+                  </article>
+                }
+              </aside>
+            </div>
+          }
+
+          @if (section() === 'issues') {
+            <div class="issue-workspace">
+              <section class="issue-list">
+                <div class="filter-row">
+                  @for (filterItem of filters; track filterItem.id) {
+                    <button
+                      type="button"
+                      [class.active]="filter() === filterItem.id"
+                      (click)="setFilter(filterItem.id)"
+                    >
+                      {{ filterItem.label }}
+                    </button>
+                  }
+                </div>
+                @for (issue of filteredIssues(); track issue.id) {
+                  <button
+                    type="button"
+                    class="issue-card"
+                    [class.selected]="selectedIssue().id === issue.id"
+                    (click)="selectedIssue.set(issue)"
+                  >
+                    <i [class.high]="issue.severity === 'high'"></i
+                    ><span
+                      ><small>{{ issue.id }} · {{ issue.component }}</small
+                      ><strong>{{ issue.title }}</strong>
+                      <p>{{ issue.evidence }}</p></span
+                    ><b>{{ stateLabel(issue.state) }}</b>
+                  </button>
+                }
+              </section>
+              <aside class="issue-detail">
+                <header>
+                  <span>{{ selectedIssue().id }}</span
+                  ><b>{{ stateLabel(selectedIssue().state) }}</b>
+                </header>
+                <h2>{{ selectedIssue().title }}</h2>
+                <dl>
+                  <div>
+                    <dt>Component</dt>
+                    <dd>{{ selectedIssue().component }}</dd>
+                  </div>
+                  <div>
+                    <dt>Measured evidence</dt>
+                    <dd>{{ selectedIssue().evidence }}</dd>
+                  </div>
+                  <div>
+                    <dt>Next action</dt>
+                    <dd>{{ selectedIssue().next_action }}</dd>
+                  </div>
+                  <div>
+                    <dt>Source record</dt>
+                    <dd>
+                      <code>{{ selectedIssue().source }}</code>
+                    </dd>
+                  </div>
+                </dl>
+                @if (selectedIssue().failed_gates.length > 0) {
+                  <div class="failed-gates">
+                    <span>Failed gates</span>
+                    @for (gate of selectedIssue().failed_gates; track gate) {
+                      <code>{{ humanize(gate) }}</code>
+                    }
+                  </div>
+                } @else {
+                  <div class="pending-note">
+                    No gate is marked failed. Promotion waits on external TensorRT evidence.
+                  </div>
+                }
+              </aside>
+            </div>
+          }
+        </section>
+
+        <aside class="decision-inspector" aria-label="Release evidence inspector">
+          <header><span>Release inspector</span><b>REVIEW</b></header>
+          <section class="verdict">
+            <span class="status"><i></i>TESTED PLANNER HOLDS MARGIN</span>
+            <h2>No qualifying regression found.</h2>
+            <p>
+              The campaign is reproducible and complete. Three measured promotion decisions remain
+              intentionally stopped or pending.
+            </p>
+          </section>
+          <section class="inspector-block">
+            <header>
+              <span>Selected decision</span><small>{{ selectedIssue().id }}</small>
+            </header>
+            <strong>{{ selectedIssue().title }}</strong>
+            <p>{{ selectedIssue().evidence }}</p>
+            <button type="button" (click)="openIssue(selectedIssue())">Inspect evidence</button>
+          </section>
+          <section class="inspector-block slos">
+            <header>
+              <span>Release contract</span
+              ><small>{{ report.slo_summary.passing }}/{{ report.slo_summary.total }}</small>
+            </header>
+            @for (slo of report.slos; track slo.id) {
+              <div>
+                <span>{{ slo.name }}</span
+                ><b [class.fail]="slo.status === 'fail'">{{ slo.status }}</b>
+              </div>
+            }
+          </section>
+          <footer>
+            <strong>Evidence boundary</strong>
+            <p>{{ report.claim_boundary }}</p>
+          </footer>
+        </aside>
+      </div>
     </main>
   `,
   styles: `
     :host {
       display: block;
-      min-height: calc(100dvh - 64px);
-      background: #07131b;
-      color: #e7f1f4;
+      height: calc(100dvh - 52px);
+      min-height: 640px;
+      background: #0b0c0d;
+      color: #e9e9e7;
       font-family:
         Inter,
         ui-sans-serif,
@@ -401,773 +394,777 @@ type IssueFilter = 'all' | 'active' | 'blocked' | 'pending_evidence';
         'Segoe UI',
         sans-serif;
     }
-    .ops-shell {
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 28px 32px 22px;
+    button {
+      font-family: inherit;
+      cursor: pointer;
     }
-    .ops-commandbar {
-      display: flex;
-      justify-content: space-between;
-      gap: 32px;
-      align-items: flex-end;
-      padding: 4px 2px 24px;
+    .ops-workstation {
+      height: 100%;
+      display: grid;
+      grid-template-rows: 52px minmax(0, 1fr);
+      overflow: hidden;
     }
-    .eyebrow,
-    .panel-heading span,
-    .coverage-contract > span {
-      color: #64dbe7;
+    .runbar {
+      display: grid;
+      grid-template-columns: minmax(270px, 1fr) auto auto;
+      align-items: center;
+      gap: 18px;
+      padding: 0 14px;
+      border-bottom: 1px solid #2a2c2e;
+      background: #111214;
+    }
+    .run-context {
+      display: grid;
+      min-width: 0;
+    }
+    .run-kicker,
+    .run-context small,
+    .review-toolbar span,
+    .campaign-rail header span,
+    .decision-inspector > header span,
+    .coverage-workspace header span {
+      color: #85888b;
       font:
-        600 11px/1.2 ui-monospace,
+        600 10px/1.25 ui-monospace,
         SFMono-Regular,
         Menlo,
         monospace;
-      letter-spacing: 0.09em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
-    .ops-commandbar h1 {
-      font-size: 28px;
-      line-height: 1.15;
-      margin: 7px 0 8px;
-      letter-spacing: -0.025em;
+    .run-context strong {
+      font-size: 13px;
+      font-weight: 620;
     }
-    .ops-commandbar p {
-      margin: 0;
-      color: #91a8b2;
-      font-size: 14px;
-    }
-    .ops-actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-    .ops-actions button,
-    .panel-heading button {
-      border: 1px solid #287985;
-      background: #0b2730;
-      color: #d9f9fb;
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-weight: 650;
-      cursor: pointer;
-    }
-    .data-boundary {
-      border: 1px solid #193541;
-      background: #091b24;
-      color: #9db3bb;
-      border-radius: 6px;
-      padding: 9px 12px;
-      font-size: 12px;
-    }
-    .data-boundary i,
-    .status-label i,
-    .panel-heading b i,
-    .stage-measure span i {
-      display: inline-block;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #46d9a0;
-      margin-right: 7px;
-      box-shadow: 0 0 0 3px #123a35;
-    }
-    .ops-tabs {
-      height: 43px;
-      border: 1px solid #18333e;
-      background: #091922;
-      display: flex;
-      align-items: stretch;
-      border-radius: 7px 7px 0 0;
-    }
-    .ops-tabs button {
-      color: #8299a3;
-      background: transparent;
-      border: 0;
-      border-right: 1px solid #18333e;
-      padding: 0 19px;
-      font-weight: 650;
-      cursor: pointer;
-    }
-    .ops-tabs button.active {
-      color: #eaf9fa;
-      background: #0d2630;
-      box-shadow: inset 0 -2px #43cddd;
-    }
-    .ops-tabs button span {
-      margin-left: 7px;
-      background: #213944;
-      padding: 2px 6px;
-      border-radius: 9px;
-      font:
-        600 10px/1 ui-monospace,
-        monospace;
-    }
-    .ops-tabs small {
-      margin-left: auto;
-      align-self: center;
-      margin-right: 15px;
-      color: #58717b;
-      font:
-        11px ui-monospace,
-        monospace;
-    }
-    .status-strip {
-      display: grid;
-      grid-template-columns: 1.25fr repeat(4, 1fr);
-      border: 1px solid #18333e;
-      border-top: 0;
-      background: #091922;
-    }
-    .status-strip > div {
-      padding: 20px;
-      border-right: 1px solid #18333e;
-    }
-    .status-strip > div:last-child {
-      border: 0;
-    }
-    .status-strip span {
-      display: block;
-      color: #738d98;
-      font-size: 11px;
-    }
-    .status-strip strong {
-      display: block;
-      font-size: 26px;
-      margin: 7px 0 2px;
-      letter-spacing: -0.035em;
-    }
-    .status-strip small {
-      color: #718995;
-      font-size: 11px;
-    }
-    .status-strip .status-label {
-      color: #6ce0ad;
-      text-transform: uppercase;
-      font:
-        650 10px ui-monospace,
-        monospace;
-    }
-    .status-strip .status-label.degraded,
-    .stage-measure span.degraded,
-    .slo-row .fail {
-      color: #ff776c;
-    }
-    .status-strip .neutral {
-      color: #aabcc3;
-    }
-    .attention-status strong {
-      color: #ffc66e;
-    }
-    .ops-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.4fr) minmax(420px, 1fr);
-      gap: 14px;
-      margin-top: 14px;
-    }
-    .panel {
-      background: #091922;
-      border: 1px solid #18333e;
-      border-radius: 7px;
+    .run-context small {
       overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 9px;
+      letter-spacing: 0;
+      text-transform: none;
     }
-    .panel-heading {
-      min-height: 63px;
-      padding: 0 17px;
+    .run-facts {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      color: #a9abad;
+      font-size: 10px;
+    }
+    .run-facts span {
+      white-space: nowrap;
+    }
+    .run-facts i,
+    .campaign-row i,
+    .status i {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 6px;
+      border-radius: 50%;
+      background: #73db73;
+    }
+    .run-facts .decision {
+      color: #d7d7d4;
+    }
+    .run-facts .decision i {
+      background: #e7dd55;
+    }
+    .primary-action {
+      min-height: 30px;
+      padding: 0 11px;
+      border: 1px solid #686b6e;
+      border-radius: 3px;
+      background: #e9e9e7;
+      color: #111214;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .workstation-grid {
+      display: grid;
+      grid-template-columns: 220px minmax(520px, 1fr) 286px;
+      min-height: 0;
+    }
+    .campaign-rail,
+    .decision-inspector {
+      min-height: 0;
+      overflow: auto;
+      background: #101113;
+    }
+    .campaign-rail {
+      border-right: 1px solid #2a2c2e;
+    }
+    .rail-section {
+      border-bottom: 1px solid #2a2c2e;
+    }
+    .rail-section > header,
+    .decision-inspector > header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #18333e;
+      height: 34px;
+      padding: 0 10px;
+      background: #151618;
     }
-    .panel-heading h2 {
-      font-size: 15px;
-      margin: 4px 0 0;
-    }
-    .panel-heading b {
-      font-size: 11px;
-      color: #8eb2b7;
-      font-weight: 600;
-    }
-    .stage-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .stage-list li {
-      display: grid;
-      grid-template-columns: 42px minmax(0, 1fr) 190px;
-      gap: 12px;
-      align-items: center;
-      padding: 14px 17px;
-      border-bottom: 1px solid #132d37;
-    }
-    .stage-list li:last-child {
-      border: 0;
-    }
-    .stage-index {
-      color: #506a75;
+    .rail-section header b,
+    .decision-inspector > header b {
+      color: #b9bbbd;
       font:
-        12px ui-monospace,
+        600 9px ui-monospace,
         monospace;
     }
-    .stage-copy strong,
-    .stage-copy span,
-    .stage-measure b,
-    .stage-measure span {
-      display: block;
+    .campaign-row,
+    .rail-issue {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #d9d9d7;
+      text-align: left;
     }
-    .stage-copy strong {
-      font-size: 13px;
-      margin-bottom: 4px;
+    .campaign-row {
+      display: grid;
+      gap: 4px;
+      padding: 11px 10px;
     }
-    .stage-copy span {
-      color: #718995;
-      font-size: 11px;
+    .campaign-row.selected {
+      background: #1b1d1f;
+      box-shadow: inset 2px 0 #e7dd55;
     }
-    .stage-measure {
-      text-align: right;
-    }
-    .stage-measure b {
-      font-size: 11px;
-      color: #b9cbd1;
-    }
-    .stage-measure span {
-      color: #5fdca8;
+    .campaign-row span {
       font:
         600 10px ui-monospace,
         monospace;
-      margin-top: 5px;
-      text-transform: uppercase;
     }
-    .slo-table {
-      font-size: 11px;
+    .campaign-row small {
+      color: #7e8184;
+      font-size: 9px;
     }
-    .slo-row {
+    .rail-issue {
       display: grid;
-      grid-template-columns: minmax(150px, 1.4fr) 0.7fr 0.9fr 48px;
+      grid-template-columns: 4px minmax(0, 1fr);
+      gap: 9px;
+      padding: 9px 10px;
+      border-top: 1px solid #222426;
+    }
+    .rail-issue > i,
+    .issue-card > i {
+      width: 3px;
+      height: 26px;
+      border-radius: 1px;
+      background: #d9a84c;
+    }
+    .rail-issue > i.high,
+    .issue-card > i.high {
+      background: #ef705f;
+    }
+    .rail-issue span {
+      display: grid;
+      gap: 3px;
+    }
+    .rail-issue strong {
+      font:
+        600 9px ui-monospace,
+        monospace;
+    }
+    .rail-issue small {
+      overflow: hidden;
+      color: #9b9d9f;
+      font-size: 9px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rail-issue.selected {
+      background: #191b1d;
+    }
+    .pipeline ol {
+      list-style: none;
+      margin: 0;
+      padding: 3px 0;
+    }
+    .pipeline li {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) 7px;
+      gap: 6px;
       align-items: center;
-      gap: 12px;
-      padding: 10px 14px;
-      border-bottom: 1px solid #132d37;
-      color: #afc0c6;
+      padding: 7px 10px;
     }
-    .slo-row:last-child {
-      border: 0;
-    }
-    .slo-row.head {
-      color: #57717c;
-      text-transform: uppercase;
+    .pipeline li > span {
+      color: #66696c;
       font:
-        10px ui-monospace,
+        9px ui-monospace,
         monospace;
     }
-    .slo-row strong,
-    .slo-row small {
-      display: block;
-    }
-    .slo-row strong {
-      font-size: 11px;
-      color: #d8e5e8;
-    }
-    .slo-row small {
-      color: #59717b;
-      margin-top: 3px;
-    }
-    .slo-row .pass {
-      color: #5ee0a8;
-      font:
-        650 10px ui-monospace,
-        monospace;
-      text-transform: uppercase;
-    }
-    .slo-row .fail {
-      font:
-        650 10px ui-monospace,
-        monospace;
-      text-transform: uppercase;
-    }
-    .issue-preview {
-      grid-column: 1/-1;
-    }
-    .issue-row {
-      width: 100%;
+    .pipeline li div {
       display: grid;
-      grid-template-columns: 8px minmax(0, 1fr) 230px 18px;
-      gap: 12px;
-      align-items: center;
-      text-align: left;
-      background: transparent;
-      border: 0;
-      border-bottom: 1px solid #132d37;
-      color: #dce8eb;
-      padding: 13px 16px;
-      cursor: pointer;
     }
-    .issue-row:hover,
-    .issue-card:hover {
-      background: #0c222c;
+    .pipeline li strong {
+      font-size: 9px;
+      font-weight: 600;
     }
-    .issue-row > span strong,
-    .issue-row > span small {
-      display: block;
+    .pipeline li small {
+      color: #727578;
+      font-size: 8px;
     }
-    .issue-row small {
-      font:
-        10px ui-monospace,
-        monospace;
-      color: #718995;
-      margin-bottom: 4px;
+    .pipeline li > i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #69d38a;
     }
-    .issue-row strong {
-      font-size: 12px;
+    .pipeline li > i.degraded {
+      background: #ef705f;
     }
-    .issue-row b {
-      font-size: 11px;
-      color: #869da6;
-      font-weight: 500;
-    }
-    .severity {
-      width: 6px;
-      height: 22px;
-      border-radius: 3px;
-      background: #e6ae57;
-    }
-    .severity.high {
-      background: #f06f62;
-    }
-    .coverage-layout,
-    .issues-layout {
+    .review-surface {
       display: grid;
-      grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.7fr);
-      gap: 14px;
-      margin-top: 14px;
+      grid-template-rows: 43px minmax(0, 1fr) auto auto;
+      min-width: 0;
+      min-height: 0;
+      background: #090a0b;
     }
-    .coverage-facts {
-      display: grid;
-      grid-template-columns: 2fr repeat(3, 1fr);
-      border-bottom: 1px solid #18333e;
-    }
-    .coverage-facts > div {
-      padding: 20px;
-      border-right: 1px solid #18333e;
-    }
-    .coverage-facts span,
-    .coverage-facts strong,
-    .coverage-facts small {
-      display: block;
-    }
-    .coverage-facts span {
-      font-size: 10px;
-      text-transform: uppercase;
-      color: #64808a;
-    }
-    .coverage-facts strong {
-      font-size: 18px;
-      margin: 8px 0 4px;
-    }
-    .coverage-facts small {
-      font-size: 10px;
-      color: #6d858f;
-    }
-    .coverage-contract {
+    .review-toolbar {
       display: flex;
-      gap: 8px;
       align-items: center;
-      padding: 13px 18px;
-      border-bottom: 1px solid #18333e;
-    }
-    .coverage-contract > span {
-      margin-right: auto;
-    }
-    .coverage-contract b {
-      font:
-        500 11px ui-monospace,
-        monospace;
-      color: #9bb0b7;
-      border: 1px solid #21404b;
-      border-radius: 4px;
-      padding: 6px 8px;
-    }
-    .fault-verification {
-      border-bottom: 1px solid #18333e;
-      background: #0a1e27;
-      padding: 17px 18px;
-    }
-    .fault-verification header,
-    .protocol-heading,
-    .protocol-facts {
-      display: flex;
       justify-content: space-between;
-      gap: 18px;
+      padding: 0 12px;
+      border-bottom: 1px solid #2a2c2e;
+      background: #121315;
     }
-    .fault-verification header span {
-      color: #64dbe7;
+    .review-toolbar > div {
+      display: grid;
+    }
+    .review-toolbar strong {
+      font-size: 11px;
+      font-weight: 620;
+    }
+    .ops-tabs {
+      align-self: stretch;
+      display: flex;
+    }
+    .ops-tabs button {
+      min-width: 72px;
+      border: 0;
+      border-left: 1px solid #292b2d;
+      background: transparent;
+      color: #8d9093;
+      font-size: 10px;
+      font-weight: 620;
+    }
+    .ops-tabs button.active {
+      background: #1b1d1f;
+      color: #f1f1ef;
+      box-shadow: inset 0 -2px #e7dd55;
+    }
+    .ops-tabs button span {
+      margin-left: 4px;
+      padding: 1px 4px;
+      border-radius: 8px;
+      background: #2d3032;
+      color: #d4d4d2;
+      font-size: 8px;
+    }
+    .scene-frame {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      background: #050606;
+    }
+    .scene-frame app-scene-viewport {
+      position: absolute;
+      inset: 0;
+    }
+    .scene-unavailable {
+      display: grid;
+      align-content: center;
+      justify-items: start;
+      max-width: 480px;
+      height: 100%;
+      margin: auto;
+      padding: 34px;
+    }
+    .scene-unavailable span {
+      color: #e7dd55;
       font:
         600 10px ui-monospace,
         monospace;
       letter-spacing: 0.08em;
-      text-transform: uppercase;
     }
-    .fault-verification h3 {
-      margin: 4px 0 0;
-      font-size: 14px;
+    .scene-unavailable h1 {
+      margin: 12px 0 8px;
+      font-size: 22px;
+      line-height: 1.2;
     }
-    .fault-verification header b {
-      color: #5ee0a8;
-      font:
-        650 10px ui-monospace,
-        monospace;
-      text-transform: uppercase;
-    }
-    .protocol-heading {
-      align-items: center;
-      margin-top: 17px;
-      padding-top: 2px;
-    }
-    .protocol-heading.secondary {
-      border-top: 1px solid #18333e;
-      margin-top: 18px;
-      padding-top: 16px;
-    }
-    .protocol-heading strong {
-      color: #a9c0c7;
-      font:
-        600 11px ui-monospace,
-        monospace;
-      text-transform: uppercase;
-    }
-    .protocol-heading b {
-      color: #5ee0a8;
-      font:
-        650 10px ui-monospace,
-        monospace;
-    }
-    .protocol-facts {
-      margin-top: 10px;
-    }
-    .protocol-facts p {
-      flex: 1;
-      margin: 0;
-    }
-    .protocol-facts p span,
-    .protocol-facts p strong,
-    .protocol-facts p small {
-      display: block;
-    }
-    .protocol-facts p span {
-      color: #607b86;
-      font-size: 10px;
-      text-transform: uppercase;
-    }
-    .protocol-facts p strong {
-      margin: 6px 0 4px;
-      color: #dce8eb;
-      font-size: 12px;
-    }
-    .protocol-facts p small {
-      color: #708993;
-      font-size: 10px;
-    }
-    .method-comparison {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 28px;
-      padding: 23px;
-    }
-    .method-comparison span,
-    .method-comparison strong,
-    .method-comparison small {
-      display: block;
-    }
-    .method-comparison span {
-      color: #6b8791;
-      font:
-        600 10px ui-monospace,
-        monospace;
-      text-transform: uppercase;
-    }
-    .method-comparison strong {
-      font-size: 18px;
-      margin: 6px 0 10px;
-    }
-    .method-comparison > div > div {
-      height: 4px;
-      background: #142f39;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .method-comparison i {
-      display: block;
-      height: 100%;
-      background: #43cedc;
-    }
-    .method-comparison small {
-      color: #78909a;
-      margin-top: 7px;
-      font-size: 10px;
-    }
-    .gap-panel > p {
-      color: #8097a0;
+    .scene-unavailable p {
+      margin: 0 0 18px;
+      color: #929598;
       font-size: 12px;
       line-height: 1.55;
-      margin: 16px;
     }
-    .gap-panel article {
-      padding: 16px;
-      border-top: 1px solid #18333e;
-    }
-    .gap-panel article span {
-      color: #f0b863;
-      font:
-        650 10px ui-monospace,
-        monospace;
-      text-transform: uppercase;
-    }
-    .gap-panel h3 {
-      font-size: 13px;
-      margin: 6px 0;
-    }
-    .gap-panel article p {
-      color: #8299a2;
-      font-size: 11px;
-      line-height: 1.5;
-      margin: 0;
-    }
-    .issues-list .filter-row {
-      display: flex;
-      gap: 7px;
-      padding: 11px 14px;
-      border-bottom: 1px solid #18333e;
-    }
-    .filter-row button {
-      border: 1px solid #1d3a46;
-      background: #0a1c25;
-      color: #78919b;
-      border-radius: 5px;
-      padding: 6px 10px;
+    .scene-unavailable button,
+    .inspector-block button {
+      min-height: 30px;
+      border: 1px solid #4b4e51;
+      border-radius: 2px;
+      background: #1a1c1e;
+      color: #ececea;
       font-size: 10px;
-      cursor: pointer;
     }
-    .filter-row button.active {
-      border-color: #3bc6d4;
-      color: #d9fbfd;
-      background: #0c2b34;
-    }
-    .issue-card {
-      width: 100%;
+    .time-readout {
       display: grid;
-      grid-template-columns: 7px minmax(0, 1fr) 110px;
-      gap: 14px;
-      text-align: left;
-      padding: 15px;
-      background: transparent;
-      border: 0;
-      border-bottom: 1px solid #18333e;
-      color: #dce7ea;
-      cursor: pointer;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 44px;
+      padding: 0 12px;
+      border-top: 1px solid #2a2c2e;
+      background: #111214;
     }
-    .issue-card.selected {
-      background: #0d2731;
-      box-shadow: inset 2px 0 #41ccda;
+    .time-readout:has(.transport) {
+      grid-template-columns: auto auto minmax(130px, auto) minmax(120px, 1fr) auto;
     }
-    .issue-card small,
-    .issue-card strong {
-      display: block;
-    }
-    .issue-card small {
-      color: #6b848f;
+    .timecode {
+      color: #e7dd55;
       font:
-        10px ui-monospace,
+        600 12px ui-monospace,
         monospace;
-      margin-bottom: 5px;
     }
-    .issue-card strong {
-      font-size: 12px;
+    .time-readout > div {
+      display: grid;
     }
-    .issue-card p {
-      color: #7d949d;
-      font-size: 11px;
-      margin: 6px 0 0;
+    .time-readout .transport {
+      display: flex;
+      gap: 4px;
     }
-    .issue-card > b {
-      color: #dbb469;
+    .transport button {
+      min-height: 26px;
+      padding: 0 7px;
+      border: 1px solid #3d4043;
+      border-radius: 2px;
+      background: #191b1d;
+      color: #d9d9d7;
+      font-size: 9px;
+    }
+    .time-readout input {
+      width: 100%;
+      accent-color: #e7dd55;
+    }
+    .time-readout strong {
+      font-size: 10px;
+    }
+    .time-readout small,
+    .time-readout .source {
+      color: #777a7d;
+      font-size: 9px;
+    }
+    .evidence-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid #2a2c2e;
+      background: #131416;
+    }
+    .evidence-strip > div {
+      display: grid;
+      gap: 3px;
+      padding: 9px 11px;
+      border-right: 1px solid #2a2c2e;
+    }
+    .evidence-strip > div:last-child {
+      border: 0;
+    }
+    .evidence-strip span {
+      color: #777a7d;
       font:
-        650 9px ui-monospace,
+        9px ui-monospace,
         monospace;
       text-transform: uppercase;
-      text-align: right;
     }
-    .issue-detail {
-      padding: 20px;
-      align-self: start;
+    .evidence-strip strong {
+      font-size: 11px;
+      font-weight: 620;
     }
-    .issue-detail header {
+    .evidence-strip small {
+      color: #808386;
+      font-size: 8px;
+    }
+    .decision-inspector {
+      border-left: 1px solid #2a2c2e;
+    }
+    .verdict,
+    .inspector-block,
+    .decision-inspector > footer {
+      padding: 13px;
+      border-bottom: 1px solid #2a2c2e;
+    }
+    .status {
+      color: #e7dd55;
+      font:
+        600 9px ui-monospace,
+        monospace;
+    }
+    .status i {
+      background: #e7dd55;
+    }
+    .verdict h2 {
+      margin: 10px 0 7px;
+      font-size: 17px;
+      line-height: 1.25;
+    }
+    .verdict p,
+    .inspector-block p,
+    .decision-inspector footer p {
+      margin: 0;
+      color: #929598;
+      font-size: 10px;
+      line-height: 1.5;
+    }
+    .inspector-block > header {
       display: flex;
       justify-content: space-between;
-      color: #6d8791;
+      margin-bottom: 10px;
+      color: #7f8285;
       font:
-        10px ui-monospace,
+        600 9px ui-monospace,
         monospace;
       text-transform: uppercase;
     }
-    .issue-detail header b {
-      color: #e5b768;
+    .inspector-block > strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .inspector-block button {
+      width: 100%;
+      margin-top: 11px;
+    }
+    .slos > div {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-top: 1px solid #242628;
+      font-size: 9px;
+    }
+    .slos b {
+      color: #6ed28e;
+      text-transform: uppercase;
+    }
+    .slos b.fail {
+      color: #ef705f;
+    }
+    .decision-inspector footer strong {
+      font:
+        600 9px ui-monospace,
+        monospace;
+      text-transform: uppercase;
+    }
+    .coverage-workspace,
+    .issue-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      min-height: 0;
+      overflow: auto;
+    }
+    .coverage-workspace > section,
+    .coverage-workspace > aside,
+    .issue-list,
+    .issue-detail {
+      min-width: 0;
+      background: #101113;
+    }
+    .coverage-workspace > aside,
+    .issue-detail {
+      border-left: 1px solid #2a2c2e;
+    }
+    .coverage-workspace header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 3px;
+      padding: 13px;
+      border-bottom: 1px solid #2a2c2e;
+    }
+    .coverage-workspace header span {
+      grid-column: 1/-1;
+    }
+    .coverage-workspace header strong {
+      font-size: 13px;
+    }
+    .coverage-workspace header b {
+      font:
+        600 9px ui-monospace,
+        monospace;
+    }
+    .coverage-facts {
+      margin: 0;
+    }
+    .coverage-facts div {
+      display: grid;
+      grid-template-columns: 145px 1fr;
+      padding: 10px 13px;
+      border-bottom: 1px solid #242628;
+    }
+    .coverage-facts dt {
+      color: #7d8083;
+      font-size: 9px;
+    }
+    .coverage-facts dd {
+      margin: 0;
+      font-size: 10px;
+    }
+    .protocol {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 13px;
+      border-bottom: 1px solid #242628;
+    }
+    .protocol > span {
+      color: #66696c;
+      font:
+        10px ui-monospace,
+        monospace;
+    }
+    .protocol > div {
+      display: grid;
+    }
+    .protocol strong {
+      font-size: 10px;
+    }
+    .protocol small {
+      color: #7e8184;
+      font-size: 9px;
+    }
+    .protocol > b {
+      color: #6ed28e;
+      font:
+        600 9px ui-monospace,
+        monospace;
+      text-transform: uppercase;
+    }
+    .coverage-workspace article {
+      padding: 13px;
+      border-bottom: 1px solid #242628;
+    }
+    .coverage-workspace article b {
+      font-size: 10px;
+    }
+    .coverage-workspace article p {
+      margin: 5px 0 0;
+      color: #85888b;
+      font-size: 9px;
+      line-height: 1.45;
+    }
+    .issue-workspace {
+      grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.7fr);
+    }
+    .filter-row {
+      display: flex;
+      gap: 5px;
+      padding: 8px;
+      border-bottom: 1px solid #2a2c2e;
+    }
+    .filter-row button {
+      padding: 5px 8px;
+      border: 1px solid #343638;
+      border-radius: 2px;
+      background: #161719;
+      color: #8f9295;
+      font-size: 9px;
+    }
+    .filter-row button.active {
+      border-color: #777a7d;
+      background: #27292b;
+      color: #f0f0ee;
+    }
+    .issue-card {
+      display: grid;
+      grid-template-columns: 4px minmax(0, 1fr) auto;
+      gap: 10px;
+      width: 100%;
+      padding: 11px 12px;
+      border: 0;
+      border-bottom: 1px solid #242628;
+      background: transparent;
+      color: #dededc;
+      text-align: left;
+    }
+    .issue-card.selected {
+      background: #1b1d1f;
+    }
+    .issue-card span {
+      display: grid;
+      gap: 3px;
+    }
+    .issue-card small {
+      color: #7f8285;
+      font:
+        9px ui-monospace,
+        monospace;
+    }
+    .issue-card strong {
+      font-size: 10px;
+    }
+    .issue-card p {
+      margin: 0;
+      color: #898c8f;
+      font-size: 9px;
+    }
+    .issue-card > b {
+      color: #d8ad5a;
+      font:
+        600 8px ui-monospace,
+        monospace;
+      text-transform: uppercase;
+    }
+    .issue-detail {
+      padding: 14px;
+    }
+    .issue-detail > header {
+      display: flex;
+      justify-content: space-between;
+      color: #85888b;
+      font:
+        600 9px ui-monospace,
+        monospace;
+      text-transform: uppercase;
     }
     .issue-detail h2 {
-      font-size: 19px;
+      margin: 14px 0;
+      font-size: 16px;
       line-height: 1.3;
-      margin: 18px 0 22px;
     }
     .issue-detail dl {
       margin: 0;
     }
     .issue-detail dl div {
-      border-top: 1px solid #19343e;
-      padding: 13px 0;
+      padding: 9px 0;
+      border-top: 1px solid #2a2c2e;
     }
     .issue-detail dt {
-      color: #607b86;
-      font-size: 10px;
+      color: #777a7d;
+      font-size: 8px;
       text-transform: uppercase;
-      margin-bottom: 5px;
     }
     .issue-detail dd {
-      margin: 0;
-      color: #aebfc5;
-      font-size: 12px;
+      margin: 4px 0 0;
+      color: #b4b6b8;
+      font-size: 9px;
       line-height: 1.5;
     }
     .issue-detail code,
     .failed-gates code {
       font:
-        10px ui-monospace,
+        8px ui-monospace,
         monospace;
-      color: #8edbe1;
+      color: #d4cf75;
     }
     .failed-gates {
-      border-top: 1px solid #19343e;
-      padding-top: 14px;
+      margin-top: 10px;
     }
     .failed-gates span {
       display: block;
-      color: #607b86;
-      font-size: 10px;
+      color: #777a7d;
+      font-size: 8px;
       text-transform: uppercase;
-      margin-bottom: 8px;
     }
     .failed-gates code {
       display: block;
-      background: #0d232c;
-      border: 1px solid #1c3b46;
-      border-radius: 4px;
-      padding: 7px;
-      margin: 5px 0;
+      margin-top: 5px;
+      padding: 6px;
+      background: #18191b;
     }
     .pending-note {
-      background: #1c211c;
-      border: 1px solid #4a4932;
-      color: #c8bd83;
-      border-radius: 5px;
-      padding: 12px;
-      font-size: 11px;
-      line-height: 1.5;
+      margin-top: 10px;
+      padding: 8px;
+      border-left: 2px solid #d9a84c;
+      background: #1b1914;
+      color: #c9b47e;
+      font-size: 9px;
+      line-height: 1.4;
     }
-    .claim-boundary {
-      display: flex;
-      gap: 16px;
-      margin-top: 14px;
-      padding: 12px 15px;
-      border: 1px solid #16313c;
-      border-radius: 6px;
-      color: #617b86;
-      font-size: 10px;
+    @media (max-width: 1180px) {
+      .workstation-grid {
+        grid-template-columns: 190px minmax(440px, 1fr) 250px;
+      }
+      .run-facts span:nth-child(2),
+      .run-facts span:nth-child(3) {
+        display: none;
+      }
     }
-    .claim-boundary strong {
-      color: #8aa0a8;
-      white-space: nowrap;
-      text-transform: uppercase;
-    }
-    @media (max-width: 1000px) {
-      .ops-grid,
-      .coverage-layout,
-      .issues-layout {
+    @media (max-width: 900px) {
+      :host {
+        height: auto;
+      }
+      .ops-workstation {
+        height: auto;
+        min-height: calc(100dvh - 52px);
+      }
+      .runbar {
+        grid-template-columns: 1fr auto;
+      }
+      .run-facts {
+        display: none;
+      }
+      .workstation-grid {
+        grid-template-columns: 180px minmax(0, 1fr);
+      }
+      .decision-inspector {
+        grid-column: 1/-1;
+        border-top: 1px solid #2a2c2e;
+        border-left: 0;
+      }
+      .review-surface {
+        min-height: 620px;
+      }
+      .coverage-workspace,
+      .issue-workspace {
         grid-template-columns: 1fr;
       }
-      .status-strip {
+    }
+    @media (max-width: 650px) {
+      .runbar {
+        grid-template-columns: 1fr;
+        padding: 7px 10px;
+      }
+      .primary-action {
+        display: none;
+      }
+      .workstation-grid {
+        grid-template-columns: 1fr;
+      }
+      .campaign-rail {
+        display: none;
+      }
+      .review-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        height: auto;
+        padding: 8px;
+      }
+      .review-surface {
+        grid-template-rows: auto minmax(0, 1fr) auto auto;
+      }
+      .ops-tabs {
+        min-height: 34px;
+      }
+      .evidence-strip {
         grid-template-columns: repeat(2, 1fr);
       }
-      .status-strip > div {
-        border-bottom: 1px solid #18333e;
-      }
-      .coverage-facts {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-    @media (max-width: 680px) {
-      .ops-shell {
-        padding: 16px 12px;
-      }
-      .ops-commandbar {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .ops-actions {
-        width: 100%;
-        flex-wrap: wrap;
-      }
-      .ops-tabs small {
+      .source {
         display: none;
-      }
-      .status-strip {
-        grid-template-columns: 1fr;
-      }
-      .stage-list li {
-        grid-template-columns: 32px minmax(0, 1fr);
-      }
-      .stage-measure {
-        grid-column: 2;
-        text-align: left;
-      }
-      .slo-row {
-        grid-template-columns: 1.5fr 0.8fr 50px;
-      }
-      .slo-row > *:nth-child(2) {
-        display: none;
-      }
-      .coverage-facts,
-      .method-comparison {
-        grid-template-columns: 1fr;
-      }
-      .coverage-contract {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .fault-verification header,
-      .protocol-heading,
-      .protocol-facts {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .issue-row {
-        grid-template-columns: 7px minmax(0, 1fr) 18px;
-      }
-      .issue-row > b {
-        display: none;
-      }
-      .claim-boundary {
-        flex-direction: column;
-        gap: 6px;
       }
     }
   `,
 })
 export class OperationsWorkspace {
   readonly openScenarioLab = output<void>();
+  protected readonly debuggerStore = inject(DebuggerStore);
+  protected readonly local = inject(LocalEvidenceService);
   protected readonly report = TEST_OPERATIONS;
   protected readonly section = signal<OperationsSection>('overview');
   protected readonly filter = signal<IssueFilter>('all');
   protected readonly selectedIssue = signal<TestOperationIssue>(TEST_OPERATIONS.issues[0]);
   protected readonly sections: readonly { id: OperationsSection; label: string }[] = [
-    { id: 'overview', label: 'Overview' },
+    { id: 'overview', label: 'Replay' },
     { id: 'coverage', label: 'Coverage' },
     { id: 'issues', label: 'Issues' },
   ];
@@ -1181,9 +1178,6 @@ export class OperationsWorkspace {
     this.filter() === 'all'
       ? this.report.issues
       : this.report.issues.filter((issue) => issue.state === this.filter()),
-  );
-  protected readonly methods = computed(() =>
-    Object.entries(this.report.coverage.methods).map(([name, value]) => ({ name, value })),
   );
   protected readonly healthyStageCount = computed(
     () => this.report.pipeline_stages.filter((stage) => stage.status === 'healthy').length,
@@ -1206,6 +1200,25 @@ export class OperationsWorkspace {
   }
   protected stateLabel(value: TestOperationIssue['state']): string {
     return value.replaceAll('_', ' ');
+  }
+  protected currentTime(): string {
+    return this.debuggerStore.hasRun() ? `${this.debuggerStore.timeSeconds().toFixed(1)} s` : '—';
+  }
+  protected togglePlayback(): void {
+    this.debuggerStore.togglePlayback();
+  }
+  protected jumpSeconds(deltaSeconds: number): void {
+    const steps = Math.max(
+      1,
+      Math.round(Math.abs(deltaSeconds) / this.debuggerStore.run().stepSeconds),
+    );
+    this.debuggerStore.step(Math.sign(deltaSeconds) * steps);
+  }
+  protected seek(event: Event): void {
+    this.debuggerStore.seek(Number((event.target as HTMLInputElement).value));
+  }
+  protected bayesianYield(): string {
+    return `${(this.report.coverage.methods['bayesian'].eligible_rate * 100).toFixed(2)}%`;
   }
   protected humanize(value: string): string {
     return (

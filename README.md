@@ -44,8 +44,8 @@ deployment.
 6. **Inspect** the decision in a local workbench with planning replay, camera
    annotations, LiDAR, 3D Gaussian reconstruction, and sealed evidence.
 
-The public interface opens on Simulation Test Operations. An authenticated
-local launch opens the scene debugger with the retained records already loaded. Scores are
+The public interface opens on the **Campaign** workstation. An authenticated
+local launch loads the retained replay into the same scene-first review surface. Scores are
 paired with plain language such as **tested planner still succeeds**, **outside
 recorded behavior**, and **reference planner failed**.
 
@@ -76,8 +76,8 @@ npm ci
 npm start
 ```
 
-Open `http://127.0.0.1:4200`. Evidence provides the real aggregate campaign
-dashboard immediately. Workbench and Sensors explain exactly which licensed
+Open `http://127.0.0.1:4200`. Campaign and Evidence provide the real aggregate
+campaign record immediately. Replay and Sensors explain exactly which licensed
 local capabilities become available after an authenticated launch.
 
 There is intentionally no hosted dashboard in this release: the public bundle
