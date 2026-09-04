@@ -165,22 +165,23 @@ test('public clone stays honest, usable, and accessible without licensed records
   await page.goto('/');
   await expect(page).toHaveTitle('PlanMargin simulation test operations');
   await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeHidden();
-  await expect(page.getByLabel('Current campaign state')).toContainText('100/100');
-  await expect(page.getByLabel('Current campaign state')).toContainText('0 qualifying regressions');
-  await expect(page.getByLabel('Campaign explorer')).toContainText('Pipeline');
-  await expect(page.getByLabel('Release evidence inspector')).toContainText('7/7');
+  await expect(page.getByLabel('Current campaign state')).toContainText('120/120 tests healthy');
+  await expect(page.getByLabel('Current campaign state')).toContainText('7/7 SLOs');
+  await expect(page.getByLabel('Test suite registry')).toContainText('3 suites');
+  await expect(page.getByLabel('Release evidence inspector')).toContainText(
+    'Campaign evidence is complete.',
+  );
   await expect(
-    page.getByRole('heading', { name: 'No qualifying regression found.' }),
+    page.getByRole('heading', { name: 'All release-critical tests completed.' }),
   ).toBeVisible();
 
   await page.getByRole('button', { name: 'Coverage', exact: true }).click();
-  await expect(page.getByText('Behavior coverage', { exact: true })).toBeVisible();
-  await expect(page.getByText('Off-nominal behavior V&V')).toBeVisible();
-  await expect(page.getByText('Mutation contract frozen')).toBeVisible();
-  await expect(page.getByText('Known unknowns')).toBeVisible();
-  await page.getByRole('button', { name: /^Issues/ }).click();
-  await expect(page.getByRole('button', { name: 'Pending evidence', exact: true })).toBeVisible();
-  await expect(page.getByText('Measured evidence')).toBeVisible();
+  await expect(page.getByText('Versioned behavior coverage', { exact: true })).toBeVisible();
+  await expect(page.getByText('Command-dropout fallback')).toBeVisible();
+  await expect(page.getByText('Cross-simulator agreement')).toBeVisible();
+  await page.getByRole('button', { name: /^Triage/ }).click();
+  await expect(page.getByRole('button', { name: 'Pending', exact: true })).toBeVisible();
+  await expect(page.getByText('Measured decisions')).toBeVisible();
 
   await page.getByRole('button', { name: 'Evidence', exact: true }).click();
   await expect(
@@ -298,8 +299,13 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
     .analyze();
   expect(deploymentAccessibility.violations).toEqual([]);
 
-  await page.getByRole('button', { name: 'Ask analysis' }).click();
-  await expect(page.getByText('Gemini analysis')).toBeVisible();
+  await page.getByRole('button', { name: 'Ask PlanMargin' }).click();
+  await expect(page.getByText('PlanMargin assistant')).toBeVisible();
+  await page.getByPlaceholder('Ask PlanMargin about this run…').fill('hi');
+  await page.getByRole('button', { name: 'Ask evidence assistant' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Hi. I’m ready to inspect the run.' }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'How did Bayesian compare with random search?' }).click();
   await expect(
     page.getByText('Bayesian search produced more feasible proposals in this measured campaign.'),

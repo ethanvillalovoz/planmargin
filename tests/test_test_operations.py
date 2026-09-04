@@ -55,8 +55,18 @@ def test_repository_report_matches_verified_real_campaign() -> None:
 
 def test_report_validates_against_schema_and_contains_no_private_identifiers() -> None:
     report = test_operations.load_report(PUBLIC_REPORT)
-    schema = json.loads((ROOT / "schemas/test-operations-report-v1.schema.json").read_text())
+    schema = json.loads((ROOT / "schemas/test-operations-report-v2.schema.json").read_text())
     jsonschema.Draft202012Validator(schema).validate(report)
+    assert report["schema_version"] == "2.0.0"
+    assert report["test_inventory"]["release_critical_cells"] == 120
+    assert report["test_inventory"]["passing_release_critical_cells"] == 120
+    assert len(report["test_inventory"]["suites"]) == 3
+    assert len(report["coverage"]["versioned_plans"]) == 3
+    assert {gap["id"] for gap in report["coverage"]["known_gaps"]} == {
+        "simulator_diversity",
+        "scheduled_completion_latency",
+    }
+    assert all("diagnostic" in issue for issue in report["issues"])
     serialized = json.dumps(report).lower()
     for forbidden in ("scenario_id", "source_uri", "/users/", ".tfrecord", "synthetic_no_go"):
         assert forbidden not in serialized
@@ -118,6 +128,14 @@ def test_api_contract_accepts_degraded_health_evidence() -> None:
             "failed_gates": ["cell_completion"],
             "next_action": "Resume from the first incomplete checkpoint.",
             "source": "computed:test_operations",
+            "diagnostic": {
+                "detected_by": "cell-completion SLO",
+                "owner": "orchestration",
+                "impact": "Release evidence is incomplete.",
+                "root_cause_path": ["campaign", "cell scheduler", "completion gate"],
+                "resolution": "Resume from the first incomplete checkpoint.",
+                "prevention": "Alert before the completion budget is exhausted.",
+            },
         },
     )
 

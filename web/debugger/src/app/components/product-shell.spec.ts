@@ -42,9 +42,10 @@ describe('ProductShell', () => {
     let text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Campaign');
     expect(text).toContain('Behavior test / lead-braking-v1');
-    expect(text).toContain('Executionhealthy100/100 cells complete');
-    expect(text).toContain('Release contract7/7');
-    expect(text).toContain('Review queue3');
+    expect(text).toContain('All release-critical tests completed.');
+    expect(text).toContain('120/120test cells');
+    expect(text).toContain('Release contract 7/7');
+    expect(text).toContain('Held decisions');
     expect(text).not.toContain('No retained replay loaded');
     const workbench = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
@@ -151,7 +152,7 @@ describe('ProductShell', () => {
       fixture.nativeElement.querySelectorAll(
         '.product-header button',
       ) as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Ask analysis'))!;
+    ).find((candidate) => candidate.textContent?.includes('Ask PlanMargin'))!;
     expect(button.disabled).toBe(false);
 
     button.click();

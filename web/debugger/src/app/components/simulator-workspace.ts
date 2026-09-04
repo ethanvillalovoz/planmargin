@@ -893,7 +893,7 @@ import { SensorViewport } from './sensor-viewport';
       z-index: 14;
       top: 5rem;
       right: 1rem;
-      width: 292px;
+      width: min(390px, calc(100% - 2rem));
       max-height: calc(100% - 6rem);
     }
     .timeline {
@@ -1054,7 +1054,7 @@ import { SensorViewport } from './sensor-viewport';
         display: none;
       }
       .assistant-panel {
-        width: 270px;
+        width: min(360px, calc(100% - 2rem));
       }
     }
     @media (max-width: 860px) {

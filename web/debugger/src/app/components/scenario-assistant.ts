@@ -24,9 +24,24 @@ import {
 } from '../product-evidence.types';
 import { SimulatorStore } from '../simulator.store';
 
+interface LocalAssistantReply {
+  readonly heading: string;
+  readonly body: string;
+}
+
 export function classifyAssistantQuestion(value: string): AssistantQueryId | undefined {
   const question = value.trim().toLowerCase();
   if (!question) return undefined;
+  if (/\b(test health|pipeline health|release health|healthy|slo|alert|on time)\b/.test(question)) {
+    return 'test_health';
+  }
+  if (
+    /\b(behavior coverage|test coverage|fault protection|command dropout|remote assistance|assistance handoff|off[- ]nominal)\b/.test(
+      question,
+    )
+  ) {
+    return 'behavior_coverage';
+  }
   if (/\b(tensorrt|fp16|fp32|inference|latency|throughput|t4)\b/.test(question)) {
     return 'inference_qualification';
   }
@@ -73,7 +88,7 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
         <div>
           <ng-icon name="phosphorSparkle" size="17" aria-hidden="true" />
           <div>
-            <strong id="assistant-title">{{ title() }}</strong
+            <strong id="assistant-title">PlanMargin assistant</strong
             ><span>{{ providerLabel() }}</span>
           </div>
         </div>
@@ -103,6 +118,14 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
                     : 'Reading sealed evidence'
                 }}
               </div>
+            } @else if (localReply(); as reply) {
+              <div class="local-reply-label"><i></i>Local guide</div>
+              <h2>{{ reply.heading }}</h2>
+              <p>{{ reply.body }}</p>
+              <small>
+                Evidence questions use deterministic routing and verified tool results. Gemini only
+                synthesizes the returned public aggregate packet.
+              </small>
             } @else if (answer(); as response) {
               @if (usedFallback()) {
                 <p class="fallback-note">
@@ -127,32 +150,45 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
               </section>
               <small>{{ response.explanation.limitation }}</small>
             } @else {
-              <p>{{ scenarioInsight() }}</p>
-              <p>{{ scenarioComparison() }}</p>
-              <small
-                >Trajectory evidence is privacy-reduced WOMD Motion; the visual sensor scene is a
-                separate WOD Perception segment.</small
-              >
+              <div class="local-reply-label"><i></i>Connected</div>
+              <h2>What should we inspect?</h2>
+              <p>
+                Ask about test health, behavior coverage, held engineering decisions, campaign
+                evidence, or model qualification.
+              </p>
+              <small>{{ scenarioInsight() }}</small>
             }
           </article>
 
           <div class="assistant-actions">
-            <button type="button" (click)="showConflictFrame()">
-              <ng-icon name="phosphorPlayCircle" size="15" />Show planning conflict
-            </button>
-            @for (question of questions(); track question.query_id) {
+            <span>Suggested investigations</span>
+            @for (question of suggestedQuestions(); track question.query_id) {
               <button type="button" (click)="ask(question.query_id)">
                 <ng-icon name="phosphorChartLine" size="15" />{{ question.question }}
               </button>
             }
           </div>
+          @if (remainingQuestions().length > 0) {
+            <details class="more-actions">
+              <summary>
+                More evidence topics <b>{{ remainingQuestions().length }}</b>
+              </summary>
+              <div>
+                @for (question of remainingQuestions(); track question.query_id) {
+                  <button type="button" (click)="ask(question.query_id)">
+                    {{ question.question }}
+                  </button>
+                }
+              </div>
+            </details>
+          }
+          <button type="button" class="context-action" (click)="showConflictFrame()">
+            <ng-icon name="phosphorPlayCircle" size="15" />Jump to smallest planning margin
+          </button>
         }
       </div>
 
       <form (submit)="submit($event)">
-        @if (notice()) {
-          <p class="notice" role="status">{{ notice() }}</p>
-        }
         @if (error()) {
           <p class="error" role="alert">{{ error() }}</p>
         }
@@ -161,7 +197,7 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
           type="text"
           name="question"
           autocomplete="off"
-          placeholder="Ask about campaign evidence…"
+          placeholder="Ask PlanMargin about this run…"
           [disabled]="!local.connected() || loading()"
         />
         <button
@@ -253,6 +289,28 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
     .answer p + p {
       margin-top: 0.65rem;
     }
+    .answer h2 {
+      margin: 0.55rem 0 0.45rem;
+      color: #f4f8f9;
+      font-size: 0.92rem;
+      letter-spacing: -0.02em;
+    }
+    .local-reply-label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #8da0a9;
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .local-reply-label i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #35c5d3;
+    }
     .answer .fallback-note {
       margin: 0 0 0.7rem;
       padding: 0.55rem 0.6rem;
@@ -310,6 +368,14 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
       gap: 0.45rem;
       margin-top: 0.65rem;
     }
+    .assistant-actions > span {
+      margin: 0.15rem 0 0.05rem;
+      color: #7f929d;
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
     .assistant-actions button {
       display: flex;
       align-items: center;
@@ -328,6 +394,62 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
       border-color: #35c5d3;
       color: #fff;
     }
+    .more-actions {
+      margin-top: 0.5rem;
+      border: 1px solid rgb(132 155 168 / 18%);
+      border-radius: 7px;
+    }
+    .more-actions summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 36px;
+      padding: 0 0.75rem;
+      color: #9dafb8;
+      cursor: pointer;
+      font-size: 0.62rem;
+      list-style: none;
+    }
+    .more-actions summary::-webkit-details-marker {
+      display: none;
+    }
+    .more-actions summary b {
+      color: #35c5d3;
+      font-size: 0.58rem;
+    }
+    .more-actions > div {
+      display: grid;
+      gap: 1px;
+      border-top: 1px solid rgb(132 155 168 / 14%);
+    }
+    .more-actions button {
+      min-height: 36px;
+      padding: 0 0.75rem;
+      border: 0;
+      border-bottom: 1px solid rgb(132 155 168 / 10%);
+      background: transparent;
+      color: #c8d3d7;
+      font: inherit;
+      font-size: 0.61rem;
+      text-align: left;
+    }
+    .more-actions button:hover {
+      background: rgb(53 197 211 / 8%);
+      color: #fff;
+    }
+    .context-action {
+      display: flex;
+      align-items: center;
+      min-height: 34px;
+      gap: 0.45rem;
+      margin-top: 0.5rem;
+      padding: 0 0.15rem;
+      border: 0;
+      background: transparent;
+      color: #7eaeba;
+      font: inherit;
+      font-size: 0.6rem;
+    }
     form {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 38px;
@@ -335,7 +457,7 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
       padding: 0.75rem;
       border-top: 1px solid rgb(132 155 168 / 18%);
     }
-    form :is(.notice, .error) {
+    form .error {
       grid-column: 1 / -1;
       margin: 0 0 0.25rem;
       padding: 0.55rem 0.65rem;
@@ -385,11 +507,6 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
       color: #ff806c;
       font-size: 0.61rem;
     }
-    .notice {
-      color: #91a7b2;
-      font-size: 0.61rem;
-      line-height: 1.45;
-    }
     .thinking {
       display: flex;
       align-items: center;
@@ -426,26 +543,25 @@ export class ScenarioAssistant {
   protected readonly status = signal<AssistantStatus | undefined>(undefined);
   protected readonly questions = signal<readonly AssistantQuestion[]>([]);
   protected readonly answer = signal<AssistantAnswer | undefined>(undefined);
+  protected readonly localReply = signal<LocalAssistantReply | undefined>(undefined);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | undefined>(undefined);
-  protected readonly notice = signal<string | undefined>(undefined);
   protected readonly usedFallback = computed(
     () =>
       this.status()?.gemini_configured === true &&
       this.answer()?.provider.id === 'offline_deterministic',
   );
 
-  protected readonly title = computed(() =>
-    this.status()?.gemini_configured ? 'Gemini analysis' : 'Evidence analysis',
-  );
   protected readonly providerLabel = computed(() => {
     const status = this.status();
     if (status === undefined)
       return this.local.connected() ? 'Loading provider' : 'Local evidence required';
     return status.gemini_configured
-      ? `${status.model ?? 'Gemini'} · public aggregate only`
-      : 'Deterministic local provider';
+      ? `Gemini synthesis · verified aggregates · ${status.model ?? 'configured model'}`
+      : 'Verified local evidence · deterministic synthesis';
   });
+  protected readonly suggestedQuestions = computed(() => this.questions().slice(0, 3));
+  protected readonly remainingQuestions = computed(() => this.questions().slice(3));
   protected readonly scenarioInsight = computed(() => {
     const hypothesis = this.store.selectedHypothesis();
     const minimum = hypothesis.metrics.reduce((best, value) =>
@@ -470,6 +586,7 @@ export class ScenarioAssistant {
         this.status.set(undefined);
         this.questions.set([]);
         this.answer.set(undefined);
+        this.localReply.set(undefined);
       }
     });
   }
@@ -489,7 +606,7 @@ export class ScenarioAssistant {
     if (!this.local.connected() || this.loading()) return;
     this.loading.set(true);
     this.error.set(undefined);
-    this.notice.set(undefined);
+    this.localReply.set(undefined);
     try {
       this.answer.set(await this.local.askAssistant(queryId));
     } catch (error: unknown) {
@@ -505,16 +622,37 @@ export class ScenarioAssistant {
     const input = form.elements.namedItem('question') as HTMLInputElement;
     const value = input.value.trim();
     if (!value) return;
-    const query = classifyAssistantQuestion(value);
-    if (query === undefined) {
-      this.notice.set(
-        /\b(path|planning|replay|scenario|case)\b/i.test(value)
-          ? 'Only trajectory packages that pass the replay-link verification can open. Close analysis and use Review candidate records to see availability.'
-          : 'I could not route that question safely. Choose one of the verified evidence questions above.',
-      );
+    input.value = '';
+    this.error.set(undefined);
+    if (/^(hi|hello|hey|good (morning|afternoon|evening))[!. ]*$/i.test(value)) {
+      this.answer.set(undefined);
+      this.localReply.set({
+        heading: 'Hi. I’m ready to inspect the run.',
+        body: 'I can explain release health, versioned behavior coverage, campaign results, model and TensorRT qualification, or the evidence boundary. Ask naturally or choose a suggested investigation.',
+      });
       return;
     }
-    input.value = '';
+    if (/\b(what can you do|help|capabilit(?:y|ies)|how do i use)\b/i.test(value)) {
+      this.answer.set(undefined);
+      this.localReply.set({
+        heading: 'I explain verified PlanMargin evidence.',
+        body: 'Natural-language questions are routed to a sealed evidence query. The backend retrieves cited facts, then Gemini—when configured—writes a bounded explanation without receiving your raw question or private scene data.',
+      });
+      return;
+    }
+    const query = classifyAssistantQuestion(value);
+    if (query === undefined) {
+      this.answer.set(undefined);
+      this.localReply.set({
+        heading: /\b(path|planning|replay|scenario|case)\b/i.test(value)
+          ? 'That requires an exact retained replay.'
+          : 'That question is outside the verified evidence boundary.',
+        body: /\b(path|planning|replay|scenario|case)\b/i.test(value)
+          ? 'Only proposals with a verified replay link can open a trajectory. Use Evidence to select an available record, or ask me about the current campaign’s replay provenance.'
+          : 'I will not invent an answer. Try asking about test health, behavior coverage, campaign results, model qualification, or claim limitations.',
+      });
+      return;
+    }
     void this.ask(query);
   }
 

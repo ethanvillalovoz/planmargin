@@ -2,7 +2,7 @@
   "decision": "evidence_assistant_verified",
   "hosted_request_executed": false,
   "integrity_gates": {
-    "all_eight_queries_schema_valid": true,
+    "all_ten_queries_schema_valid": true,
     "citations_sealed_to_tracked_sources": true,
     "generated_numeric_metrics_rejected": true,
     "local_duckdb_query_verified": true,
@@ -20,8 +20,8 @@
     "offline_deterministic",
     "gemini_public_aggregate"
   ],
-  "public_catalog_fingerprint": "a28e1ee0f5b284060c5b4ee52a62663304ff3a18a0f6a9dac54671612439408f",
-  "query_count": 8,
+  "public_catalog_fingerprint": "278222566a8b0f7b5ce30d9073bfba2b2bbe7aeff246c08e4aa83ae605b788a8",
+  "query_count": 10,
   "record_type": "planmargin.evidence_assistant_integration",
   "schema_version": 1,
   "status": "completed"

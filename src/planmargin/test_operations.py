@@ -17,17 +17,17 @@ import duckdb
 
 from planmargin import random_search
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "2.0.0"
 SCHEMA_URI = (
     "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/"
-    "schemas/test-operations-report-v1.schema.json"
+    "schemas/test-operations-report-v2.schema.json"
 )
 RECORD_TYPE = "planmargin.test_operations_report"
 DEFAULT_CAMPAIGN = Path("artifacts/search-comparison/natural-development-v1")
 DEFAULT_ANALYTICS = Path("artifacts/analytics/natural-development-v1")
 DEFAULT_SELECTION = Path("artifacts/stage-0/scenario-selection.json")
 DEFAULT_REPLAYS = Path("artifacts/proposal-replays/natural-development-v1")
-DEFAULT_OUTPUT = Path("web/debugger/public/data/test-operations-v1.json")
+DEFAULT_OUTPUT = Path("web/debugger/public/data/test-operations-v2.json")
 
 
 def evaluate_test_health(
@@ -45,7 +45,7 @@ def evaluate_test_health(
     expected_protected_scenes: int,
     assisted_scenes: int,
     expected_assisted_scenes: int,
-) -> tuple[list[dict[str, str]], dict[str, Any], list[dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
     """Evaluate campaign SLOs and emit actionable test-health alerts.
 
     This function is intentionally independent from artifact loading so CI can
@@ -62,8 +62,11 @@ def evaluate_test_health(
         {
             "id": "cell_completion",
             "name": "Campaign cells complete",
+            "indicator": "completed release cells / planned release cells",
             "target": f"{planned_cells} of {planned_cells}",
             "observed": f"{completed_cells} of {planned_cells}",
+            "objective": 1.0,
+            "observed_value": completed_cells / planned_cells if planned_cells else 0.0,
             "owner": "orchestration",
             "passed": completed_cells == planned_cells and planned_cells > 0,
             "severity": "high",
@@ -72,8 +75,13 @@ def evaluate_test_health(
         {
             "id": "integrity",
             "name": "Integrity checks pass",
+            "indicator": "passing integrity checks / integrity checks",
             "target": "100%",
             "observed": f"{integrity_passing} of {integrity_total}",
+            "objective": 1.0,
+            "observed_value": (
+                integrity_passing / integrity_total if integrity_total else 0.0
+            ),
             "owner": "evidence pipeline",
             "passed": integrity_passing == integrity_total and integrity_total > 0,
             "severity": "high",
@@ -82,8 +90,13 @@ def evaluate_test_health(
         {
             "id": "proposal_budget",
             "name": "Proposal budget exact",
+            "indicator": "completed proposals / frozen proposal budget",
             "target": f"{expected_proposals:,}",
             "observed": f"{proposal_count:,}",
+            "objective": 1.0,
+            "observed_value": (
+                proposal_count / expected_proposals if expected_proposals else 0.0
+            ),
             "owner": "search coordinator",
             "passed": proposal_count == expected_proposals,
             "severity": "medium",
@@ -92,10 +105,13 @@ def evaluate_test_health(
         {
             "id": "method_balance",
             "name": "Matched method budgets",
+            "indicator": "search methods with the frozen matched budget / methods",
             "target": f"{expected_each:,} each",
             "observed": " · ".join(
                 f"{value:,} {method}" for method, value in sorted(method_proposals.items())
             ),
+            "objective": 1.0,
+            "observed_value": 1.0 if method_balanced else 0.0,
             "owner": "experiment design",
             "passed": method_balanced,
             "severity": "high",
@@ -104,8 +120,13 @@ def evaluate_test_health(
         {
             "id": "retained_replays",
             "name": "Retained replays verified",
+            "indicator": "verified retained replays / selected retained replays",
             "target": f"{expected_replays} retained",
             "observed": f"{retained_replays} of {expected_replays}",
+            "objective": 1.0,
+            "observed_value": (
+                retained_replays / expected_replays if expected_replays else 0.0
+            ),
             "owner": "replay evidence",
             "passed": retained_replays == expected_replays and expected_replays > 0,
             "severity": "medium",
@@ -114,8 +135,15 @@ def evaluate_test_health(
         {
             "id": "fault_fallback",
             "name": "Command-dropout fallback",
+            "indicator": "scenes passing fallback V&V / evaluated scenes",
             "target": f"{expected_protected_scenes} of {expected_protected_scenes} scenes",
             "observed": f"{protected_scenes} of {expected_protected_scenes} scenes",
+            "objective": 1.0,
+            "observed_value": (
+                protected_scenes / expected_protected_scenes
+                if expected_protected_scenes
+                else 0.0
+            ),
             "owner": "behavior V&V",
             "passed": (
                 protected_scenes == expected_protected_scenes
@@ -127,8 +155,15 @@ def evaluate_test_health(
         {
             "id": "assistance_handoff",
             "name": "Assistance handoff recovery",
+            "indicator": "scenes passing handoff V&V / evaluated scenes",
             "target": f"{expected_assisted_scenes} of {expected_assisted_scenes} scenes",
             "observed": f"{assisted_scenes} of {expected_assisted_scenes} scenes",
+            "objective": 1.0,
+            "observed_value": (
+                assisted_scenes / expected_assisted_scenes
+                if expected_assisted_scenes
+                else 0.0
+            ),
             "owner": "behavior V&V",
             "passed": (
                 assisted_scenes == expected_assisted_scenes
@@ -142,8 +177,20 @@ def evaluate_test_health(
         {
             "id": str(check["id"]),
             "name": str(check["name"]),
+            "indicator": str(check["indicator"]),
             "target": str(check["target"]),
             "observed": str(check["observed"]),
+            "objective": float(check["objective"]),
+            "observed_value": round(float(check["observed_value"]), 6),
+            "error_budget_remaining_percent": round(
+                max(
+                    0.0,
+                    100.0
+                    if float(check["observed_value"]) >= float(check["objective"])
+                    else 0.0,
+                ),
+                3,
+            ),
             "status": "pass" if check["passed"] else "fail",
             "owner": str(check["owner"]),
         }
@@ -160,6 +207,21 @@ def evaluate_test_health(
             "failed_gates": [check["id"]],
             "next_action": check["next_action"],
             "source": "computed:test_operations",
+            "diagnostic": {
+                "detected_by": f"{check['id']} SLO",
+                "owner": check["owner"],
+                "impact": "Release qualification is blocked until this health check passes.",
+                "root_cause_path": [
+                    "sealed campaign evidence",
+                    str(check["owner"]),
+                    str(check["id"]),
+                ],
+                "resolution": check["next_action"],
+                "prevention": (
+                    "Evaluate this SLO on every regenerated operations report and fail CI "
+                    "before the evidence bundle is published."
+                ),
+            },
         }
         for index, check in enumerate(checks, start=1)
         if not check["passed"]
@@ -327,6 +389,18 @@ def build_report(root: Path) -> dict[str, Any]:
     selected_family = selection["selection_protocol"]["selected_family"]
     scanned = int(selection["scan_summary"]["records_scanned"])
     selected = int(selection["scan_summary"]["selected_candidates"])
+    protected_scenes = int(
+        fault_protection["summary"]["protected_fallback_success_count"]
+    )
+    assisted_scenes = int(
+        assistance_handoff["summary"]["assisted_handoff_success_count"]
+    )
+    release_critical_cells = (
+        int(cell_total)
+        + int(fault_protection["dataset"]["scenario_count"])
+        + int(assistance_handoff["dataset"]["scenario_count"])
+    )
+    passing_release_critical_cells = int(completed_cells) + protected_scenes + assisted_scenes
     report: dict[str, Any] = {
         "$schema": SCHEMA_URI,
         "schema_version": SCHEMA_VERSION,
@@ -350,6 +424,79 @@ def build_report(root: Path) -> dict[str, Any]:
         },
         "slo_summary": slo_summary,
         "slos": slos,
+        "test_inventory": {
+            "release_critical_cells": release_critical_cells,
+            "passing_release_critical_cells": passing_release_critical_cells,
+            "tracked_suites": 3,
+            "active_health_alerts": len(health_alerts),
+            "held_decisions": 3,
+            "suites": [
+                {
+                    "id": "lead_braking",
+                    "name": "Lead-vehicle braking",
+                    "plan_version": "lead-braking-v1",
+                    "platform": "Waymax",
+                    "owner": "behavior V&V",
+                    "status": "healthy",
+                    "scenario_count": selected,
+                    "test_cell_count": cell_total,
+                    "execution_count": int(
+                        campaign["cost_total"]["total_physical_rollouts"]
+                    ),
+                    "execution_unit": "physical rollouts",
+                    "gate_passes": integrity_passing,
+                    "gate_total": integrity_total,
+                },
+                {
+                    "id": "command_dropout",
+                    "name": "Command-dropout fallback",
+                    "plan_version": "command-dropout-v1",
+                    "platform": "Waymax",
+                    "owner": "fault-protection V&V",
+                    "status": "healthy",
+                    "scenario_count": int(
+                        fault_protection["dataset"]["scenario_count"]
+                    ),
+                    "test_cell_count": int(
+                        fault_protection["dataset"]["scenario_count"]
+                    ),
+                    "execution_count": int(
+                        fault_protection["protocol"]["physical_rollouts"]
+                    ),
+                    "execution_unit": "physical rollouts",
+                    "gate_passes": int(
+                        fault_protection["summary"]["scene_gate_passes"]
+                    ),
+                    "gate_total": int(
+                        fault_protection["summary"]["scene_gate_total"]
+                    ),
+                },
+                {
+                    "id": "assistance_handoff",
+                    "name": "Assistance handoff recovery",
+                    "plan_version": "command-recovery-v1",
+                    "platform": "Waymax",
+                    "owner": "remote-assistance V&V",
+                    "status": "healthy",
+                    "scenario_count": int(
+                        assistance_handoff["dataset"]["scenario_count"]
+                    ),
+                    "test_cell_count": int(
+                        assistance_handoff["dataset"]["scenario_count"]
+                    ),
+                    "execution_count": int(
+                        assistance_handoff["protocol"]["physical_rollouts"]
+                    ),
+                    "execution_unit": "physical rollouts",
+                    "gate_passes": int(
+                        assistance_handoff["summary"]["scene_gate_passes"]
+                    ),
+                    "gate_total": int(
+                        assistance_handoff["summary"]["scene_gate_total"]
+                    ),
+                },
+            ],
+        },
         "pipeline_stages": [
             {
                 "id": "selection",
@@ -440,6 +587,60 @@ def build_report(root: Path) -> dict[str, Any]:
                     "status": "not_covered",
                     "next_test": "Repeat the frozen test contract in a second simulator.",
                 },
+                {
+                    "id": "scheduled_completion_latency",
+                    "label": "Scheduled completion latency",
+                    "status": "not_covered",
+                    "next_test": "Preregister per-suite wall-clock deadlines before the next campaign.",
+                },
+            ],
+            "versioned_plans": [
+                {
+                    "id": "lead_braking",
+                    "plan_version": "lead-braking-v1",
+                    "scenario_family": selected_family,
+                    "scenario_count": selected,
+                    "test_cell_count": cell_total,
+                    "gate_passes": integrity_passing,
+                    "gate_total": integrity_total,
+                    "status": "qualified",
+                },
+                {
+                    "id": "command_dropout",
+                    "plan_version": "command-dropout-v1",
+                    "scenario_family": "lead_vehicle_braking_with_command_dropout",
+                    "scenario_count": int(
+                        fault_protection["dataset"]["scenario_count"]
+                    ),
+                    "test_cell_count": int(
+                        fault_protection["dataset"]["scenario_count"]
+                    ),
+                    "gate_passes": int(
+                        fault_protection["summary"]["scene_gate_passes"]
+                    ),
+                    "gate_total": int(
+                        fault_protection["summary"]["scene_gate_total"]
+                    ),
+                    "status": "qualified",
+                },
+                {
+                    "id": "assistance_handoff",
+                    "plan_version": "command-recovery-v1",
+                    "scenario_family": "lead_vehicle_braking_with_assistance_handoff",
+                    "scenario_count": int(
+                        assistance_handoff["dataset"]["scenario_count"]
+                    ),
+                    "test_cell_count": int(
+                        assistance_handoff["dataset"]["scenario_count"]
+                    ),
+                    "gate_passes": int(
+                        assistance_handoff["summary"]["scene_gate_passes"]
+                    ),
+                    "gate_total": int(
+                        assistance_handoff["summary"]["scene_gate_total"]
+                    ),
+                    "status": "qualified",
+                },
             ],
         },
         "issues": health_alerts
@@ -457,6 +658,19 @@ def build_report(root: Path) -> dict[str, Any]:
                 "failed_gates": _failed_gates(tensorrt),
                 "next_action": "Keep FP32; qualify the residual FP16 candidate independently.",
                 "source": "experiments/tensorrt-qualification-v2.json",
+                "diagnostic": {
+                    "detected_by": "FP16 batch-256 numerical-parity gate",
+                    "owner": "inference qualification",
+                    "impact": "FP16 promotion is blocked; the measured FP32 path remains available.",
+                    "root_cause_path": [
+                        "trajectory predictor",
+                        "ONNX export",
+                        "TensorRT FP16 engine",
+                        "batch-256 parity gate",
+                    ],
+                    "resolution": "Keep FP32 and qualify the residual FP16 candidate on the same T4 protocol.",
+                    "prevention": "Run numerical-parity gates at every supported batch size before promotion.",
+                },
             },
             {
                 "id": "PM-RANK-006",
@@ -468,6 +682,19 @@ def build_report(root: Path) -> dict[str, Any]:
                 "failed_gates": _failed_gates(active_risk),
                 "next_action": "Retain deterministic search; redesign only under a new protocol.",
                 "source": "experiments/active-risk-qualification-v2.json",
+                "diagnostic": {
+                    "detected_by": "leave-one-scenario-out promotion suite",
+                    "owner": "proposal ranking",
+                    "impact": "The learned selector is excluded from the campaign path.",
+                    "root_cause_path": [
+                        "real proposal targets",
+                        "leave-one-scenario-out split",
+                        "active-risk ranker",
+                        "four promotion gates",
+                    ],
+                    "resolution": "Retain deterministic search for this protocol.",
+                    "prevention": "Require cross-scenario qualification before a learned selector can enter the campaign path.",
+                },
             },
             {
                 "id": "PM-TRT-011",
@@ -479,6 +706,18 @@ def build_report(root: Path) -> dict[str, Any]:
                 "failed_gates": [],
                 "next_action": "Run the frozen candidate in a free T4 runtime before promotion.",
                 "source": "experiments/fp16-residual-candidate-v1.json",
+                "diagnostic": {
+                    "detected_by": "deployment-evidence completeness gate",
+                    "owner": "inference qualification",
+                    "impact": "The candidate remains unavailable for promotion.",
+                    "root_cause_path": [
+                        "residual candidate",
+                        "local MPS numerical proxy",
+                        "missing T4 TensorRT qualification",
+                    ],
+                    "resolution": "Run the frozen candidate in the existing free-T4 notebook.",
+                    "prevention": "Treat local numerical checks as preflight evidence, never deployment evidence.",
+                },
             },
         ],
         "source_seals": {

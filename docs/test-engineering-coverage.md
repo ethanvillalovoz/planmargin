@@ -16,7 +16,7 @@ executable contract, measured run, or working product surface.
 | Query and reconcile results        | DuckDB and SQL independently reconstruct campaign and method totals                                                 | Implemented                 |
 | Monitor release-critical tests     | Seven owned SLOs distinguish execution health from behavior outcome                                                 | Implemented                 |
 | Alert on unhealthy tests           | Pure evaluator emits one actionable, owned alert per failed SLO; degraded fixtures exercise it in CI                | Implemented                 |
-| Debug and root-cause failures      | Issue queue links observed evidence, failed gates, owner, source record, and next action                            | Implemented                 |
+| Debug and root-cause failures      | Triage links detector, impact, isolation path, owner, resolution, prevention, source record, and failed gates       | Implemented                 |
 | Operate complex simulation systems | Resumable 100-cell campaign, 3,200 proposals, 14,110 physical rollouts, 1,128,800 Waymax steps                      | Implemented                 |
 | Python systems work                | Simulation orchestration, artifact validation, FastAPI, test health, model and search experiments                   | Implemented                 |
 | C++ systems work                   | C++20 geometry kernel with Python-oracle parity; independent C++17 TensorRT runtime                                 | Implemented                 |
@@ -28,6 +28,9 @@ executable contract, measured run, or working product surface.
 
 - The fault and assistance protocols run in Waymax only; cross-simulator
   agreement is not established.
+- The report records work duration, but no per-suite wall-clock deadline was
+  preregistered. Scheduled completion latency remains an explicit uncovered
+  SLO rather than a post-hoc on-time claim.
 - The assistance-resolution signal is deterministic. It does not measure a
   human operator, network delay distribution, or production service.
 - The campaign operates over bounded licensed research data, not a production

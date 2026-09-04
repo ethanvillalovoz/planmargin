@@ -299,9 +299,9 @@ flowchart LR
 | Learned mining    | PyTorch ensemble, grouped CV         | rank, budgeted selection, calibration, and no-go gates          |
 | Interaction study | PyTorch nearest-actor pooling        | same-data ego-only ablation and no-go gate                      |
 | NVIDIA runtime    | Python and C++17 `enqueueV3`         | device plus pinned-host end-to-end p50/p95/p99 contract         |
-| Assistant         | deterministic tools, optional Gemini | allowlisted evidence and sealed citations                       |
+| Assistant         | deterministic tools, optional Gemini | ten routed evidence topics, sealed citations, local conversation |
 | Replay retention  | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching              |
-| Test operations   | Python, DuckDB, JSON Schema          | seven SLOs, degraded-state fixtures, sealed aggregate report    |
+| Test operations   | Python, DuckDB, JSON Schema          | owned SLOs, versioned suites, diagnostic paths, sealed report   |
 | Fault protection  | JAX, Waymax                          | 60 repeated rollouts and 80/80 frozen scene gates               |
 | Assistance V&V    | JAX, Waymax                          | 60 repeated rollouts, exact transitions, 90/90 frozen gates     |
 

@@ -94,7 +94,7 @@ function initialEvidenceView(): EvidenceView {
             [disabled]="!local.connected()"
             (click)="toggleAssistant()"
           >
-            <ng-icon name="phosphorSparkle" size="15" />Ask analysis
+            <ng-icon name="phosphorSparkle" size="15" />Ask PlanMargin
           </button>
           @if (publicHosted) {
             <a class="connection" [href]="repositoryUrl"><i></i>Clone for local workspace</a>

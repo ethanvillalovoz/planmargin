@@ -42,12 +42,14 @@ DEFAULT_ROLLOUTS = Path("artifacts/stage-0/rollout-records.json")
 DEFAULT_GAUSSIAN = Path("artifacts/gaussian-field/feasibility")
 DEFAULT_SENSOR_SCENE = Path("artifacts/sensor-scene/waymo-front")
 DEFAULT_PROPOSAL_REPLAYS = Path("artifacts/proposal-replays/natural-development-v1")
-DEFAULT_TEST_OPERATIONS = Path("web/debugger/public/data/test-operations-v1.json")
+DEFAULT_TEST_OPERATIONS = Path("web/debugger/public/data/test-operations-v2.json")
 DEFAULT_ORIGINS = ("http://127.0.0.1:4200", "http://localhost:4200")
 SESSION_COOKIE_NAME = "planmargin_local_session"
 MAX_JSON_BYTES = 128 * 1024 * 1024
 GAUSSIAN_LINKAGE_GATE = 0.90
 ASSISTANT_QUESTIONS = {
+    "test_health": "Are the release-critical simulation tests healthy?",
+    "behavior_coverage": "Which off-nominal behaviors are covered?",
     "campaign_overview": "What happened in the development campaign?",
     "method_comparison": "How did Bayesian compare with random search?",
     "hypothesis_decisions": "What happened to H1, H2, and H3?",
@@ -88,8 +90,12 @@ class CampaignEvidence(EvidenceModel):
 class TestOperationSloEvidence(EvidenceModel):
     id: str
     name: str
+    indicator: str
     target: str
     observed: str
+    objective: float
+    observed_value: float
+    error_budget_remaining_percent: float
     status: Literal["pass", "fail"]
     owner: str
 
@@ -112,16 +118,18 @@ class TestOperationIssueEvidence(EvidenceModel):
     failed_gates: list[str]
     next_action: str
     source: str
+    diagnostic: dict[str, Any]
 
 
 class TestOperationsEvidence(EvidenceModel):
-    schema_version: Literal["1.0.0"]
+    schema_version: Literal["2.0.0"]
     record_type: Literal["planmargin.test_operations_report"]
     evidence_mode: Literal["published_aggregate"]
     claim_boundary: str
     campaign: dict[str, Any]
     slo_summary: dict[str, Any]
     slos: list[TestOperationSloEvidence]
+    test_inventory: dict[str, Any]
     pipeline_stages: list[TestOperationStageEvidence]
     coverage: dict[str, Any]
     issues: list[TestOperationIssueEvidence]

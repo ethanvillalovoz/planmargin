@@ -2,6 +2,8 @@ import { classifyAssistantQuestion } from './scenario-assistant';
 
 describe('classifyAssistantQuestion', () => {
   it.each([
+    ['Are the release-critical tests healthy?', 'test_health'],
+    ['Which off-nominal behavior coverage is verified?', 'behavior_coverage'],
     ['How did Bayesian compare with random search?', 'method_comparison'],
     ['What happened to H1, H2, and H3?', 'hypothesis_decisions'],
     ['What did the Beam feature pipeline process?', 'beam_pipeline'],

@@ -149,7 +149,7 @@ disconnect does.
 | `GET /api/v1/runs`                                                 | Stage-0 plus every proposal-linked replay that passes startup validation             |
 | `GET /api/v1/runs/{run_id}`                                        | redacted scene, trajectories, outcomes, and interaction timeline                     |
 | `GET /api/v1/assistant/status`                                     | active explanation provider and input scope                                          |
-| `GET /api/v1/assistant/questions`                                  | eight natural-language questions mapped to a closed query allowlist                  |
+| `GET /api/v1/assistant/questions`                                  | ten natural-language questions mapped to a closed query allowlist                    |
 | `GET /api/v1/assistant/{query_id}`                                 | cited facts, bounded explanation, limitations, and privacy receipt                   |
 | `GET /api/v1/gaussian-field`                                       | privacy-reduced geometry metrics and frozen integration gates                        |
 | `GET /api/v1/gaussian-field/field.ply`                             | sealed local Gaussian PLY for in-browser rendering                                   |

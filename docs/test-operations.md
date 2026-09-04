@@ -19,8 +19,8 @@ flowchart LR
     D["DuckDB + Parquet aggregates"] --> V
     F["Command-dropout V&V"] --> V
     V --> H["Test-health evaluator"]
-    H --> S["Seven release SLOs"]
-    H --> A["Actionable alerts"]
+    H --> S["Seven owned SLOs"]
+    H --> A["Actionable diagnostics"]
     V --> R["Aggregate operations report"]
     R --> API["Authenticated FastAPI"]
     R --> UI["Angular campaign workstation"]
@@ -31,7 +31,14 @@ seal-verified workspace. It refuses incomplete campaigns, mismatched analytics,
 unexpected experiment states, unbalanced budgets, missing exact replays, and a
 failed fault-protection qualification. The generated public JSON contains
 aggregates only and is validated by
-[`test-operations-report-v1.schema.json`](../schemas/test-operations-report-v1.schema.json).
+[`test-operations-report-v2.schema.json`](../schemas/test-operations-report-v2.schema.json).
+
+The v2 contract adds a real test-suite inventory, versioned behavior plans,
+numeric SLI/objective fields, remaining error-budget state, and a deterministic
+root-cause path for every alert or held engineering decision. The Campaign UI
+uses that contract for three distinct tasks: release health, behavior coverage,
+and failure triage. It does not duplicate the same status across a dashboard,
+queue, and inspector.
 
 ## Health contract
 
@@ -48,9 +55,25 @@ The health evaluator has seven independently owned objectives:
 | Assistance handoff recovery | behavior V&V       | Block promotion and inspect the failed state transition |
 
 Unit tests exercise both the current healthy report and a deliberately degraded
-fixture. The latter must produce one actionable alert for every failed SLO; the
-console is therefore backed by executable alert logic rather than hard-coded
-status copy.
+test input. The latter is a software-contract fixture—not displayed experiment
+data—and must produce one actionable alert for every failed SLO. The product
+surface itself loads only the sealed real-data aggregate report.
+
+## Test registry and triage
+
+The registry currently exposes three independently versioned plans built from
+the repository's measured artifacts:
+
+| Plan | Responsibility | Measured evidence |
+| --- | --- | --- |
+| `lead-braking-v1` | matched counterfactual behavior campaign | 100 cells, 14,110 physical rollouts, 807/807 integrity gates |
+| `command-dropout-v1` | sustained command-loss fallback | 10 real-data scenes, 60 rollouts, 80/80 gates |
+| `command-recovery-v1` | assistance request, resolution, and recovery | 10 real-data scenes, 60 rollouts, 90/90 gates |
+
+Triage uses measured no-go or pending results rather than fabricated incidents.
+Each item names its detector, owner, operational impact, isolation path,
+resolution, prevention rule, source record, and failed gates. Pipeline-health
+alerts use the same shape when a regenerated report violates an SLO.
 
 ## Fault-injection verification
 
@@ -105,5 +128,7 @@ licensed scene data.
 This is independent research on bounded Waymo Open Dataset training scenes. It
 is not Waymo Driver fault protection, a human-operated remote-assistance
 implementation, fleet health telemetry, or a safety claim. Cross-simulator
-agreement remains visible as an open coverage gap rather than being hidden
-behind the healthy campaign state.
+agreement and scheduled completion latency remain visible as open coverage
+gaps. PlanMargin records work duration, but no wall-clock deadline was
+preregistered, so it does not relabel completion as an on-time SLO after the
+fact.
