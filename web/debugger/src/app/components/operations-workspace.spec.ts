@@ -6,7 +6,21 @@ import { API_RUN } from '../local-evidence.test-fixtures';
 import { OperationsWorkspace } from './operations-workspace';
 
 describe('OperationsWorkspace', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+    TestBed.resetTestingModule();
+  });
+
+  it('opens a requested review section for reproducible local inspection', () => {
+    window.history.replaceState(null, '', '/?section=coverage');
+    const fixture = TestBed.createComponent(OperationsWorkspace);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Behavior coverage');
+    expect(fixture.nativeElement.querySelector('.ops-tabs button.active').textContent).toContain(
+      'Coverage',
+    );
+  });
 
   it('separates healthy execution, behavior outcome, coverage gaps, and promotion issues', () => {
     const fixture = TestBed.createComponent(OperationsWorkspace);

@@ -55,6 +55,8 @@ ladder, comparison, exact replay, grounded analysis, and signed export remain
 visible as one investigation console. The interface is designed for tracing a
 decision, not presenting a marketing dashboard.
 
+![PlanMargin counterfactual evidence investigation workspace](docs/assets/planmargin-evidence-workspace-v3.1.jpg)
+
 ![PlanMargin real SHARP 3DGS scene with calibrated recorded, JAX, and baseline paths](docs/assets/planmargin-sensor-trajectory-v1.1.png)
 
 ## Run it

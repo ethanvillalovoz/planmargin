@@ -107,7 +107,11 @@ interface FallbackScene {
       min-width: 0;
       min-height: 0;
       overflow: hidden;
-      background: var(--app-bg);
+      --divider: #2a3239;
+      --tested: #76d786;
+      --reference: #e7dd55;
+      --recorded: #a2a5a8;
+      background: #080d11;
     }
     .viewport {
       position: absolute;
@@ -118,10 +122,10 @@ interface FallbackScene {
       top: 0;
       right: 0;
       bottom: 0;
-      left: 280px;
-      width: calc(100% - 280px);
+      left: 0;
+      width: 100%;
       height: 100%;
-      background: var(--app-bg);
+      background: #080d11;
     }
     .fallback :is(polyline, polygon, rect) {
       vector-effect: non-scaling-stroke;
@@ -176,7 +180,7 @@ interface FallbackScene {
     .scene-label {
       position: absolute;
       top: 5rem;
-      left: 296px;
+      left: 24px;
       display: flex;
       align-items: baseline;
       gap: 0.75rem;
@@ -241,14 +245,14 @@ interface FallbackScene {
     }
     .scale {
       position: absolute;
-      left: 296px;
+      left: 24px;
       bottom: 0.8rem;
       color: #aab9c4;
       font-size: 0.58rem;
     }
     .planning-guide {
       position: absolute;
-      left: calc(50% + 140px);
+      left: 50%;
       bottom: 0.8rem;
       display: grid;
       max-width: 390px;

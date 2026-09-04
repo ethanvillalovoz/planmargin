@@ -14,6 +14,11 @@ import { SceneViewport } from './scene-viewport';
 type OperationsSection = 'overview' | 'coverage' | 'issues';
 type IssueFilter = 'all' | 'active' | 'blocked' | 'pending_evidence';
 
+function initialOperationsSection(): OperationsSection {
+  const requested = new URLSearchParams(window.location.search).get('section');
+  return requested === 'coverage' || requested === 'issues' ? requested : 'overview';
+}
+
 @Component({
   selector: 'app-operations-workspace',
   imports: [SceneViewport],
@@ -23,7 +28,7 @@ type IssueFilter = 'all' | 'active' | 'blocked' | 'pending_evidence';
       <header class="runbar">
         <div class="run-context">
           <span class="run-kicker">Behavior test / {{ report.coverage.plan_version }}</span>
-          <strong>{{ report.coverage.scenario_family }}</strong>
+          <strong>{{ humanize(report.coverage.scenario_family) }}</strong>
           <small>Campaign {{ report.campaign.campaign_id }} · report {{ shortSeal() }}</small>
         </div>
         <div class="run-facts" aria-label="Current campaign state">
@@ -1081,6 +1086,454 @@ type IssueFilter = 'all' | 'active' | 'blocked' | 'pending_evidence';
       font-size: 9px;
       line-height: 1.4;
     }
+
+    /*
+     * Public Waymo product-language pass.
+     * The surrounding workstation follows the spacious editorial hierarchy,
+     * soft controls, and light/dark balance used across Waymo Research,
+     * Safety Impact, Careers, and Open Dataset. The replay canvas remains a
+     * dark technical surface derived from Waymax's public visualization.
+     */
+    :host {
+      height: calc(100dvh - 72px);
+      min-height: 720px;
+      background: #f4f6f3;
+      color: #141b2d;
+      font-family:
+        Inter,
+        ui-sans-serif,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        sans-serif;
+    }
+    .ops-workstation {
+      grid-template-rows: 104px minmax(0, 1fr);
+      background: #f4f6f3;
+    }
+    .runbar {
+      grid-template-columns: minmax(320px, 1fr) auto auto;
+      gap: 24px;
+      padding: 14px 22px 18px;
+      border: 0;
+      background: #f4f6f3;
+    }
+    .run-context {
+      gap: 2px;
+    }
+    .run-kicker,
+    .run-context small,
+    .review-toolbar span,
+    .campaign-rail header span,
+    .decision-inspector > header span,
+    .coverage-workspace header span {
+      color: #6f7782;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 650;
+      line-height: 1.3;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .run-context strong {
+      color: #121a2d;
+      font-size: 25px;
+      font-weight: 500;
+      letter-spacing: -0.045em;
+      line-height: 1.05;
+      text-transform: capitalize;
+    }
+    .run-context small {
+      color: #767e88;
+      font-size: 10px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .run-facts {
+      gap: 8px;
+      color: #4e5866;
+      font-size: 10px;
+    }
+    .run-facts span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 11px;
+      border-radius: 999px;
+      background: #e9ede8;
+    }
+    .run-facts .decision {
+      color: #294631;
+      background: #dff3e6;
+    }
+    .run-facts .decision i {
+      background: #24aa6b;
+    }
+    .primary-action {
+      min-height: 42px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 999px;
+      background: #1769ff;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 8px 22px rgb(23 105 255 / 20%);
+    }
+    .primary-action:hover {
+      background: #0759e7;
+    }
+    .workstation-grid {
+      grid-template-columns: 244px minmax(540px, 1fr) 310px;
+      gap: 14px;
+      padding: 0 14px 14px;
+    }
+    .campaign-rail,
+    .decision-inspector,
+    .review-surface {
+      border: 1px solid #e0e5e1;
+      border-radius: 20px;
+      background: #ffffff;
+      box-shadow: 0 8px 28px rgb(17 31 45 / 6%);
+      overflow: hidden auto;
+    }
+    .campaign-rail,
+    .decision-inspector {
+      color: #141b2d;
+    }
+    .campaign-rail,
+    .decision-inspector {
+      border-right: 1px solid #e0e5e1;
+      border-left: 1px solid #e0e5e1;
+    }
+    .rail-section {
+      margin: 0 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #edf0ec;
+    }
+    .rail-section:last-child {
+      border-bottom: 0;
+    }
+    .rail-section > header,
+    .decision-inspector > header {
+      height: 34px;
+      padding: 0 4px;
+      background: transparent;
+    }
+    .rail-section header b,
+    .decision-inspector > header b {
+      color: #646d78;
+      font-family: inherit;
+      font-size: 9px;
+      font-weight: 650;
+      letter-spacing: 0.06em;
+    }
+    .campaign-row,
+    .rail-issue {
+      border-radius: 12px;
+      color: #182033;
+    }
+    .campaign-row {
+      padding: 12px;
+    }
+    .campaign-row.selected {
+      background: #eef4ff;
+      box-shadow: none;
+    }
+    .campaign-row span,
+    .rail-issue strong,
+    .pipeline li > span {
+      font-family: inherit;
+    }
+    .campaign-row span {
+      color: #1549a4;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .campaign-row small,
+    .rail-issue small,
+    .pipeline li small {
+      color: #747c86;
+    }
+    .rail-issue {
+      grid-template-columns: 5px minmax(0, 1fr);
+      margin: 3px 0;
+      padding: 9px 8px;
+      border-top: 0;
+    }
+    .rail-issue:hover,
+    .rail-issue.selected {
+      background: #f2f4f1;
+    }
+    .rail-issue > i,
+    .issue-card > i {
+      width: 4px;
+      border-radius: 999px;
+    }
+    .pipeline ol {
+      padding: 2px 0 4px;
+    }
+    .pipeline li {
+      padding: 7px 4px;
+    }
+    .pipeline li > span {
+      display: grid;
+      width: 18px;
+      height: 18px;
+      place-items: center;
+      border-radius: 50%;
+      background: #f0f2ef;
+      color: #67717b;
+      font-size: 8px;
+    }
+    .pipeline li strong {
+      color: #293142;
+      font-size: 9px;
+    }
+    .review-surface {
+      grid-template-rows: 58px minmax(0, 1fr) auto auto;
+      min-width: 0;
+      background: #ffffff;
+    }
+    .review-toolbar {
+      padding: 0 10px 0 18px;
+      border-bottom: 1px solid #e6e9e6;
+      background: #ffffff;
+    }
+    .review-toolbar strong {
+      color: #161d2f;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .ops-tabs {
+      align-self: center;
+      gap: 3px;
+      padding: 3px;
+      border-radius: 999px;
+      background: #f0f2ef;
+    }
+    .ops-tabs button {
+      min-width: 72px;
+      min-height: 32px;
+      border: 0;
+      border-radius: 999px;
+      color: #69727d;
+    }
+    .ops-tabs button.active {
+      background: #ffffff;
+      color: #164ca9;
+      box-shadow: 0 2px 8px rgb(24 43 61 / 10%);
+    }
+    .ops-tabs button span {
+      background: #dde8ff;
+      color: #164ca9;
+    }
+    .scene-frame {
+      margin: 0 10px;
+      border-radius: 18px;
+      background: #080d12;
+      overflow: hidden;
+    }
+    .scene-unavailable span {
+      color: #54d78f;
+      font-family: inherit;
+    }
+    .scene-unavailable h1 {
+      color: #ffffff;
+      font-size: 27px;
+      font-weight: 500;
+      letter-spacing: -0.04em;
+    }
+    .scene-unavailable p {
+      color: #9aa7b4;
+    }
+    .scene-unavailable button,
+    .inspector-block button {
+      min-height: 36px;
+      border: 0;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: #1549a4;
+      font-weight: 700;
+    }
+    .time-readout {
+      min-height: 54px;
+      margin: 0 10px;
+      padding: 0 4px;
+      border-top: 0;
+      background: #ffffff;
+    }
+    .timecode {
+      color: #1769ff;
+      font-family: inherit;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .transport button {
+      min-height: 30px;
+      padding: 0 9px;
+      border: 0;
+      border-radius: 999px;
+      background: #edf0ed;
+      color: #2d3542;
+    }
+    .time-readout input {
+      accent-color: #1769ff;
+    }
+    .time-readout strong {
+      color: #222a3a;
+    }
+    .time-readout small,
+    .time-readout .source {
+      color: #777f89;
+    }
+    .evidence-strip {
+      margin: 0 10px 10px;
+      border: 1px solid #e7ebe7;
+      border-radius: 14px;
+      background: #f8faf7;
+      overflow: hidden;
+    }
+    .evidence-strip > div {
+      padding: 10px 12px;
+      border-right-color: #e3e8e3;
+    }
+    .evidence-strip span {
+      color: #717984;
+      font-family: inherit;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .evidence-strip strong {
+      color: #20283a;
+    }
+    .decision-inspector > header {
+      margin: 0 14px;
+      padding-top: 10px;
+    }
+    .verdict,
+    .inspector-block,
+    .decision-inspector > footer {
+      margin: 0 14px;
+      padding: 16px 0;
+      border-bottom: 1px solid #edf0ed;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #e2f5e9;
+      color: #237447;
+      font-family: inherit;
+      font-size: 9px;
+      font-weight: 750;
+    }
+    .status i {
+      background: #24aa6b;
+    }
+    .verdict h2 {
+      margin: 13px 0 8px;
+      color: #111a2d;
+      font-size: 24px;
+      font-weight: 500;
+      letter-spacing: -0.045em;
+      line-height: 1.08;
+    }
+    .verdict p,
+    .inspector-block p,
+    .decision-inspector footer p {
+      color: #6a727d;
+      font-size: 10px;
+    }
+    .inspector-block > header {
+      color: #77808a;
+      font-family: inherit;
+    }
+    .inspector-block > strong {
+      color: #20283a;
+    }
+    .slos > div {
+      border-top-color: #edf0ed;
+      color: #3c4553;
+    }
+    .decision-inspector footer strong {
+      color: #626b76;
+      font-family: inherit;
+    }
+    .coverage-workspace,
+    .issue-workspace {
+      margin: 0 10px 10px;
+      border: 1px solid #e2e6e2;
+      border-radius: 16px;
+      background: #ffffff;
+      overflow: auto;
+    }
+    .coverage-workspace > section,
+    .coverage-workspace > aside,
+    .issue-list,
+    .issue-detail {
+      background: #ffffff;
+      color: #1c2435;
+    }
+    .coverage-workspace > aside,
+    .issue-detail {
+      border-left-color: #e4e8e4;
+    }
+    .coverage-workspace header,
+    .coverage-facts div,
+    .protocol,
+    .coverage-workspace article,
+    .filter-row,
+    .issue-card,
+    .issue-detail dl div {
+      border-bottom-color: #e8ebe8;
+    }
+    .coverage-facts dt,
+    .protocol small,
+    .coverage-workspace article p,
+    .issue-card small,
+    .issue-card p,
+    .issue-detail dt,
+    .issue-detail dd {
+      color: #6f7782;
+    }
+    .filter-row button {
+      border: 0;
+      border-radius: 999px;
+      background: #eef1ed;
+      color: #5f6873;
+    }
+    .filter-row button.active {
+      background: #1769ff;
+      color: #ffffff;
+    }
+    .issue-card {
+      color: #222a3b;
+    }
+    .issue-card:hover,
+    .issue-card.selected {
+      background: #f1f5ff;
+    }
+    .issue-card small,
+    .issue-detail > header,
+    .issue-card > b,
+    .issue-detail code,
+    .failed-gates code {
+      font-family: inherit;
+    }
+    .failed-gates code {
+      background: #f3f5f2;
+      color: #365f9f;
+    }
+    .pending-note {
+      border-left-color: #f0a33b;
+      border-radius: 0 12px 12px 0;
+      background: #fff6e7;
+      color: #7e5b1a;
+    }
     @media (max-width: 1180px) {
       .workstation-grid {
         grid-template-columns: 190px minmax(440px, 1fr) 250px;
@@ -1096,7 +1549,7 @@ type IssueFilter = 'all' | 'active' | 'blocked' | 'pending_evidence';
       }
       .ops-workstation {
         height: auto;
-        min-height: calc(100dvh - 52px);
+        min-height: calc(100dvh - 72px);
       }
       .runbar {
         grid-template-columns: 1fr auto;
@@ -1109,8 +1562,7 @@ type IssueFilter = 'all' | 'active' | 'blocked' | 'pending_evidence';
       }
       .decision-inspector {
         grid-column: 1/-1;
-        border-top: 1px solid #2a2c2e;
-        border-left: 0;
+        border: 1px solid #e0e5e1;
       }
       .review-surface {
         min-height: 620px;
@@ -1121,6 +1573,9 @@ type IssueFilter = 'all' | 'active' | 'blocked' | 'pending_evidence';
       }
     }
     @media (max-width: 650px) {
+      .ops-workstation {
+        min-height: calc(100dvh - 112px);
+      }
       .runbar {
         grid-template-columns: 1fr;
         padding: 7px 10px;
@@ -1160,7 +1615,7 @@ export class OperationsWorkspace {
   protected readonly debuggerStore = inject(DebuggerStore);
   protected readonly local = inject(LocalEvidenceService);
   protected readonly report = TEST_OPERATIONS;
-  protected readonly section = signal<OperationsSection>('overview');
+  protected readonly section = signal<OperationsSection>(initialOperationsSection());
   protected readonly filter = signal<IssueFilter>('all');
   protected readonly selectedIssue = signal<TestOperationIssue>(TEST_OPERATIONS.issues[0]);
   protected readonly sections: readonly { id: OperationsSection; label: string }[] = [

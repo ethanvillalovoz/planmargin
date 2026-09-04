@@ -27,6 +27,21 @@ type ProposalSort = 'criticality' | 'minimality' | 'support' | 'sequence';
 type ProposalFilter = 'all' | 'eligible' | 'support-rejected' | 'pipeline-rejected';
 type InvestigationRank = 'closest' | 'minimal' | 'support';
 
+function initialProductView(): ProductView {
+  const requested = new URLSearchParams(window.location.search).get('view');
+  if (requested === 'evidence') return 'investigate';
+  if (requested === 'replay' || requested === 'sensors') {
+    return requested === 'sensors' ? 'sensor' : requested;
+  }
+  return 'operations';
+}
+
+function initialEvidenceView(): EvidenceView {
+  return new URLSearchParams(window.location.search).get('panel') === 'runtime'
+    ? 'deployment'
+    : 'campaign';
+}
+
 @Component({
   selector: 'app-product-shell',
   imports: [NgIcon, OperationsWorkspace, SimulatorWorkspace],
@@ -44,7 +59,10 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       <header class="product-header">
         <button class="brand" type="button" (click)="setView('operations')">
           <ng-icon name="phosphorStack" size="23" aria-hidden="true" />
-          <strong>PlanMargin</strong>
+          <span class="brand-lockup">
+            <strong>PlanMargin</strong>
+            <small>Behavior Test Studio</small>
+          </span>
         </button>
         <nav aria-label="Product sections">
           <button
@@ -2202,6 +2220,319 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
       display: block;
       height: calc(100dvh - 52px);
     }
+
+    /* Full-shell design language grounded in Waymo's public product surfaces. */
+    :host {
+      background: #f4f6f3;
+      color: #141b2d;
+    }
+    .product-shell {
+      background: #f4f6f3;
+    }
+    .product-header {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      min-height: 72px;
+      padding: 0 22px;
+      border-bottom: 1px solid #e3e7e3;
+      background: rgb(255 255 255 / 96%);
+      box-shadow: 0 2px 16px rgb(18 32 44 / 4%);
+      backdrop-filter: blur(18px);
+    }
+    .brand {
+      gap: 10px;
+      color: #111a2d;
+    }
+    .brand ng-icon {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 12px;
+      background: #ddf8ee;
+      color: #087d6a;
+    }
+    .brand-lockup {
+      display: grid;
+      gap: 1px;
+      text-align: left;
+    }
+    .brand strong {
+      font-size: 0.9rem;
+      font-weight: 720;
+      letter-spacing: -0.035em;
+    }
+    .brand small {
+      color: #78808b;
+      font-size: 0.55rem;
+      font-weight: 650;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .product-header nav {
+      align-self: center;
+      justify-self: center;
+      gap: 4px;
+      margin-left: 0;
+      padding: 4px;
+      border: 0;
+      border-radius: 999px;
+      background: #f0f2ef;
+    }
+    .product-header nav button {
+      min-height: 36px;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 999px;
+      color: #626b76;
+      font-size: 0.67rem;
+      font-weight: 700;
+    }
+    .product-header nav button:hover {
+      color: #174fae;
+    }
+    .product-header nav button.active {
+      background: #ffffff;
+      color: #164ca9;
+      box-shadow: 0 2px 10px rgb(27 46 64 / 10%);
+    }
+    .product-header nav button.active:after {
+      display: none;
+    }
+    .header-actions {
+      gap: 8px;
+    }
+    .connection,
+    .assistant-launch {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 999px;
+      background: #edf0ed;
+      color: #3f4855;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+    .assistant-launch {
+      background: #1769ff;
+      color: #ffffff;
+      box-shadow: 0 7px 20px rgb(23 105 255 / 18%);
+    }
+    .assistant-launch ng-icon {
+      color: #ffffff;
+    }
+    .assistant-launch:hover,
+    .assistant-launch.active {
+      border-color: transparent;
+      background: #0759e7;
+    }
+    .assistant-launch:disabled {
+      background: #dfe4e2;
+      color: #8b929b;
+      box-shadow: none;
+    }
+    .connection.connected {
+      background: #e1f4e8;
+      color: #276e49;
+    }
+    .investigation-page {
+      min-height: calc(100dvh - 72px);
+      padding-bottom: 24px;
+      background: #f4f6f3;
+    }
+    .evidence-commandbar {
+      top: 72px;
+      min-height: 108px;
+      padding: 16px 24px 18px;
+      border-bottom: 0;
+      background: rgb(244 246 243 / 96%);
+    }
+    .evidence-context span {
+      color: #1769ff;
+      font-size: 0.58rem;
+      letter-spacing: 0.08em;
+    }
+    .evidence-context strong {
+      color: #121a2d;
+      font-size: 1.45rem;
+      font-weight: 510;
+      letter-spacing: -0.045em;
+    }
+    .evidence-context small {
+      margin-top: 3px;
+      color: #69727d;
+      font-size: 0.64rem;
+    }
+    .evidence-sections {
+      gap: 4px;
+      padding: 4px;
+      border: 0;
+      border-radius: 999px;
+      background: #e9ede8;
+    }
+    .evidence-sections button {
+      min-height: 36px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 999px;
+      color: #626b76;
+    }
+    .evidence-sections button.active {
+      background: #ffffff;
+      color: #164ca9;
+      box-shadow: 0 2px 10px rgb(27 46 64 / 10%);
+    }
+    .page-status {
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: #e8ece8;
+      color: #56606c;
+      font-weight: 650;
+    }
+    .page-status.connected {
+      background: #e0f4e7;
+      color: #286d49;
+    }
+    .deployment-workbench,
+    .public-workbench,
+    .campaign-index,
+    .investigation-workspace {
+      border: 1px solid #e0e5e1;
+      border-radius: 22px;
+      background: #ffffff;
+      box-shadow: 0 8px 30px rgb(17 31 45 / 6%);
+      overflow: hidden;
+    }
+    .deployment-workbench,
+    .public-workbench {
+      margin: 0 24px 24px;
+    }
+    .campaign-index,
+    .investigation-workspace {
+      margin-right: 24px;
+      margin-left: 24px;
+    }
+    .deployment-workbench > header,
+    .model-evidence,
+    .public-kpis,
+    .method-card,
+    .campaign-funnel,
+    .campaign-row,
+    .cell-rail,
+    .proposal-toolbar,
+    .gate-funnel,
+    .proposal-list,
+    .parameter-strip,
+    .controller-comparison,
+    .proposal-detail > header,
+    .comparison-dock,
+    .comparison-dock > header,
+    .comparison-dock article,
+    .deployment-notes article {
+      border-color: #e7eae7;
+    }
+    .deployment-workbench > header h2,
+    .proposal-detail header h2,
+    .rail-heading h2,
+    .proposal-toolbar h2 {
+      color: #121a2d;
+      font-weight: 520;
+      letter-spacing: -0.035em;
+    }
+    .qualification-status {
+      min-height: 30px;
+      padding: 0 11px;
+      border-radius: 999px;
+      background: #e0f4e7;
+      color: #286d49;
+    }
+    .public-kpis div,
+    .method-card,
+    .decision-card,
+    .proposal-detail,
+    .cell-rail,
+    .deployment-notes article {
+      color: #20283a;
+    }
+    .public-kpis strong {
+      color: #141b2d;
+      font-size: 1.65rem;
+      font-weight: 500;
+    }
+    .public-kpis span,
+    .method-card small,
+    .deployment-notes p,
+    .rail-heading span,
+    .proposal-toolbar p,
+    .cell-summary dt,
+    .proposal-list small,
+    .proposal-list b,
+    .parameter-strip span,
+    .controller-comparison span,
+    .gate-ladder span,
+    .grounded-analysis p {
+      color: #68717c;
+    }
+    .rank-tabs,
+    .comparison-dock,
+    .grounded-analysis {
+      background: #f7f9f6;
+    }
+    .rank-tabs {
+      padding: 4px;
+      border-radius: 999px;
+    }
+    .rank-tabs button,
+    .proposal-toolbar select,
+    .row-actions button,
+    .comparison-dock button,
+    .detail-actions button,
+    .replay-boundary button {
+      border-color: #d7ddda;
+      border-radius: 999px;
+      background: #f0f2ef;
+      color: #36404d;
+    }
+    .rank-tabs button.active {
+      background: #1769ff;
+      color: #ffffff;
+    }
+    .campaign-head {
+      background: #f0f3ef;
+      color: #68717c;
+    }
+    .campaign-row {
+      color: #36404d;
+    }
+    .campaign-row .method.bayesian,
+    .comparison-dock article > span,
+    .proposal-detail header p,
+    .grounded-analysis code {
+      color: #1769ff;
+    }
+    .cell-grid button {
+      border-radius: 7px;
+      background: linear-gradient(to top, currentColor var(--validity), #e8ece8 var(--validity));
+    }
+    .proposal-list button {
+      color: #20283a;
+    }
+    .proposal-list button:hover,
+    .proposal-list button.active {
+      background: #eef4ff;
+      box-shadow: none;
+    }
+    .replay-boundary {
+      border-radius: 0 14px 14px 0;
+      background: #fff5e6;
+      color: #3d4652;
+    }
+    .grounded-analysis {
+      border-radius: 14px;
+    }
+    .embedded-simulator {
+      height: calc(100dvh - 72px);
+    }
     @media (max-width: 900px) {
       .product-header {
         grid-template-columns: auto 1fr auto;
@@ -2300,7 +2631,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         grid-column: 1 / -1;
         height: 54px;
         border-top: 1px solid var(--divider);
-        background: #071018;
+        background: #f0f2ef;
       }
       .product-header nav button {
         flex: 1;
@@ -2409,7 +2740,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
         flex-direction: column;
       }
       .embedded-simulator {
-        height: calc(100dvh - 52px);
+        height: calc(100dvh - 112px);
       }
     }
   `,
@@ -2425,8 +2756,8 @@ export class ProductShell {
     window.location.protocol === 'https:' &&
     window.location.hostname !== 'localhost' &&
     window.location.hostname !== '127.0.0.1';
-  protected readonly view = signal<ProductView>('operations');
-  protected readonly evidenceView = signal<EvidenceView>('campaign');
+  protected readonly view = signal<ProductView>(initialProductView());
+  protected readonly evidenceView = signal<EvidenceView>(initialEvidenceView());
   protected readonly sort = signal<ProposalSort>('criticality');
   protected readonly filter = signal<ProposalFilter>('all');
   protected readonly rank = signal<InvestigationRank>('closest');

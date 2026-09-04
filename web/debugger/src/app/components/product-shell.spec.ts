@@ -21,8 +21,18 @@ describe('ProductShell', () => {
   });
 
   afterEach(() => {
+    window.history.replaceState(null, '', '/');
     vi.unstubAllGlobals();
     TestBed.resetTestingModule();
+  });
+
+  it('opens a requested evidence surface for reproducible local inspection', () => {
+    window.history.replaceState(null, '', '/?view=evidence&panel=runtime');
+    const fixture = TestBed.createComponent(ProductShell);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Model qualification');
+    expect(fixture.nativeElement.textContent).toContain('Models, deployment, and promotion gates');
   });
 
   it('opens on simulation test operations and keeps the local-workspace boundary explicit', () => {
