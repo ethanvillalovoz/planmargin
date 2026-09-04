@@ -26,6 +26,7 @@ The source is a public Waymax visualization used as a visual-language target, no
 5. P2 — The earlier README images still showed the generic dashboard. Replaced them with captures from the verified redesigned local product.
 6. P1 — The first CI browser pass found that the compact campaign tab row overlapped the scene at mobile width. Changed the compact review grid to size the toolbar from content so controls remain clickable.
 7. P1 — Automated WCAG checks found the tertiary label color just below the required contrast ratio on several evidence surfaces. Increased the neutral tertiary token while preserving the subdued hierarchy.
+8. P2 — The CI browser suite found an ambiguous accessible-name query for the issue filter because the same phrase also appeared inside a card. Tightened the test to the exact filter control; application behavior was unaffected.
 
 ## Interaction verification
 

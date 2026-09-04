@@ -179,7 +179,7 @@ test('public clone stays honest, usable, and accessible without licensed records
   await expect(page.getByText('Mutation contract frozen')).toBeVisible();
   await expect(page.getByText('Known unknowns')).toBeVisible();
   await page.getByRole('button', { name: /^Issues/ }).click();
-  await expect(page.getByRole('button', { name: 'Pending evidence' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pending evidence', exact: true })).toBeVisible();
   await expect(page.getByText('Measured evidence')).toBeVisible();
 
   await page.getByRole('button', { name: 'Evidence', exact: true }).click();
