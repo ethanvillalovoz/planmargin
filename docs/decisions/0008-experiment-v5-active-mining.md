@@ -97,16 +97,16 @@ never scenario identifiers or raw feature rows.
 
 All gates must pass:
 
-| Gate | Threshold |
-| --- | --- |
-| Evidence scale | At least 500 unique accepted examples across exactly 10 scenarios. |
-| Scenario isolation | Zero train/calibration/test overlap in every fold. |
-| Ranking signal | Mean held-out Spearman correlation at least 0.25. |
-| Budget efficiency | At budget 8, mean random-minus-learned best separation at least 0.25 m. |
-| Scenario consistency | Learned budget-8 ranking matches or beats random median in at least 7 of 10 scenarios. |
-| Calibration | Aggregate 90% held-out interval coverage in `[0.75, 0.98]`. |
-| Determinism | Two clean runs have the same logical report fingerprint and byte-identical model bundle. |
-| Privacy | Tracked/public output contains no scenario identifier, source location, or feature row. |
+| Gate                 | Threshold                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------- |
+| Evidence scale       | At least 500 unique accepted examples across exactly 10 scenarios.                       |
+| Scenario isolation   | Zero train/calibration/test overlap in every fold.                                       |
+| Ranking signal       | Mean held-out Spearman correlation at least 0.25.                                        |
+| Budget efficiency    | At budget 8, mean random-minus-learned best separation at least 0.25 m.                  |
+| Scenario consistency | Learned budget-8 ranking matches or beats random median in at least 7 of 10 scenarios.   |
+| Calibration          | Aggregate 90% held-out interval coverage in `[0.75, 0.98]`.                              |
+| Determinism          | Two clean runs have the same logical report fingerprint and byte-identical model bundle. |
+| Privacy              | Tracked/public output contains no scenario identifier, source location, or feature row.  |
 
 A failure is recorded as `qualification_no_go`. Thresholds, features, folds,
 and labels may not be changed after observing Stage-A results under Experiment

@@ -22,16 +22,16 @@ flowchart LR
 
 The classifier chooses exactly one of eight query IDs:
 
-| Query ID | Evidence responsibility |
-| --- | --- |
-| `campaign_overview` | Frozen v1 execution, cost, findings, and held-out state |
-| `method_comparison` | Random/Bayesian aggregate validity, hypervolume, findings, and H3 status |
-| `hypothesis_decisions` | Frozen H1, H2, and H3 decisions without reinterpreting censored values |
-| `claim_boundary` | What the development result does and does not establish |
-| `beam_pipeline` | Published Beam ingestion, event, partition, integrity, and privacy evidence |
-| `model_performance` | Real-WOMD trajectory-model accuracy, baseline, and repeatability evidence |
-| `inference_qualification` | Measured NVIDIA latency, throughput, FP32 parity, and FP16 no-go evidence |
-| `workbench_provenance` | Aggregate campaign, exact replay, 3DGS, record-separation, and redistribution boundaries |
+| Query ID                  | Evidence responsibility                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `campaign_overview`       | Frozen v1 execution, cost, findings, and held-out state                                  |
+| `method_comparison`       | Random/Bayesian aggregate validity, hypervolume, findings, and H3 status                 |
+| `hypothesis_decisions`    | Frozen H1, H2, and H3 decisions without reinterpreting censored values                   |
+| `claim_boundary`          | What the development result does and does not establish                                  |
+| `beam_pipeline`           | Published Beam ingestion, event, partition, integrity, and privacy evidence              |
+| `model_performance`       | Real-WOMD trajectory-model accuracy, baseline, and repeatability evidence                |
+| `inference_qualification` | Measured NVIDIA latency, throughput, FP32 parity, and FP16 no-go evidence                |
+| `workbench_provenance`    | Aggregate campaign, exact replay, 3DGS, record-separation, and redistribution boundaries |
 
 Unknown questions fail closed. The question never becomes SQL, a filesystem
 path, a model-selected function, or a network request. Public facts embed the

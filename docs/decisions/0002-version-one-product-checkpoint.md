@@ -50,19 +50,19 @@ few minutes without requiring a recruiter to read the complete research log.
 
 ## Checkpoint assessment
 
-| Product responsibility | Status at `6224760` | Evidence or gap |
-| --- | --- | --- |
-| WOMD/Waymax simulation | Complete foundation | Deterministic replay and bounded scenario loading |
-| Mutation and validation | Complete foundation | Lead-braking mutation with physical and map gates |
-| Controller comparison | Complete foundation | Tested/reference reruns and four-outcome finding contract |
-| Reproducible records | Strong | Versioned schemas, atomic checkpoints, provenance, and privacy boundaries |
-| Random-search control | Complete | Fixed 320-proposal training baseline |
-| Behavioral realism | Incomplete | No likelihood model estimated from WOMD behavior distributions |
-| Bayesian search | Incomplete | No BoTorch model or acquisition policy |
-| Held-out evidence | Incomplete | Current ten-scenario set is training-only |
-| Analytical data layer | Incomplete | No Parquet/DuckDB experiment tables or SQL analysis |
-| Product interface | Prototype only | Static SVG exists; FastAPI/Angular/Three.js debugger does not |
-| Systems optimization | Not started | No measured C++ kernel migration or batch-pipeline benchmark |
+| Product responsibility  | Status at `6224760` | Evidence or gap                                                           |
+| ----------------------- | ------------------- | ------------------------------------------------------------------------- |
+| WOMD/Waymax simulation  | Complete foundation | Deterministic replay and bounded scenario loading                         |
+| Mutation and validation | Complete foundation | Lead-braking mutation with physical and map gates                         |
+| Controller comparison   | Complete foundation | Tested/reference reruns and four-outcome finding contract                 |
+| Reproducible records    | Strong              | Versioned schemas, atomic checkpoints, provenance, and privacy boundaries |
+| Random-search control   | Complete            | Fixed 320-proposal training baseline                                      |
+| Behavioral realism      | Incomplete          | No likelihood model estimated from WOMD behavior distributions            |
+| Bayesian search         | Incomplete          | No BoTorch model or acquisition policy                                    |
+| Held-out evidence       | Incomplete          | Current ten-scenario set is training-only                                 |
+| Analytical data layer   | Incomplete          | No Parquet/DuckDB experiment tables or SQL analysis                       |
+| Product interface       | Prototype only      | Static SVG exists; FastAPI/Angular/Three.js debugger does not             |
+| Systems optimization    | Not started         | No measured C++ kernel migration or batch-pipeline benchmark              |
 
 The project remains aligned in direction. It has completed the experiment
 engine's foundation, while the comparative research result and visible product

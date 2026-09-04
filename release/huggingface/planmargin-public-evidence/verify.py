@@ -42,6 +42,13 @@ def main() -> None:
     cpp_v2 = json.loads((ROOT / "data/tensorrt-cpp-benchmark-v2.json").read_text())
     residual_fp16 = json.loads((ROOT / "data/fp16-residual-candidate.json").read_text())
     shielded_rl = json.loads((ROOT / "data/shielded-rl-controller.json").read_text())
+    fault_protection = json.loads(
+        (ROOT / "data/fault-protection-command-dropout.json").read_text()
+    )
+    assistance_handoff = json.loads(
+        (ROOT / "data/assistance-handoff-command-recovery.json").read_text()
+    )
+    test_operations = json.loads((ROOT / "data/test-operations.json").read_text())
     if trajectory.get("synthetic") is not False:
         raise SystemExit("Trajectory result must identify real training data")
     if (
@@ -93,6 +100,30 @@ def main() -> None:
         is not False
     ):
         raise SystemExit("Shielded-controller no-go boundary is incomplete")
+    if (
+        fault_protection.get("status") != "qualified"
+        or fault_protection.get("summary", {}).get(
+            "protected_fallback_success_count"
+        )
+        != 10
+        or not all(fault_protection.get("gates", {}).values())
+    ):
+        raise SystemExit("Fault-protection qualification is incomplete")
+    if (
+        assistance_handoff.get("status") != "qualified"
+        or assistance_handoff.get("summary", {}).get(
+            "assisted_handoff_success_count"
+        )
+        != 10
+        or not all(assistance_handoff.get("gates", {}).values())
+    ):
+        raise SystemExit("Assistance-handoff qualification is incomplete")
+    if (
+        test_operations.get("slo_summary")
+        != {"status": "healthy", "passing": 7, "total": 7}
+        or test_operations.get("campaign", {}).get("real_data_only") is not True
+    ):
+        raise SystemExit("Test-operations contract is incomplete")
     restricted = json.dumps(
         (
             rows,
@@ -105,6 +136,9 @@ def main() -> None:
             cpp_v2,
             residual_fp16,
             shielded_rl,
+            fault_protection,
+            assistance_handoff,
+            test_operations,
         ),
         sort_keys=True,
     )
@@ -112,7 +146,7 @@ def main() -> None:
         key in restricted for key in ("scenario_ids", "source_shard", "record_index")
     ):
         raise SystemExit("Restricted provenance field found")
-    print("PlanMargin public evidence verified: 16 aggregate research records")
+    print("PlanMargin public evidence verified: 19 aggregate research records")
 
 
 if __name__ == "__main__":

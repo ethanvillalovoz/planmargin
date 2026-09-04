@@ -9,12 +9,12 @@ and by a deterministic structural validator in `planmargin.rollout_record`.
 
 A successful controller comparison exports one collection with four records:
 
-| Variant | Controller role |
-| --- | --- |
-| Original | Tested |
-| Original | Reference |
-| Counterfactual | Tested |
-| Counterfactual | Reference |
+| Variant        | Controller role |
+| -------------- | --------------- |
+| Original       | Tested          |
+| Original       | Reference       |
+| Counterfactual | Tested          |
+| Counterfactual | Reference       |
 
 Every record has a unique deterministic record ID derived from its schema
 version, comparison key, variant, controller, rollout Git revision, and

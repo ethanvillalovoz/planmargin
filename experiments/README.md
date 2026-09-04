@@ -50,3 +50,17 @@ changing its frozen configuration or the natural experiment.
 The [experiment-v2 protocol and result](../docs/decisions/0006-experiment-v2-protocol.md)
 records deterministic JAX double-DQN training and the synthetic-safety `no_go`
 that prevented Waymax deployment and a v2 development or held-out campaign.
+
+The [command-dropout fault-protection result](fault-protection-command-dropout-v1.json)
+records a qualified off-nominal verification study over ten real WOMD training
+scenes: 60 deterministic physical rollouts and 80/80 passing scene gates. Its
+protocol, first failed fault representation, and corrected qualification are
+documented in [ADR 0011](../docs/decisions/0011-command-dropout-fault-protection.md).
+Only the schema-validated aggregate is tracked; scene traces remain private.
+
+The [assistance-handoff result](assistance-handoff-command-recovery-v1.json)
+extends that fault test with explicit request, fallback, deterministic
+resolution, and primary-recovery states. All 90 frozen gates passed across 60
+additional repeated real-WOMD rollouts. [ADR 0012](../docs/decisions/0012-assistance-handoff-v-and-v.md)
+defines the boundary: it tests assistance behavior, not a human-operated or
+production remote-assistance service.

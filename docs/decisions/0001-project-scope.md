@@ -41,4 +41,3 @@ The first experiment will compare constrained Bayesian optimization with uniform
 - **Optimize only for collisions:** creates trivial and potentially unavoidable events.
 - **Make 3D Gaussian splatting central:** visually compelling but unrelated to the first vector-based simulation experiment and risky on available hardware.
 - **Lead with an LLM assistant:** duplicates existing résumé evidence and cannot replace deterministic evaluation.
-

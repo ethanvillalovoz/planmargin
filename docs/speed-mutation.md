@@ -18,15 +18,15 @@ For the selected actor, the transformation:
 
 The default Stage 0 configuration is:
 
-| Parameter | Value |
-| --- | ---: |
-| Speed multiplier | `0.90` |
-| Allowed multiplier range | `[0.75, 1.00]` |
-| Smoothstep ramp | `10` steps (`1.0` s) |
-| Maximum speed | `40.0 m/s` |
-| Maximum absolute acceleration | `12.0 m/s²` |
-| Maximum absolute jerk | `100.0 m/s³` |
-| Maximum route deviation | `0.05 m` |
+| Parameter                     |                Value |
+| ----------------------------- | -------------------: |
+| Speed multiplier              |               `0.90` |
+| Allowed multiplier range      |       `[0.75, 1.00]` |
+| Smoothstep ramp               | `10` steps (`1.0` s) |
+| Maximum speed                 |           `40.0 m/s` |
+| Maximum absolute acceleration |          `12.0 m/s²` |
+| Maximum absolute jerk         |         `100.0 m/s³` |
+| Maximum route deviation       |             `0.05 m` |
 
 These Stage 0 thresholds are conservative data-quality guards for 10 Hz WOMD
 trajectories, not claims about passenger comfort or a complete

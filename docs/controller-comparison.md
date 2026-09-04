@@ -9,17 +9,17 @@ obviously shared failure while keeping the non-ego scenario input identical.
 Both controllers use the Waymax `IDMRoutePolicy` implementation pinned by the
 repository. Their configurations are versioned separately:
 
-| Parameter | Tested: `waymax-idm-default-v1` | Reference: `planmargin-conservative-idm-v1` |
-| --- | ---: | ---: |
-| Desired speed | `30.0 m/s` | `20.0 m/s` |
-| Minimum spacing | `2.0 m` | `4.0 m` |
-| Safe time headway | `2.0 s` | `3.0 s` |
-| Maximum acceleration | `2.0 m/s²` | `1.5 m/s²` |
-| Comfortable deceleration parameter | `4.0 m/s²` | `2.0 m/s²` |
-| Lookahead from current simulated position | `true` | `true` |
-| Additional lookahead points | `10` | `20` |
-| Additional lookahead distance | `10.0 m` | `20.0 m` |
-| Invalidate at route end | `false` | `false` |
+| Parameter                                 | Tested: `waymax-idm-default-v1` | Reference: `planmargin-conservative-idm-v1` |
+| ----------------------------------------- | ------------------------------: | ------------------------------------------: |
+| Desired speed                             |                      `30.0 m/s` |                                  `20.0 m/s` |
+| Minimum spacing                           |                         `2.0 m` |                                     `4.0 m` |
+| Safe time headway                         |                         `2.0 s` |                                     `3.0 s` |
+| Maximum acceleration                      |                      `2.0 m/s²` |                                  `1.5 m/s²` |
+| Comfortable deceleration parameter        |                      `4.0 m/s²` |                                  `2.0 m/s²` |
+| Lookahead from current simulated position |                          `true` |                                      `true` |
+| Additional lookahead points               |                            `10` |                                        `20` |
+| Additional lookahead distance             |                        `10.0 m` |                                    `20.0 m` |
+| Invalidate at route end                   |                         `false` |                                     `false` |
 
 The tested configuration matches Waymax defaults. The reference is intended to
 be more conservative through lower desired speed and acceleration, larger
@@ -32,10 +32,10 @@ while closing on a slower lead vehicle. It is not a hard braking clamp.
 
 Each controller runs on both the original and mutated scenarios:
 
-| Scenario | Tested policy | Reference policy |
-| --- | --- | --- |
-| Original | Must pass before a finding is eligible | Must pass before the reference is eligible |
-| Mutated | Evaluated for candidate failure | Evaluated independently for reference success |
+| Scenario | Tested policy                          | Reference policy                              |
+| -------- | -------------------------------------- | --------------------------------------------- |
+| Original | Must pass before a finding is eligible | Must pass before the reference is eligible    |
+| Mutated  | Evaluated for candidate failure        | Evaluated independently for reference success |
 
 A rollout succeeds only if the SDC has zero overlap, zero off-road value,
 remains valid, and completes all 80 future steps. A policy-specific avoidable

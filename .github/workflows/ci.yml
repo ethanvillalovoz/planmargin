@@ -68,7 +68,7 @@ jobs:
   debugger-quality:
     name: Scenario debugger checks
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     defaults:
       run:
@@ -91,7 +91,20 @@ jobs:
         run: npm ci
 
       - name: Audit production and development dependencies
-        run: npm audit --audit-level=moderate
+        run: |
+          for attempt in 1 2 3; do
+            if timeout 120s npm audit --audit-level=moderate; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "npm audit attempt $attempt failed; retrying after a transient-backoff delay"
+              sleep $((attempt * 10))
+            fi
+          done
+
+          echo "npm audit failed after three attempts"
+          exit 1
 
       - name: Typecheck, test, and build
         run: npm run check

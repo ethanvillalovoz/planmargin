@@ -13,6 +13,11 @@ describe('ProductShell', () => {
         disconnect(): void {}
       },
     );
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      addEventListener(): void {},
+      removeEventListener(): void {},
+    }));
   });
 
   afterEach(() => {
@@ -20,17 +25,20 @@ describe('ProductShell', () => {
     TestBed.resetTestingModule();
   });
 
-  it('opens on public evidence and keeps the local-workspace boundary explicit', () => {
+  it('opens on simulation test operations and keeps the local-workspace boundary explicit', () => {
     const fixture = TestBed.createComponent(ProductShell);
     fixture.detectChanges();
 
     let text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Workbench');
-    expect(text).toContain('3,200 counterfactual proposals. Zero qualifying regressions.');
+    expect(text).toContain('Operations');
+    expect(text).toContain('Campaign health and release evidence');
+    expect(text).toContain('Execution healthy100/100');
+    expect(text).toContain('Integrity checks passevidence pipeline100%807 of 807Pass');
+    expect(text).toContain('Promotion queue3');
     expect(text).not.toContain('Replay sealed planner evidence locally');
     const workbench = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Workbench'))!;
+    ).find((candidate) => candidate.textContent?.includes('Scenario lab'))!;
     workbench.click();
     fixture.detectChanges();
     text = fixture.nativeElement.textContent as string;
@@ -39,7 +47,7 @@ describe('ProductShell', () => {
 
     const evidence = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
+    ).find((candidate) => candidate.textContent?.includes('Research'))!;
     evidence.click();
     fixture.detectChanges();
     const runtime = Array.from(
@@ -69,7 +77,7 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
+    ).find((candidate) => candidate.textContent?.includes('Research'))!;
     button.click();
     fixture.detectChanges();
 
@@ -88,7 +96,7 @@ describe('ProductShell', () => {
         '.product-header nav button',
       ) as NodeListOf<HTMLButtonElement>,
     );
-    navigation.find((candidate) => candidate.textContent?.includes('Evidence'))!.click();
+    navigation.find((candidate) => candidate.textContent?.includes('Research'))!.click();
     fixture.detectChanges();
     const runtime = Array.from(
       fixture.nativeElement.querySelectorAll(
@@ -117,7 +125,7 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     expect(simulator.sensorMode()).toBe('camera');
 
-    buttons.find((candidate) => candidate.textContent?.includes('Workbench'))!.click();
+    buttons.find((candidate) => candidate.textContent?.includes('Scenario lab'))!.click();
     fixture.detectChanges();
     expect(simulator.sensorMode()).toBe('planning');
   });
@@ -187,7 +195,7 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Evidence'))!;
+    ).find((candidate) => candidate.textContent?.includes('Research'))!;
     button.click();
     fixture.detectChanges();
 

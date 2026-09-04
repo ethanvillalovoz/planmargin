@@ -10,16 +10,16 @@ artifacts.
 
 The comparison used the protocol frozen before the campaign began:
 
-| Dimension | Value |
-| --- | ---: |
-| Search methods | uniform random, constrained Bayesian |
-| Training scenarios | 10 |
-| Seeds per scenario and method | 5 |
-| Cells per method | 50 |
-| Proposal budget per cell | 32 |
-| Proposal budget per method | 1,600 |
-| Total cells | 100 |
-| Total proposals | 3,200 |
+| Dimension                     |                                Value |
+| ----------------------------- | -----------------------------------: |
+| Search methods                | uniform random, constrained Bayesian |
+| Training scenarios            |                                   10 |
+| Seeds per scenario and method |                                    5 |
+| Cells per method              |                                   50 |
+| Proposal budget per cell      |                                   32 |
+| Proposal budget per method    |                                1,600 |
+| Total cells                   |                                  100 |
+| Total proposals               |                                3,200 |
 
 Both methods used the same mutation bounds, controllers, empirical-support
 model, finding classifier, proposal budget, and physical-cost accounting. The
@@ -28,15 +28,15 @@ headway-regression original-eligibility gate returned `no_go`.
 
 ## Aggregate results
 
-| Metric | Random | Bayesian | Bayesian - random |
-| --- | ---: | ---: | ---: |
-| Cells with a qualifying finding | 0 / 50 | 0 / 50 | 0 |
-| Qualifying findings | 0 | 0 | 0 |
-| Pipeline-valid proposals | 944 / 1,600 | 1,245 / 1,600 | +301 |
-| Support-and-pipeline-valid proposals | 873 / 1,600 | 1,110 / 1,600 | +237 |
-| Support-and-pipeline-valid rate | 54.5625% | 69.3750% | +14.8125 pp |
-| Mean final feasible hypervolume | 0.227223 | 0.258250 | +0.031027 |
-| Physical rollouts executed | 6,152 | 7,958 | +1,806 |
+| Metric                               |      Random |      Bayesian | Bayesian - random |
+| ------------------------------------ | ----------: | ------------: | ----------------: |
+| Cells with a qualifying finding      |      0 / 50 |        0 / 50 |                 0 |
+| Qualifying findings                  |           0 |             0 |                 0 |
+| Pipeline-valid proposals             | 944 / 1,600 | 1,245 / 1,600 |              +301 |
+| Support-and-pipeline-valid proposals | 873 / 1,600 | 1,110 / 1,600 |              +237 |
+| Support-and-pipeline-valid rate      |    54.5625% |      69.3750% |       +14.8125 pp |
+| Mean final feasible hypervolume      |    0.227223 |      0.258250 |         +0.031027 |
+| Physical rollouts executed           |       6,152 |         7,958 |            +1,806 |
 
 The complete campaign executed 14,110 physical rollouts, representing
 1,128,800 Waymax rollout steps. No proposal met the full qualifying-finding

@@ -16,14 +16,14 @@ semantics.
 
 The service reads five fixed artifact families beneath the repository root:
 
-| Source                                               | Verification                                                                                                    | Exposed projection                                                                                    |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `artifacts/analytics/natural-development-v1`         | sealed manifest, DuckDB hash and size, exact table allowlist, row counts                                        | campaign, method, hypothesis, and cell aggregates                                                     |
-| `artifacts/search-comparison/natural-development-v1` | sealed campaign identity linked by the analytics manifest; sealed cell/proposal checkpoints on access           | selected proposal parameters, outcomes, support decisions, findings, and cost                         |
-| `artifacts/stage-0/rollout-records.json`             | rollout collection schema, stable identities, trajectory and scene-context hashes                               | local road geometry, redacted trajectories, controller outcomes, and recomputed interaction timelines |
-| `artifacts/proposal-replays/natural-development-v1`  | exact verification-key allowlist, proposal/original seals, scientific-evidence digest, collection hash, and semantic trajectory/outcome/mutation/scenario agreement | exact replay for each deliberately retained proposal |
-| `artifacts/gaussian-field/feasibility`               | sealed manifest, exact gate allowlist, privacy declaration, PLY size and SHA-256                                | geometry metrics, integration decision, and authenticated binary field                                |
-| `artifacts/sensor-scene/waymo-front`                 | fixed manifest paths, frame indices, byte sizes, SHA-256 digests, source-frame alignment, and PLY vertex counts | recorded FRONT JPEGs, real SHARP reconstruction, and same-frame LiDAR Gaussian field                  |
+| Source                                               | Verification                                                                                                                                                        | Exposed projection                                                                                    |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `artifacts/analytics/natural-development-v1`         | sealed manifest, DuckDB hash and size, exact table allowlist, row counts                                                                                            | campaign, method, hypothesis, and cell aggregates                                                     |
+| `artifacts/search-comparison/natural-development-v1` | sealed campaign identity linked by the analytics manifest; sealed cell/proposal checkpoints on access                                                               | selected proposal parameters, outcomes, support decisions, findings, and cost                         |
+| `artifacts/stage-0/rollout-records.json`             | rollout collection schema, stable identities, trajectory and scene-context hashes                                                                                   | local road geometry, redacted trajectories, controller outcomes, and recomputed interaction timelines |
+| `artifacts/proposal-replays/natural-development-v1`  | exact verification-key allowlist, proposal/original seals, scientific-evidence digest, collection hash, and semantic trajectory/outcome/mutation/scenario agreement | exact replay for each deliberately retained proposal                                                  |
+| `artifacts/gaussian-field/feasibility`               | sealed manifest, exact gate allowlist, privacy declaration, PLY size and SHA-256                                                                                    | geometry metrics, integration decision, and authenticated binary field                                |
+| `artifacts/sensor-scene/waymo-front`                 | fixed manifest paths, frame indices, byte sizes, SHA-256 digests, source-frame alignment, and PLY vertex counts                                                     | recorded FRONT JPEGs, real SHARP reconstruction, and same-frame LiDAR Gaussian field                  |
 
 The sensor-scene manifest is produced by
 `uv run python scripts/prepare_perception_scene.py` from ignored local WOD
@@ -146,7 +146,7 @@ disconnect does.
 | `GET /api/v1/cells/{cell_id}/proposals`                            | sealed proposal evidence for an opaque cell                                          |
 | `GET /api/v1/investigation`                                        | cached campaign-wide funnel and top proposal rankings across all 3,200 seals         |
 | `GET /api/v1/cells/{cell_id}/proposals/{proposal_number}/analysis` | deterministic proposal-specific gate explanation and sealed-record citation          |
-| `GET /api/v1/runs`                                                 | Stage-0 plus every proposal-linked replay that passes startup validation              |
+| `GET /api/v1/runs`                                                 | Stage-0 plus every proposal-linked replay that passes startup validation             |
 | `GET /api/v1/runs/{run_id}`                                        | redacted scene, trajectories, outcomes, and interaction timeline                     |
 | `GET /api/v1/assistant/status`                                     | active explanation provider and input scope                                          |
 | `GET /api/v1/assistant/questions`                                  | eight natural-language questions mapped to a closed query allowlist                  |

@@ -71,6 +71,18 @@ def test_public_bundle_hashes_and_scope() -> None:
         "shielded-rl-controller.json": ROOT
         / "experiments"
         / "shielded-rl-controller-v3.json",
+        "fault-protection-command-dropout.json": ROOT
+        / "experiments"
+        / "fault-protection-command-dropout-v1.json",
+        "assistance-handoff-command-recovery.json": ROOT
+        / "experiments"
+        / "assistance-handoff-command-recovery-v1.json",
+        "test-operations.json": ROOT
+        / "web"
+        / "debugger"
+        / "public"
+        / "data"
+        / "test-operations-v1.json",
     }
     for name, source in expected_sources.items():
         public = json.loads((BUNDLE / "data" / name).read_text(encoding="utf-8"))

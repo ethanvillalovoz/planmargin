@@ -33,6 +33,7 @@ from planmargin import proposal_replay
 from planmargin import random_search
 from planmargin import rollout_record
 from planmargin import speed_mutation
+from planmargin import test_operations
 
 API_VERSION = "1.1.0"
 DEFAULT_ANALYTICS = Path("artifacts/analytics/natural-development-v1")
@@ -41,6 +42,7 @@ DEFAULT_ROLLOUTS = Path("artifacts/stage-0/rollout-records.json")
 DEFAULT_GAUSSIAN = Path("artifacts/gaussian-field/feasibility")
 DEFAULT_SENSOR_SCENE = Path("artifacts/sensor-scene/waymo-front")
 DEFAULT_PROPOSAL_REPLAYS = Path("artifacts/proposal-replays/natural-development-v1")
+DEFAULT_TEST_OPERATIONS = Path("web/debugger/public/data/test-operations-v1.json")
 DEFAULT_ORIGINS = ("http://127.0.0.1:4200", "http://localhost:4200")
 SESSION_COOKIE_NAME = "planmargin_local_session"
 MAX_JSON_BYTES = 128 * 1024 * 1024
@@ -81,6 +83,50 @@ class CampaignEvidence(EvidenceModel):
     privacy_scope: str
     integrity: Literal["verified"]
     held_out_comparison_run: Literal[False]
+
+
+class TestOperationSloEvidence(EvidenceModel):
+    id: str
+    name: str
+    target: str
+    observed: str
+    status: Literal["pass", "fail"]
+    owner: str
+
+
+class TestOperationStageEvidence(EvidenceModel):
+    id: str
+    name: str
+    status: Literal["healthy", "degraded"]
+    observed: str
+    detail: str
+
+
+class TestOperationIssueEvidence(EvidenceModel):
+    id: str
+    severity: Literal["high", "medium", "low"]
+    state: Literal["active", "blocked", "stopped", "pending_evidence"]
+    component: str
+    title: str
+    evidence: str
+    failed_gates: list[str]
+    next_action: str
+    source: str
+
+
+class TestOperationsEvidence(EvidenceModel):
+    schema_version: Literal["1.0.0"]
+    record_type: Literal["planmargin.test_operations_report"]
+    evidence_mode: Literal["published_aggregate"]
+    claim_boundary: str
+    campaign: dict[str, Any]
+    slo_summary: dict[str, Any]
+    slos: list[TestOperationSloEvidence]
+    pipeline_stages: list[TestOperationStageEvidence]
+    coverage: dict[str, Any]
+    issues: list[TestOperationIssueEvidence]
+    source_seals: dict[str, str]
+    report_sha256: str
 
 
 class MethodEvidence(EvidenceModel):
@@ -412,6 +458,7 @@ class EvidencePaths:
     analytics: Path
     campaign: Path
     rollouts: Path
+    test_operations: Path | None = None
 
     @classmethod
     def from_root(cls, root: Path) -> "EvidencePaths":
@@ -421,6 +468,7 @@ class EvidencePaths:
             analytics=resolved / DEFAULT_ANALYTICS,
             campaign=resolved / DEFAULT_CAMPAIGN,
             rollouts=resolved / DEFAULT_ROLLOUTS,
+            test_operations=resolved / DEFAULT_TEST_OPERATIONS,
         )
 
 
@@ -795,6 +843,15 @@ class EvidenceRepository:
             "integrity": "verified",
             "held_out_comparison_run": False,
         }
+
+    def test_operations(self) -> dict[str, Any]:
+        """Return the sealed aggregate operations contract used by the UI."""
+
+        path = self.paths.test_operations or self.paths.root / DEFAULT_TEST_OPERATIONS
+        report = test_operations.load_report(path)
+        public = dict(report)
+        public.pop("$schema", None)
+        return public
 
     def methods(self) -> list[dict[str, Any]]:
         return self._query(
@@ -1760,6 +1817,14 @@ def create_app(
     @app.get("/api/v1/campaign", dependencies=[auth], response_model=CampaignEvidence)
     def campaign() -> dict[str, Any]:
         return repository.campaign()
+
+    @app.get(
+        "/api/v1/test-operations",
+        dependencies=[auth],
+        response_model=TestOperationsEvidence,
+    )
+    def test_operations_report() -> dict[str, Any]:
+        return repository.test_operations()
 
     @app.get(
         "/api/v1/methods",

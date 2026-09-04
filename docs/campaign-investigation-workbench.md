@@ -34,7 +34,7 @@ documentation rather than occupying a product navigation section.
    exact replay only after the API verifies the campaign-record link, fresh
    trajectory hashes, outcomes, interaction metrics, and collection seal.
 10. Report export produces self-contained HTML and a SHA-256 digest over the
-   selected privacy-reduced evidence payload.
+    selected privacy-reduced evidence payload.
 11. **Sensors** keeps the WOD Perception camera, 3DGS, and LiDAR study
     available as a secondary, explicitly independent workspace.
 
@@ -47,18 +47,18 @@ hashes. They did not retain the underlying controller trajectories.
 The separately versioned replay-retention protocol closes that gap only for
 explicitly re-executed proposals. The current local workspace contains ten:
 
-| Selection purpose | Method | Seed | Scenario order | Proposal |
-| --- | --- | ---: | ---: | ---: |
-| Overall closest margin | random | 1 | 8 | 12 |
-| Closest Bayesian margin | bayesian | 0 | 8 | 29 |
-| Small-edit near-margin case | bayesian | 3 | 8 | 20 |
-| Strongest-support Bayesian case | bayesian | 2 | 2 | 27 |
-| Strongest-support random case | random | 3 | 2 | 20 |
-| Scenario-order 1 low-margin case | bayesian | 1 | 1 | 16 |
-| Scenario-order 3 low-margin case | random | 4 | 3 | 30 |
-| Scenario-order 4 low-margin case | bayesian | 0 | 4 | 29 |
-| Scenario-order 5 low-margin case | bayesian | 3 | 5 | 20 |
-| Scenario-order 7 low-margin case | random | 0 | 7 | 13 |
+| Selection purpose                | Method   | Seed | Scenario order | Proposal |
+| -------------------------------- | -------- | ---: | -------------: | -------: |
+| Overall closest margin           | random   |    1 |              8 |       12 |
+| Closest Bayesian margin          | bayesian |    0 |              8 |       29 |
+| Small-edit near-margin case      | bayesian |    3 |              8 |       20 |
+| Strongest-support Bayesian case  | bayesian |    2 |              2 |       27 |
+| Strongest-support random case    | random   |    3 |              2 |       20 |
+| Scenario-order 1 low-margin case | bayesian |    1 |              1 |       16 |
+| Scenario-order 3 low-margin case | random   |    4 |              3 |       30 |
+| Scenario-order 4 low-margin case | bayesian |    0 |              4 |       29 |
+| Scenario-order 5 low-margin case | bayesian |    3 |              5 |       20 |
+| Scenario-order 7 low-margin case | random   |    0 |              7 |       13 |
 
 Their fresh trajectories reproduce the sealed v1 hashes and metrics. The UI
 labels all other proposal records as not retained and never substitutes the

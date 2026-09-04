@@ -1,0 +1,77 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ethanvillalovoz/planmargin/main/schemas/fault-protection-public-v1.schema.json",
+  "claim_boundary": "Independent command-dropout and fallback verification on bounded real WOMD training scenes; not a model of Waymo Driver fault protection, a remote-assistance system, or a safety claim.",
+  "dataset": {
+    "name": "Waymo Open Motion Dataset",
+    "scenario_count": 10,
+    "split": "training",
+    "synthetic": false,
+    "version": "1.3.1"
+  },
+  "gates": {
+    "all_baselines_pass": true,
+    "all_protected_fallbacks_pass": true,
+    "all_scene_gates_pass": true,
+    "all_unprotected_faults_manifested": true,
+    "exactly_ten_scenes": true,
+    "real_womd_only": true
+  },
+  "protocol": {
+    "fallback_controller": {
+      "controller_id": "planmargin-conservative-idm-v1",
+      "implementation": "Waymax IDMRoutePolicy",
+      "parameters": {
+        "additional_lookahead_distance_m": 20.0,
+        "additional_lookahead_points": 20,
+        "comfortable_decel_mps2": 2.0,
+        "delta": 4.0,
+        "desired_vel_mps": 20.0,
+        "invalidate_on_end": false,
+        "lookahead_from_current_position": true,
+        "max_accel_mps2": 1.5,
+        "max_lookahead": 10,
+        "min_spacing_m": 4.0,
+        "safe_time_headway_s": 3.0
+      },
+      "role": "reference"
+    },
+    "fault": "sustained_primary_command_dropout",
+    "fault_onset_seconds": 2.0,
+    "fault_onset_step": 20,
+    "physical_rollouts": 60,
+    "primary_controller": {
+      "controller_id": "waymax-idm-default-v1",
+      "implementation": "Waymax IDMRoutePolicy",
+      "parameters": {
+        "additional_lookahead_distance_m": 10.0,
+        "additional_lookahead_points": 10,
+        "comfortable_decel_mps2": 4.0,
+        "delta": 4.0,
+        "desired_vel_mps": 30.0,
+        "invalidate_on_end": false,
+        "lookahead_from_current_position": true,
+        "max_accel_mps2": 2.0,
+        "max_lookahead": 10,
+        "min_spacing_m": 2.0,
+        "safe_time_headway_s": 2.0
+      },
+      "role": "tested"
+    },
+    "protected_behavior": "switch_to_conservative_idm_fallback",
+    "unprotected_behavior": "zero_order_hold_at_last_commanded_pose",
+    "waymax_steps": 4800
+  },
+  "record_type": "planmargin.public_fault_protection_result",
+  "redistribution": "aggregate_only",
+  "report_sha256": "e8b607c566b21147c005a7af6784a7208814a70c1c5a33e745469220f926a791",
+  "schema_version": "1.0.0",
+  "source_report_sha256": "215c90bfe6db6523f461a85007bc330615187ca133470edcba64227d69e4f375",
+  "status": "qualified",
+  "summary": {
+    "baseline_success_count": 10,
+    "protected_fallback_success_count": 10,
+    "scene_gate_passes": 80,
+    "scene_gate_total": 80,
+    "unprotected_fault_manifestation_count": 10
+  }
+}
