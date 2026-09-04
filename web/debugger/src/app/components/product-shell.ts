@@ -1222,7 +1222,7 @@ function initialEvidenceView(): EvidenceView {
       background: rgb(240 163 59 / 4%);
     }
     .deployment-notes article.stopped-gate span {
-      color: #f0a33b;
+      color: #835600;
     }
     .deployment-notes strong {
       display: block;
