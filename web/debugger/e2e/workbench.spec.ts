@@ -177,7 +177,9 @@ test('public clone stays honest, usable, and accessible without licensed records
 
   await page.getByRole('button', { name: 'Coverage', exact: true }).click();
   await expect(page.getByText('Versioned behavior coverage', { exact: true })).toBeVisible();
-  await expect(page.getByText('Command-dropout fallback')).toBeVisible();
+  await expect(
+    page.locator('.coverage-table').getByText('Command-dropout fallback', { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Cross-simulator agreement')).toBeVisible();
   await page.getByRole('button', { name: /^Triage/ }).click();
   await expect(page.getByRole('button', { name: 'Pending', exact: true })).toBeVisible();

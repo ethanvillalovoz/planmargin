@@ -1256,9 +1256,13 @@ function initialOperationsSection(): OperationsSection {
         display: none;
       }
       .review-toolbar {
+        position: sticky;
+        z-index: 5;
+        top: 112px;
         align-items: stretch;
         flex-direction: column;
         padding: 10px;
+        background: #fff;
       }
       .ops-tabs {
         align-self: stretch;

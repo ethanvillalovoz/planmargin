@@ -120,7 +120,7 @@ point field, or reconstruction when licensed evidence is absent.
   recovery, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
-  payload is 410.21 kB raw, while Spark and Three.js viewers remain lazy.
+  payload is 410.26 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
 - Python dependency audit: `pip-audit==2.10.1` reported no unreviewed
