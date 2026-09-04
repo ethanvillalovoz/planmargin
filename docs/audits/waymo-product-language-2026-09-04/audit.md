@@ -59,6 +59,14 @@ Waymo's public work uses dark immersive or technical content inside a broader
 editorial system that often includes white or warm-neutral surfaces. The old
 PlanMargin shell rendered every object at the same dark visual level.
 
+### P1 — disconnected technical workspaces retained unreadable legacy chrome
+
+A clean-session walkthrough found that Replay and Sensors still used the old
+black locked-workspace styling after the rest of the shell moved to a light
+system. Because the global tokens had changed, several labels and data values
+rendered nearly black on black. This state was not visible during the earlier
+connected-only audit.
+
 ## Implemented direction
 
 - Rebuilt the global header as a white, low-chrome product bar with a restrained
@@ -73,6 +81,11 @@ PlanMargin shell rendered every object at the same dark visual level.
   simulation semantics.
 - Reworked Campaign, Coverage, Evidence, and Model & Runtime into one coherent
   visual system without changing their evidence or safety contracts.
+- Rebuilt disconnected Replay and Sensors as first-class empty states with
+  readable data-boundary rails, a calm light canvas, and one clear connection
+  action.
+- Brought the manual-token error and exported investigation report into the
+  same visual system, covering the last non-simulator product surfaces.
 - Added direct local view parameters (`view`, `panel`, and `section`) for
   reproducible visual review and documentation capture.
 - Replaced the README's Campaign and Coverage screenshots and added a real
@@ -88,4 +101,3 @@ PlanMargin remains visibly independent while using the shared public principles
 that matter for this tool: calm hierarchy, evidence-first writing, large rounded
 type, soft controls, strong light/dark contrast, and scene-first technical
 visualization.
-

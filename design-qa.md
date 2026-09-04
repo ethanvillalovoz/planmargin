@@ -53,6 +53,17 @@ artwork, proprietary typeface, or generated imagery is included.
 8. **P2 — The new component theme crossed the previous style warning budget.**
    Raised the explicit component-style budget by four kilobytes and verified a
    clean production build without warnings.
+9. **P1 — Disconnected Replay and Sensors were missed.** The clean-session
+   audit exposed near-black text on the old black locked workspace. Rebuilt
+   both states with the same warm canvas, white rails, blue action hierarchy,
+   and explicit local-data boundary used by the connected shell.
+10. **P2 — The manual-token error still used the legacy dark alert.** Replaced
+    it with a readable light error treatment and verified the rejected-token
+    journey in the in-app browser.
+11. **P2 — Exported investigation reports retained the previous styling.**
+    Reworked the standalone HTML artifact around the current PlanMargin
+    lockup, evidence decision, cards, integrity block, responsive layout, and
+    print behavior.
 
 ## Visual comparison result
 
@@ -75,6 +86,13 @@ artwork, proprietary typeface, or generated imagery is included.
 - Planning replay timeline and one-second stepping: covered by frontend tests.
 - Real camera, LiDAR, and 3DGS behavior: unchanged and retained in the same
   simulator workspace.
+- Disconnected Campaign, Replay, Sensors, and Evidence states: captured and
+  inspected in a separate clean browser session.
+- Local session summary and rejected-token states: captured and inspected.
+- Browser console across connected and disconnected journeys: no errors or
+  warnings.
+- WCAG A/AA automated checks for the locked workspace and connection dialog:
+  added to the browser regression suite.
 - Frontend formatting and strict TypeScript checks: passed.
 - Frontend unit tests: 64 passed.
 - Production build: passed without size-budget warnings.
@@ -83,9 +101,9 @@ artwork, proprietary typeface, or generated imagery is included.
 
 ## Final review
 
-No P0, P1, or P2 visual issue remains in the audited desktop journey. The shell
-now reflects Waymo's public hierarchy, spacing, shape, and color language while
-remaining an independent PlanMargin product and preserving every evidence
-boundary.
+No P0, P1, or P2 visual issue remains in the audited connected or disconnected
+desktop journeys. The shell now reflects Waymo's public hierarchy, spacing,
+shape, and color language while remaining an independent PlanMargin product
+and preserving every evidence boundary.
 
 final result: passed

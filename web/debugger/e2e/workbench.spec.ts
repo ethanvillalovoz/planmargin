@@ -196,8 +196,16 @@ test('public clone stays honest, usable, and accessible without licensed records
 
   await page.getByRole('button', { name: 'Replay', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'No retained replay loaded' })).toBeVisible();
+  const lockedWorkspaceAccessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze();
+  expect(lockedWorkspaceAccessibility.violations).toEqual([]);
   await page.getByRole('button', { name: 'Connect sealed records', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeVisible();
+  const connectionAccessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze();
+  expect(connectionAccessibility.violations).toEqual([]);
   await page.getByRole('button', { name: 'Close local evidence' }).click();
   await page.getByRole('button', { name: 'Evidence', exact: true }).click();
 

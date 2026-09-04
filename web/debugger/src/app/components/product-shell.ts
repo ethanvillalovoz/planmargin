@@ -2541,6 +2541,149 @@ function initialEvidenceView(): EvidenceView {
     .public-boundary p {
       color: #4d5764;
     }
+    .locked-workspace {
+      grid-template-columns: 230px minmax(0, 1fr) 300px;
+      gap: 16px;
+      min-height: calc(100dvh - 72px);
+      padding: 18px;
+      background: #f4f6f3;
+    }
+    .locked-rail,
+    .locked-canvas,
+    .locked-inspector {
+      overflow: hidden;
+      border: 1px solid #e0e5e1;
+      border-radius: 20px;
+      background: #ffffff;
+      box-shadow: 0 8px 30px rgb(17 31 45 / 6%);
+    }
+    .locked-rail header,
+    .locked-inspector header {
+      min-height: 48px;
+      padding: 0 14px;
+      border-color: #e7eae7;
+      background: #ffffff;
+      color: #59636f;
+      font-family: inherit;
+      font-size: 0.56rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+    }
+    .locked-rail header b {
+      color: #9a5c00;
+    }
+    .locked-inspector header b {
+      color: #56606c;
+    }
+    .locked-rail > button {
+      min-height: 52px;
+      padding: 0 14px;
+      border-color: #e7eae7;
+      color: #20283a;
+      font-weight: 680;
+    }
+    .locked-rail > button.selected {
+      background: #eef4ff;
+      color: #164ca9;
+      box-shadow: inset 3px 0 #1769ff;
+    }
+    .locked-rail section {
+      padding: 18px 14px;
+      color: #59636f;
+      font-size: 0.62rem;
+    }
+    .locked-rail section span {
+      color: #0758c7;
+      font-family: inherit;
+      font-size: 0.55rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+    }
+    .locked-rail section p {
+      margin-top: 0.8rem;
+      color: #4d5764;
+    }
+    .locked-canvas {
+      position: relative;
+      padding: clamp(2rem, 6vw, 5rem);
+      background:
+        radial-gradient(circle at 76% 18%, rgb(23 105 255 / 9%), transparent 30%),
+        linear-gradient(145deg, #ffffff 0%, #f7faf8 100%);
+    }
+    .locked-canvas::after {
+      position: absolute;
+      right: -90px;
+      bottom: -130px;
+      width: 330px;
+      height: 330px;
+      border: 64px solid rgb(100 211 138 / 12%);
+      border-radius: 50%;
+      content: '';
+      pointer-events: none;
+    }
+    .locked-canvas > div {
+      position: relative;
+      z-index: 1;
+      max-width: 560px;
+    }
+    .locked-canvas span {
+      color: #0758c7;
+      font-family: inherit;
+      font-size: 0.59rem;
+      font-weight: 760;
+      letter-spacing: 0.09em;
+    }
+    .locked-canvas h1 {
+      margin: 0.8rem 0 0.7rem;
+      color: #121a2d;
+      font-size: clamp(2rem, 4vw, 3.35rem);
+      font-weight: 500;
+      line-height: 1.02;
+      letter-spacing: -0.055em;
+    }
+    .locked-canvas p {
+      max-width: 500px;
+      margin-bottom: 1.5rem;
+      color: #4d5764;
+      font-size: 0.76rem;
+      line-height: 1.65;
+    }
+    .locked-canvas .primary {
+      display: inline-flex;
+      width: auto;
+      min-height: 42px;
+      border: 0;
+      border-radius: 999px;
+      background: #1769ff;
+      color: #ffffff;
+      box-shadow: 0 8px 22px rgb(23 105 255 / 20%);
+    }
+    .locked-canvas .primary:hover {
+      background: #0759e7;
+    }
+    .locked-inspector dl div {
+      padding: 14px;
+      border-color: #e7eae7;
+    }
+    .locked-inspector dt {
+      color: #59636f;
+    }
+    .locked-inspector dd {
+      color: #141b2d;
+    }
+    .locked-inspector > button {
+      width: calc(100% - 28px);
+      min-height: 38px;
+      margin: 14px;
+      border: 0;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: #164ca9;
+      font-weight: 680;
+    }
+    .locked-inspector > button:hover {
+      background: #dfeaff;
+    }
     .embedded-simulator {
       height: calc(100dvh - 72px);
     }
@@ -2704,7 +2847,8 @@ function initialEvidenceView(): EvidenceView {
         grid-template-columns: 120px minmax(80px, 1fr) 55px;
       }
       .locked-workspace {
-        min-height: calc(100dvh - 52px);
+        min-height: calc(100dvh - 112px);
+        padding: 0.75rem;
       }
       .rank-tabs {
         width: 100%;
