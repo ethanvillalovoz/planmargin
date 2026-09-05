@@ -96,3 +96,21 @@ Raw source identifiers, trajectories, and screenshots of the licensed scene are
 kept local, not distributed with this case study. The experiment result retains
 configuration, controller/source provenance, outcome gates, and integrity hashes
 so an authorized engineer can reproduce it independently.
+
+## Fresh-checkout verification
+
+On September 4, 2026, the documented setup was also executed in a separate clean
+checkout without copying the original selection, model, or experiment files.
+It reused installed dependency caches and the operator's authorized Google
+credentials; this was not a new-account or cross-platform test.
+
+The planning command selected ten scenarios after scanning 455 records. The
+support command independently processed all 16 prescribed shards and extracted
+265 braking events. The resulting numerical model fingerprint matched the
+original; its configuration fingerprint and enclosing model hash differed.
+
+The same scenario-8 command then completed in 52.3 seconds. All four
+original/changed clearance measurements above, both documented changed
+trajectory hashes, the support score, and all six gate decisions matched.
+This establishes reproduction on a fresh workspace on the same machine—not
+generalization across scenes, devices, or software versions.

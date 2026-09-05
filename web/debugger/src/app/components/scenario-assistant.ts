@@ -203,9 +203,9 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
           #question
           type="text"
           name="question"
-          aria-label="Ask PlanMargin about this run…"
+          aria-label="Ask about campaign evidence…"
           autocomplete="off"
-          placeholder="Ask PlanMargin about this run…"
+          placeholder="Ask about campaign evidence…"
           [disabled]="!local.connected() || loading()"
         />
         <button

@@ -26,10 +26,15 @@ data should describe the failure without attaching that data.
 - Refreshes and additional tabs in the same browser session reconnect through
   that cookie. Explicit disconnect clears it; it is not written to durable
   browser storage, an export, or a repository file.
-- API responses are closed, privacy-reduced models with `no-store` and
+- API evidence projections are privacy-reduced with `no-store` and
   `nosniff`; raw paths, source URIs, scenario IDs, and record indexes are not
   exposed.
-- The browser cannot submit SQL, filesystem paths, or write requests.
+- The browser cannot submit SQL, filesystem paths, or arbitrary commands.
+- Authenticated clients may start and cancel bounded local experiments.
+  Browser writes require an allowed loopback origin; header-token clients
+  may omit Origin. Configuration is strictly validated and size-limited.
+- Workers run without a shell, one per workspace, with cancellation and a
+  wall-time limit. New jobs never overwrite the frozen campaign.
 - Optional proposal replay packages are revalidated against their sealed
   campaign record, fixed local path, collection hash, and rollout schema before
   the API exposes an opaque replay ID.

@@ -329,7 +329,10 @@ import { DebuggerRun } from '../debugger.types';
               <span class="eyebrow">Persistent local records</span>
               <h2 id="history-title">Run history</h2>
             </div>
-            <span>{{ experiments.jobs().length }} experiments</span>
+            <span
+              >{{ experiments.jobs().length }}
+              {{ experiments.jobs().length === 1 ? 'experiment' : 'experiments' }}</span
+            >
           </header>
           @if (!experiments.jobs().length) {
             <p>

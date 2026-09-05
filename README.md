@@ -64,7 +64,8 @@ npm start
 
 Open [localhost:4200](http://127.0.0.1:4200). Aggregate evidence works immediately.
 The app identifies unavailable private capabilities; it does not invent camera
-frames or substitute synthetic scenarios. There is no hosted dashboard.
+frames or substitute synthetic scenarios.
+There is intentionally no hosted dashboard in this release.
 
 ### Planning-only — execute real experiments
 

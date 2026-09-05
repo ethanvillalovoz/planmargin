@@ -1,7 +1,8 @@
 # PlanMargin 3.1.0
 
-PlanMargin 3.1.0 turns the default product surface into a simulation test
-operations console and adds two real-data off-nominal behavior qualifications.
+PlanMargin 3.1.0 adds simulation test operations and two real-data off-nominal
+behavior qualifications. The current branch also adds a focused investigation
+workflow and separately retained interactive local experiments.
 
 ## Test operations
 
@@ -30,14 +31,19 @@ operations console and adds two real-data off-nominal behavior qualifications.
 
 ## Product
 
-- Campaign is now the default destination.
+- Investigate is the default destination. **New experiment** runs a real
+  scenario change and opens its exact replay, with progress, cancellation,
+  persistent history, and explicit finding gates.
+- A planning-only launcher works without the full historical campaign,
+  sensors, model studies, or Gemini. Licensed dataset access remains required.
 - The console provides task-separated health, versioned behavior-coverage, and
   issue-triage workflows instead of repeating the same status in several panels.
 - The assistant routes ten sealed evidence topics, supports natural greetings
   and capability questions locally, and shows only three primary investigations
   before progressively revealing the remaining topics.
-- The repository README uses screenshots captured from the verified local
-  product; no generated or fabricated interface imagery is included.
+- The README leads with executable setup and a reproduced close-clearance
+  case study. Licensed replay recordings remain local; no generated or
+  fabricated interface imagery is included.
 - The visual system remains independently branded while using the spatial,
   technical, high-contrast character of public autonomous-driving tools.
 

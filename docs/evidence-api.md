@@ -1,7 +1,8 @@
 # Local real-record evidence API
 
-The FastAPI service is the authenticated, read-only boundary between ignored
-experiment artifacts and local engineering tools. It gives the debugger a
+The FastAPI service is the authenticated boundary between ignored local
+artifacts and engineering tools. Historical evidence remains read-only;
+separate experiment routes start and cancel bounded local workers. It gives the debugger a
 real-record path without copying restricted WOMD evidence into the Angular
 bundle, Git, CI, browser storage, or a hosted service.
 
@@ -14,7 +15,7 @@ semantics.
 
 ## Source and response boundary
 
-The service reads five fixed artifact families beneath the repository root:
+The historical-evidence service reads fixed artifact families beneath the repository root:
 
 | Source                                               | Verification                                                                                                                                                        | Exposed projection                                                                                    |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -53,20 +54,23 @@ identities and reveal no source ID.
 ## Security contract
 
 - Uvicorn binds only to `127.0.0.1`; the command offers no public-host flag.
-- Every endpoint, including health, requires an `X-PlanMargin-Token` value of
-  at least 16 characters.
+- Every endpoint, including health, requires the valid ephemeral header token
+  or its exchanged HttpOnly browser-session cookie.
 - Browser access is restricted to the two explicit Angular development origins
   `http://127.0.0.1:4200` and `http://localhost:4200`.
 - Trusted-host validation rejects DNS-rebinding hostnames.
 - Responses carry `Cache-Control: no-store`, `Pragma: no-cache`,
   `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer`.
-- The API accepts no SQL, filesystem path, query expression, mutation, or
-  write operation from a client. Every DuckDB query is source-controlled and
-  each connection is opened read-only.
+- The API accepts no SQL, filesystem path, query expression, or arbitrary
+  command. Every DuckDB query is source-controlled and opened read-only.
+  Experiment configuration and cancellation use separate authenticated routes
+  with trusted-origin checks and bounded, strictly validated JSON.
 - Artifact and database symlinks are rejected. Core campaign/replay validation
   completes during startup; the optional Gaussian artifact is sealed and
   revalidated on every summary or binary request.
-- The service performs no outbound network request.
+- Evidence reads do not fetch remote scenario records. Explicit new experiments
+  run isolated workers that load their authorized WOMD source through configured
+  GCS credentials. Optional Gemini explanations send only public aggregates.
 
 These controls complement one another. CORS is a browser boundary, not
 authentication; the random local token and trusted-host check also protect the
@@ -76,8 +80,14 @@ loopback service. The implementation follows FastAPI's documented
 
 ## Start the service
 
-Complete the private Stage 0 and campaign workflows first. From the repository
-root, run:
+For new experiments without the full campaign, use
+`uv run --frozen planmargin-workbench --planning-only` after the
+[planning setup](running-experiments.md). Campaign endpoints return an explicit
+503 in this mode; health reports `campaign_ready: false`, while experiment
+routes remain available. Optional sensors require the full workspace.
+
+For the historical-evidence service, complete the private Stage 0 and campaign
+workflows first. From the repository root, run:
 
 ```bash
 uv run --frozen planmargin-serve-evidence
@@ -113,9 +123,9 @@ manual **Local evidence** form remains only as a recovery path when the browser
 was opened separately.
 
 The handshake exposes the validated replay records and campaign cell/proposal
-browser, bounded assistant, and camera/3DGS/LiDAR workspace. It sends no writes
-and, in the default offline-assistant mode, makes no outbound request beyond
-this fixed loopback API.
+browser, bounded assistant, and camera/3DGS/LiDAR workspace. Merely browsing
+evidence does not start a simulation. **Run experiment** explicitly submits a
+new local job; it does not modify historical records.
 
 The token is exchanged for an HttpOnly, `SameSite=Strict` browser-session
 cookie after bootstrap so refreshes and fresh local tabs can reconnect. It is
@@ -158,6 +168,32 @@ disconnect does.
 | `GET /api/v1/sensor-scene/reconstruction.ply`                      | real Apple SHARP 3DGS generated from the declared source frame                       |
 | `GET /api/v1/sensor-scene/lidar.ply`                               | deterministic Gaussian field generated from same-frame LiDAR returns                 |
 | `GET /api/v1/openapi.json`                                         | authenticated OpenAPI 3 contract generated from closed response models               |
+
+## Interactive experiment endpoints
+
+| Endpoint | Responsibility |
+| --- | --- |
+| `GET /api/v1/experiments/readiness` | Local input availability and execution limits |
+| `GET /api/v1/experiments` | Persistent job history, status, stages, and completed summaries |
+| `POST /api/v1/experiments` | Start a strictly bounded scenario change with an idempotent request ID |
+| `GET /api/v1/experiments/{job_id}` | Inspect a single job |
+| `POST /api/v1/experiments/{job_id}/cancel` | Terminate that workspace's active job process group |
+| `GET /api/v1/experiments/{job_id}/result` | Reverify and export a completed result |
+| `GET /api/v1/experiments/{job_id}/replay` | Reverify the exact collection and project its trajectories |
+
+Configuration permits only selection order 1–10, onset 0–0.5 s in 0.1 s steps,
+speed 0.75–1.00, and a request UUID. POST configuration is capped at 4 KiB.
+Duplicate request IDs return the existing job; changed parameters with the same
+ID are rejected. A second active job returns 409. The supervisor permits one
+worker, 15 minutes per run, and 200 retained jobs per workspace.
+
+New results include source-code and input hashes but no raw source identifier
+or filesystem path. Their trajectories remain licensed local data. Whole-result
+hashes include job identity and timings; deterministic comparison uses
+controller trajectory hashes and metrics. See the
+[experiment contract](running-experiments.md) for lifecycle, privacy, and
+scientific boundaries. These routes do not accept or expose arbitrary worker
+logs, and no result is inferred from a failed, cancelled, or partial execution.
 
 The run timeline computes oriented-box separation with the same parity-tested
 interaction-metrics implementation used by the experiment. Longitudinal TTC

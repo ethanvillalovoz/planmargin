@@ -304,7 +304,7 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
 
   await page.getByRole('button', { name: 'Ask PlanMargin' }).click();
   await expect(page.getByText('PlanMargin assistant')).toBeVisible();
-  await page.getByPlaceholder('Ask PlanMargin about this run…').fill('hi');
+  await page.getByPlaceholder('Ask about campaign evidence…').fill('hi');
   await page.getByRole('button', { name: 'Ask evidence assistant' }).click();
   await expect(
     page.getByRole('heading', { name: 'Hi. I’m ready to inspect the run.' }),
@@ -320,7 +320,7 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
     .withTags(['wcag2a', 'wcag2aa'])
     .analyze();
   expect(assistantAccessibility.violations).toEqual([]);
-  await page.getByRole('textbox', { name: 'Ask PlanMargin about this run…' }).press('Escape');
+  await page.getByRole('textbox', { name: 'Ask about campaign evidence…' }).press('Escape');
   await expect(page.getByRole('button', { name: 'Ask PlanMargin', exact: true })).toBeFocused();
 
   await page.reload();
