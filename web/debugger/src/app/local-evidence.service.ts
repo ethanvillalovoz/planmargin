@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { CAMPAIGN_EVIDENCE } from './campaign-evidence';
 import { DebuggerRun } from './debugger.types';
 import {
@@ -39,6 +39,7 @@ const API_ROOT = `http://${API_HOST}:8765/api/v1`;
 @Injectable({ providedIn: 'root' })
 export class LocalEvidenceService {
   private requestGeneration = 0;
+  private selectionGeneration = 0;
   readonly state = signal<LocalConnectionState>('disconnected');
   readonly error = signal<string | undefined>(undefined);
   readonly campaign = signal(CAMPAIGN_EVIDENCE);
@@ -50,12 +51,36 @@ export class LocalEvidenceService {
   readonly selectedProposalNumber = signal<number | undefined>(undefined);
   readonly loadingProposals = signal(false);
   readonly connected = computed(() => this.state() === 'connected');
+  readonly campaignAvailable = signal(true);
   readonly selectedCell = computed(() =>
     this.cells().find((cell) => cell.cellId === this.selectedCellId()),
   );
   readonly selectedProposal = computed(() =>
     this.proposals().find((proposal) => proposal.proposalNumber === this.selectedProposalNumber()),
   );
+
+  constructor() {
+    const onFocus = () => {
+      if (this.connected()) void this.verifyConnection();
+    };
+    window.addEventListener('focus', onFocus);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('focus', onFocus));
+  }
+
+  async verifyConnection(): Promise<void> {
+    if (!this.connected()) return;
+    const generation = this.requestGeneration;
+    try {
+      const health = this.record(await this.authorizedGet('/health'), 'health');
+      if (health['status'] !== 'ready')
+        throw new Error('Local evidence is not ready. Reconnect the workspace.');
+    } catch (error: unknown) {
+      if (generation === this.requestGeneration && this.state() !== 'disconnected') {
+        this.state.set('error');
+        this.error.set(this.safeMessage(error));
+      }
+    }
+  }
 
   async connect(candidateToken: string): Promise<LocalEvidenceSnapshot> {
     const token = candidateToken.trim();
@@ -103,28 +128,43 @@ export class LocalEvidenceService {
       throw error;
     }
   }
+  async loadExperimentRun(jobId: string): Promise<DebuggerRun> {
+    if (!/^[0-9a-f]{32}$/.test(jobId)) throw new Error('Invalid experiment identity');
+    return parseLocalRun(await this.authorizedGet(`/experiments/${jobId}/replay`));
+  }
 
-  async selectCell(cellId: string): Promise<void> {
+  async selectCell(cellId: string, proposalNumber?: number): Promise<void> {
     if (!this.cells().some((cell) => cell.cellId === cellId)) {
       throw new Error('Unknown local evidence cell');
     }
-    this.selectedCellId.set(cellId);
+    const generation = ++this.selectionGeneration;
+    const connectionGeneration = this.requestGeneration;
     this.error.set(undefined);
-    this.selectedProposalNumber.set(undefined);
-    this.proposals.set([]);
     this.loadingProposals.set(true);
     try {
       const proposals = parseProposals(
         await this.authorizedGet(`/cells/${encodeURIComponent(cellId)}/proposals`),
       );
-      if (this.selectedCellId() !== cellId) return;
+      if (
+        generation !== this.selectionGeneration ||
+        connectionGeneration !== this.requestGeneration
+      )
+        return;
+      const selected = proposalNumber ?? proposals[0].proposalNumber;
+      if (!proposals.some((proposal) => proposal.proposalNumber === selected))
+        throw new Error('Unknown local proposal');
+      this.selectedCellId.set(cellId);
       this.proposals.set(proposals);
-      this.selectedProposalNumber.set(proposals[0].proposalNumber);
+      this.selectedProposalNumber.set(selected);
     } catch (error: unknown) {
-      this.error.set(this.safeMessage(error));
+      if (
+        generation === this.selectionGeneration &&
+        connectionGeneration === this.requestGeneration
+      )
+        this.error.set(this.safeMessage(error));
       throw error;
     } finally {
-      if (this.selectedCellId() === cellId) this.loadingProposals.set(false);
+      if (generation === this.selectionGeneration) this.loadingProposals.set(false);
     }
   }
 
@@ -132,12 +172,13 @@ export class LocalEvidenceService {
     if (!this.proposals().some((proposal) => proposal.proposalNumber === proposalNumber)) {
       throw new Error('Unknown local proposal');
     }
+    this.selectionGeneration++;
+    this.loadingProposals.set(false);
     this.selectedProposalNumber.set(proposalNumber);
   }
 
   async selectInvestigationProposal(cellId: string, proposalNumber: number): Promise<void> {
-    await this.selectCell(cellId);
-    this.selectProposal(proposalNumber);
+    await this.selectCell(cellId, proposalNumber);
   }
 
   async proposalAnalysis(cellId: string, proposalNumber: number): Promise<ProposalAnalysis> {
@@ -206,6 +247,7 @@ export class LocalEvidenceService {
 
   async disconnect(): Promise<void> {
     this.requestGeneration++;
+    this.selectionGeneration++;
     const logout = this.endBrowserSession();
     this.state.set('disconnected');
     this.error.set(undefined);
@@ -250,17 +292,33 @@ export class LocalEvidenceService {
     signal?: AbortSignal,
   ): Promise<Response> {
     const headers = token === undefined ? undefined : { 'X-PlanMargin-Token': token };
-    const response = await fetch(`${API_ROOT}${path}`, {
-      method: 'GET',
-      headers,
-      cache: 'no-store',
-      credentials: 'include',
-      mode: 'cors',
-      referrerPolicy: 'no-referrer',
-      signal,
-    });
+    let response: Response;
+    const generation = this.requestGeneration;
+    try {
+      response = await fetch(`${API_ROOT}${path}`, {
+        method: 'GET',
+        headers,
+        cache: 'no-store',
+        credentials: 'include',
+        mode: 'cors',
+        referrerPolicy: 'no-referrer',
+        signal,
+      });
+    } catch (error: unknown) {
+      if (!signal?.aborted && this.connected() && generation === this.requestGeneration) {
+        this.state.set('error');
+        this.error.set(this.safeMessage(error));
+      }
+      throw error;
+    }
     if (!response.ok) {
-      if (response.status === 401) throw new Error('The local evidence token was rejected');
+      if (response.status === 401) {
+        if (this.connected() && generation === this.requestGeneration) {
+          this.state.set('error');
+          this.error.set('Your local session expired. Reconnect the workspace.');
+        }
+        throw new Error('The local evidence token was rejected');
+      }
       throw new Error(`Local evidence request failed (${response.status})`);
     }
     return response;
@@ -301,6 +359,19 @@ export class LocalEvidenceService {
     if (health['status'] !== 'ready' || health['evidence_mode'] !== 'real_local_redacted') {
       throw new Error('Local API did not return the expected readiness contract');
     }
+    if (health['campaign_ready'] === false) {
+      if (generation !== this.requestGeneration) throw new Error('Connection was superseded');
+      this.campaignAvailable.set(false);
+      this.campaign.set(CAMPAIGN_EVIDENCE);
+      this.cells.set([]);
+      this.runs.set([]);
+      this.proposals.set([]);
+      this.investigation.set(undefined);
+      this.selectedCellId.set(undefined);
+      this.selectedProposalNumber.set(undefined);
+      this.state.set('connected');
+      return { campaign: CAMPAIGN_EVIDENCE, cells: [], runs: [] };
+    }
     const campaignValue = await this.get('/campaign');
     const methodsValue = await this.get('/methods');
     const hypothesesValue = await this.get('/hypotheses');
@@ -314,13 +385,26 @@ export class LocalEvidenceService {
     ]);
     const initialRun = parseLocalRun(initialRunValue);
     const investigation = parseCampaignInvestigation(investigationValue);
+    const first = investigation.closestMargin[0];
+    const firstCellId = first?.cellId ?? campaign.cells[0].cellId;
+    if (!campaign.cells.some((cell) => cell.cellId === firstCellId))
+      throw new Error('Investigation references an unknown cell');
+    const proposals = parseProposals(
+      await this.get(`/cells/${encodeURIComponent(firstCellId)}/proposals`),
+    );
+    const firstProposalNumber = first?.proposalNumber ?? proposals[0].proposalNumber;
+    if (!proposals.some((proposal) => proposal.proposalNumber === firstProposalNumber))
+      throw new Error('Investigation references an unknown proposal');
     if (generation !== this.requestGeneration) throw new Error('Connection was superseded');
     this.campaign.set(campaign.campaign);
+    this.campaignAvailable.set(true);
     this.cells.set(campaign.cells);
     this.runs.set(runs);
     this.investigation.set(investigation);
+    this.proposals.set(proposals);
+    this.selectedCellId.set(firstCellId);
+    this.selectedProposalNumber.set(firstProposalNumber);
     this.state.set('connected');
-    await this.selectCell(campaign.cells[0].cellId);
     return snapshot(campaign.campaign, campaign.cells, runs, initialRun);
   }
 

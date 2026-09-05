@@ -173,7 +173,7 @@ PUBLIC_CITATIONS = {
         WORKBENCH,
         "Campaign investigation workbench contract",
         "docs/campaign-investigation-workbench.md",
-        "7ad99d2f272293d85656ed566e783b614556506e049c274f03ea8144e572e41b",
+        "77c9aa5f15a684f4a8d8dd8d8fd869b7c90fa1c3dde6de4be080167f4b5149fd",
     ),
     OPERATIONS: Citation(
         OPERATIONS,

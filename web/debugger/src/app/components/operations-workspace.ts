@@ -18,32 +18,26 @@ function initialOperationsSection(): OperationsSection {
     <main class="ops-workstation">
       <header class="runbar">
         <div class="run-context">
-          <span>Behavior test / {{ report.coverage.plan_version }}</span>
-          <strong>{{ humanize(report.coverage.scenario_family) }}</strong>
+          <span>Saved verification report / {{ report.coverage.plan_version }}</span>
+          <strong>Test health</strong>
           <small>Campaign {{ report.campaign.campaign_id }} · report {{ shortSeal() }}</small>
         </div>
-        <div class="run-state" aria-label="Current campaign state">
-          <span
-            ><i></i>{{ report.test_inventory.passing_release_critical_cells }}/{{
-              report.test_inventory.release_critical_cells
-            }}
-            tests healthy</span
-          >
-          <span><i></i>{{ report.slo_summary.passing }}/{{ report.slo_summary.total }} SLOs</span>
-        </div>
+        <p class="snapshot-note">
+          Saved checks from a completed run.<br />Not live pipeline monitoring.
+        </p>
         <button type="button" class="primary-action" (click)="openScenarioLab.emit()">
-          Open retained replay
+          Review scenario changes
         </button>
       </header>
 
-      <div class="workstation-grid">
+      <div class="workstation-grid" [class.health-layout]="section() === 'health'">
         <aside class="suite-rail" aria-label="Test suite registry">
           <header class="rail-heading">
             <span>Test registry</span>
             <b>{{ report.test_inventory.tracked_suites }} suites</b>
           </header>
           <div class="registry-summary">
-            <strong>Release candidate</strong>
+            <strong>Completed campaign</strong>
             <span>{{ report.campaign.campaign_id }}</span>
             <small>Real WOMD · sealed run</small>
           </div>
@@ -92,11 +86,15 @@ function initialOperationsSection(): OperationsSection {
             <div class="health-workspace">
               <section class="health-summary" aria-labelledby="health-title">
                 <div>
-                  <span class="eyebrow">Release health</span>
-                  <h1 id="health-title">All release-critical tests completed.</h1>
+                  <span class="eyebrow">Execution verification</span>
+                  <h1 id="health-title">The saved test run passed its checks.</h1>
+                  <button type="button" (click)="openExperiments.emit()">
+                    View live local experiments
+                  </button>
                   <p>
-                    Execution is healthy. Three measured engineering decisions are held without
-                    blocking the verified campaign.
+                    The checks below validate execution and evidence integrity, not planner safety.
+                    This report covers 100 search runs and 20 fault/handoff cases across the same
+                    ten recorded scenarios.
                   </p>
                 </div>
                 <div class="health-kpis" aria-label="Release health summary">
@@ -110,11 +108,11 @@ function initialOperationsSection(): OperationsSection {
                   </article>
                   <article>
                     <strong>{{ report.slo_summary.passing }}/{{ report.slo_summary.total }}</strong>
-                    <span>SLOs passing</span>
+                    <span>checks passed</span>
                   </article>
                   <article>
                     <strong>{{ report.test_inventory.active_health_alerts }}</strong>
-                    <span>active alerts</span>
+                    <span>run-health alerts</span>
                   </article>
                 </div>
               </section>
@@ -256,127 +254,88 @@ function initialOperationsSection(): OperationsSection {
           }
         </section>
 
-        <aside class="context-inspector" aria-label="Release evidence inspector">
-          @if (section() === 'health') {
-            <header><span>Release decision</span><b>READY</b></header>
-            <section class="verdict">
-              <span class="status"><i></i>EXECUTION HEALTHY</span>
-              <h2>Campaign evidence is complete.</h2>
-              <p>No pipeline-health alert blocks review of the measured behavior outcome.</p>
-            </section>
-            <section class="inspector-block suite-inspector">
-              <span>Selected suite</span>
-              <strong>{{ selectedSuite().name }}</strong>
-              <dl>
-                <div>
-                  <dt>Plan</dt>
-                  <dd>{{ selectedSuite().plan_version }}</dd>
-                </div>
-                <div>
-                  <dt>Owner</dt>
-                  <dd>{{ selectedSuite().owner }}</dd>
-                </div>
-                <div>
-                  <dt>Platform</dt>
-                  <dd>{{ selectedSuite().platform }}</dd>
-                </div>
-                <div>
-                  <dt>Verified gates</dt>
-                  <dd>{{ selectedSuite().gate_passes }}/{{ selectedSuite().gate_total }}</dd>
-                </div>
-              </dl>
-            </section>
-            <details class="release-contract">
-              <summary>
-                Release contract
-                <b>{{ report.slo_summary.passing }}/{{ report.slo_summary.total }}</b>
-              </summary>
-              @for (slo of report.slos; track slo.id) {
-                <div>
-                  <span><i></i>{{ slo.name }}</span>
-                  <small>{{ slo.observed }}</small>
-                </div>
-              }
-            </details>
-          } @else if (section() === 'coverage') {
-            <header><span>Coverage inspector</span><b>VERSIONED</b></header>
-            <section class="verdict">
-              <span class="status"><i></i>{{ selectedSuite().status }}</span>
-              <h2>{{ selectedSuite().name }}</h2>
-              <p>
-                {{ selectedSuite().scenario_count }} real-data scenarios on
-                {{ selectedSuite().platform }}.
-              </p>
-            </section>
-            <section class="inspector-block suite-inspector">
-              <span>Verification contract</span>
-              <dl>
-                <div>
-                  <dt>Version</dt>
-                  <dd>{{ selectedSuite().plan_version }}</dd>
-                </div>
-                <div>
-                  <dt>Test cells</dt>
-                  <dd>{{ selectedSuite().test_cell_count }}</dd>
-                </div>
-                <div>
-                  <dt>Executions</dt>
-                  <dd>{{ selectedSuite().execution_count.toLocaleString() }}</dd>
-                </div>
-                <div>
-                  <dt>Unit</dt>
-                  <dd>{{ selectedSuite().execution_unit }}</dd>
-                </div>
-                <div>
-                  <dt>Gates</dt>
-                  <dd>{{ selectedSuite().gate_passes }}/{{ selectedSuite().gate_total }}</dd>
-                </div>
-              </dl>
-            </section>
-          } @else {
-            <header>
-              <span>Diagnostic</span><b>{{ selectedIssue().id }}</b>
-            </header>
-            <section class="verdict issue-verdict">
-              <span class="issue-state">{{ stateLabel(selectedIssue().state) }}</span>
-              <h2>{{ selectedIssue().title }}</h2>
-              <p>{{ selectedIssue().diagnostic.impact }}</p>
-            </section>
-            <section class="inspector-block">
-              <span>Detected by</span>
-              <strong>{{ selectedIssue().diagnostic.detected_by }}</strong>
-              <small>Owner · {{ selectedIssue().diagnostic.owner }}</small>
-            </section>
-            <section class="root-cause" aria-label="Root cause path">
-              <span>Isolation path</span>
-              <ol>
-                @for (
-                  step of selectedIssue().diagnostic.root_cause_path;
-                  track step;
-                  let index = $index
-                ) {
-                  <li>
-                    <b>{{ index + 1 }}</b
-                    ><span>{{ step }}</span>
-                  </li>
-                }
-              </ol>
-            </section>
-            <section class="inspector-block action-block">
-              <span>Resolution</span>
-              <strong>{{ selectedIssue().diagnostic.resolution }}</strong>
-            </section>
-            <details class="release-contract prevention">
-              <summary>Prevention</summary>
-              <p>{{ selectedIssue().diagnostic.prevention }}</p>
-              <code>{{ selectedIssue().source }}</code>
-            </details>
-          }
-          <footer>
-            <strong>Evidence boundary</strong>
-            <p>{{ report.claim_boundary }}</p>
-          </footer>
-        </aside>
+        @if (section() !== 'health') {
+          <aside class="context-inspector" aria-label="Release evidence inspector">
+            @if (section() === 'coverage') {
+              <header><span>Coverage inspector</span><b>VERSIONED</b></header>
+              <section class="verdict">
+                <span class="status"><i></i>{{ selectedSuite().status }}</span>
+                <h2>{{ selectedSuite().name }}</h2>
+                <p>
+                  {{ selectedSuite().scenario_count }} real-data scenarios on
+                  {{ selectedSuite().platform }}.
+                </p>
+              </section>
+              <section class="inspector-block suite-inspector">
+                <span>Verification contract</span>
+                <dl>
+                  <div>
+                    <dt>Version</dt>
+                    <dd>{{ selectedSuite().plan_version }}</dd>
+                  </div>
+                  <div>
+                    <dt>Test cells</dt>
+                    <dd>{{ selectedSuite().test_cell_count }}</dd>
+                  </div>
+                  <div>
+                    <dt>Executions</dt>
+                    <dd>{{ selectedSuite().execution_count.toLocaleString() }}</dd>
+                  </div>
+                  <div>
+                    <dt>Unit</dt>
+                    <dd>{{ selectedSuite().execution_unit }}</dd>
+                  </div>
+                  <div>
+                    <dt>Gates</dt>
+                    <dd>{{ selectedSuite().gate_passes }}/{{ selectedSuite().gate_total }}</dd>
+                  </div>
+                </dl>
+              </section>
+            } @else {
+              <header>
+                <span>Diagnostic</span><b>{{ selectedIssue().id }}</b>
+              </header>
+              <section class="verdict issue-verdict">
+                <span class="issue-state">{{ stateLabel(selectedIssue().state) }}</span>
+                <h2>{{ selectedIssue().title }}</h2>
+                <p>{{ selectedIssue().diagnostic.impact }}</p>
+              </section>
+              <section class="inspector-block">
+                <span>Detected by</span>
+                <strong>{{ selectedIssue().diagnostic.detected_by }}</strong>
+                <small>Owner · {{ selectedIssue().diagnostic.owner }}</small>
+              </section>
+              <section class="root-cause" aria-label="Root cause path">
+                <span>Isolation path</span>
+                <ol>
+                  @for (
+                    step of selectedIssue().diagnostic.root_cause_path;
+                    track step;
+                    let index = $index
+                  ) {
+                    <li>
+                      <b>{{ index + 1 }}</b
+                      ><span>{{ step }}</span>
+                    </li>
+                  }
+                </ol>
+              </section>
+              <section class="inspector-block action-block">
+                <span>Resolution</span>
+                <strong>{{ selectedIssue().diagnostic.resolution }}</strong>
+              </section>
+              <details class="release-contract prevention">
+                <summary>Prevention</summary>
+                <p>{{ selectedIssue().diagnostic.prevention }}</p>
+                <code>{{ selectedIssue().source }}</code>
+              </details>
+            }
+            <footer>
+              <strong>Evidence boundary</strong>
+              <p>{{ report.claim_boundary }}</p>
+            </footer>
+          </aside>
+        }
       </div>
     </main>
   `,
@@ -488,6 +447,26 @@ function initialOperationsSection(): OperationsSection {
       gap: 14px;
       min-height: 0;
       padding: 0 14px 14px;
+    }
+    .workstation-grid.health-layout {
+      grid-template-columns: 220px minmax(0, 1fr);
+      max-width: 1420px;
+      margin: auto;
+    }
+    .snapshot-note {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #607168;
+      margin: 0;
+    }
+    @media (max-width: 650px) {
+      .workstation-grid.health-layout {
+        grid-template-columns: 1fr;
+      }
+      .snapshot-note {
+        grid-column: 1 / -1;
+        order: 3;
+      }
     }
     .suite-rail,
     .review-surface,
@@ -1314,6 +1293,7 @@ function initialOperationsSection(): OperationsSection {
   `,
 })
 export class OperationsWorkspace {
+  readonly openExperiments = output<void>();
   readonly openScenarioLab = output<void>();
   protected readonly report = TEST_OPERATIONS;
   protected readonly section = signal<OperationsSection>(initialOperationsSection());
@@ -1372,7 +1352,7 @@ export class OperationsWorkspace {
 
   protected sectionTitle(): string {
     return {
-      health: 'Release health',
+      health: 'Saved run checks',
       coverage: 'Versioned behavior coverage',
       triage: 'Failure triage',
     }[this.section()];

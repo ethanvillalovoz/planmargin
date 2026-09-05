@@ -54,6 +54,8 @@ planmargin-doctor = "planmargin.workspace:doctor_main"
 planmargin-bootstrap-workbench = "planmargin.workspace:bootstrap_workbench_main"
 planmargin-bootstrap-sensor = "planmargin.workspace:bootstrap_sensor_main"
 planmargin-workbench = "planmargin.debugger_launcher:main"
+planmargin-run-experiment = "planmargin.experiment_jobs:main"
+planmargin-prepare-planning = "planmargin.planning_setup:main"
 
 [project.optional-dependencies]
 assistant = [

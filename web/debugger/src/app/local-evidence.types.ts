@@ -92,5 +92,5 @@ export interface LocalEvidenceSnapshot {
   readonly campaign: CampaignEvidence;
   readonly cells: readonly LocalCell[];
   readonly runs: readonly LocalRunSummary[];
-  readonly initialRun: DebuggerRun;
+  readonly initialRun?: DebuggerRun;
 }

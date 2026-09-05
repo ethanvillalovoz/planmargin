@@ -1,6 +1,6 @@
 # Simulation test operations
 
-PlanMargin's default surface is an operational view of one sealed, real-data
+PlanMargin's **Test health** surface is a saved view of one sealed, real-data
 simulation campaign. It is designed around two questions that must not be
 collapsed into a single green or red badge:
 
@@ -8,7 +8,14 @@ collapsed into a single green or red badge:
 2. **What did the tested behavior do?**
 
 A healthy campaign can find no regression. A broken pipeline can also appear to
-find nothing. The Campaign workspace keeps those outcomes separate.
+find nothing. The Test health workspace keeps those outcomes separate. The
+default **Investigate** view starts with scenario changes and planner outcomes.
+
+This is a report rebuilt from completed artifacts, not continuous monitoring.
+The seven schema-level SLOs are snapshot objectives; the binary remaining-budget
+fields are not an observed time-window error budget. No live fleet events,
+rolling availability, scheduled deadline, or alert delivery integration is
+claimed. The 120 test cells reuse ten scenarios across three plans.
 
 ## Evidence flow
 
@@ -35,8 +42,8 @@ aggregates only and is validated by
 
 The v2 contract adds a real test-suite inventory, versioned behavior plans,
 numeric SLI/objective fields, remaining error-budget state, and a deterministic
-root-cause path for every alert or held engineering decision. The Campaign UI
-uses that contract for three distinct tasks: release health, behavior coverage,
+root-cause path for every alert or held engineering decision. The Test health UI
+uses that contract for three distinct tasks: saved run checks, behavior coverage,
 and failure triage. It does not duplicate the same status across a dashboard,
 queue, and inspector.
 

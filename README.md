@@ -5,59 +5,55 @@
 <!-- prettier-ignore -->
 [![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![Node 24](https://img.shields.io/badge/Node-24-5FA04E?logo=nodedotjs&logoColor=white) ![C++17/20](https://img.shields.io/badge/C%2B%2B-17%2F20-00599C?logo=cplusplus&logoColor=white) ![TensorRT 11.2](https://img.shields.io/badge/TensorRT-11.2-76B900?logo=nvidia&logoColor=white) [![License](https://img.shields.io/badge/Code-Apache--2.0-blue.svg)](LICENSE)
 
-PlanMargin is a local simulation-test operations system for autonomous-driving
-planners. It monitors campaign health, versions behavior coverage, injects
-off-nominal planner faults, and turns a recorded driving scenario into a
-reviewable counterfactual. A candidate is retained only when it is realistic,
-reproducible, and specific to the planner under test.
+PlanMargin is a local workbench for **counterfactual planner testing**: take a
+recorded driving scenario, change when the lead vehicle brakes and how fast it
+moves, then compare a tested planner with a conservative reference.
 
-It is an engineering workbench, not a benchmark leaderboard or a Waymo Driver
-evaluation.
+The engineering question is: **can a small, realistic change expose a failure
+that the reference planner avoids?** A finding must pass realism,
+reproducibility, and planner-specific failure gates. All attempts—including
+rejected changes and successful planners—remain in the audit trail.
 
-![PlanMargin simulation test operations console](docs/assets/planmargin-test-operations-overview-v3.1.jpg)
+The current campaign evaluated **3,200 changes across ten recorded WOMD
+scenarios** and found **zero qualifying regressions**. That is a measured
+negative result, not a safety certification or a claim about the Waymo Driver.
+Ten selected proposals have separately verified, exact trajectory replays.
 
-The public clone opens an operational console over the sealed 3,200-proposal
-campaign, qualified command-dropout protection study, and assistance-handoff
-verification. Execution health, behavior outcome, coverage gaps, and promotion
-decisions remain separate rather than being compressed into one status score.
-It fails closed only for licensed per-scenario data. An
-authorized local launch adds exact proposal replay, candidate investigation,
-recorded camera annotations, LiDAR, three 3D Gaussian reconstructions, and a
-calibrated real-data JAX trajectory overlay without uploading those artifacts.
-The public Evidence view exposes the 1,024-scenario real-WOMD prediction study,
-both free-T4 TensorRT decisions, and every promotion gate—including learned and
-reduced-precision ideas that were stopped because the evidence did not support
-deployment.
+## Run a change—or investigate a recorded result
 
-## The engineering workflow
+**New experiment** runs a user-configured change on real WOMD data. Choose a
+scenario, adjust braking timing and speed, execute both controllers, then open
+that run's exact replay. Progress, cancellation, rejected inputs, failures, and
+completed results have their own persistent local history. The original
+research campaign is never overwritten or silently expanded.
 
-1. **Monitor** seven owned SLOs across selection, generation, simulation,
-   analytics, replay retention, and fault-injection verification.
-2. **Search** bounded scenario changes with matched random and constrained
-   Bayesian budgets.
-3. **Reject** physically invalid, unsupported, or non-reproducible candidates.
-4. **Isolate** a regression only when the tested planner fails and the reference
-   planner succeeds under the same change.
-5. **Inject** sustained and temporary planner-command dropout; verify a
-   conservative fallback plus fault/request/resolution/recovery transitions
-   across deterministic real-WOMD rollouts.
-6. **Inspect** the decision in a local workbench with planning replay, camera
-   annotations, LiDAR, 3D Gaussian reconstruction, and sealed evidence.
+The [experiment guide](docs/running-experiments.md) covers the smaller
+planning-only setup; Gemini and sensor reconstruction are not prerequisites.
+For a concrete example, follow [the 3 cm clearance case study](docs/case-study-close-clearance.md):
+the tool shows why a close approach still does **not** meet the failure contract.
+The rest of the workbench supports investigation of already measured evidence:
 
-The public interface opens on the **Campaign** workstation. An authenticated
-local launch loads the retained replay into the same scene-first review surface. Scores are
-paired with plain language such as **tested planner still succeeds**, **outside
-recorded behavior**, and **reference planner failed**.
+1. **Investigate** opens the closest approaches first. Select a change and read
+   what was changed, the planner outcomes, and why it did not qualify.
+2. **Open exact proposal replay** follows a retained change into its own
+   trajectory. “Metrics only” means its full path is unavailable; the app
+   never substitutes another scenario.
+3. **Explain decision**, **Analyze selected proposal**, and **Export
+   investigation** expose the gates, sealed-record explanation, and a portable
+   report with a SHA-256 integrity digest.
 
-Inside the authenticated Evidence workspace, the priority queue, campaign gate
-counts, 100-cell search matrix, ranked proposals, selected-candidate gate
-ladder, comparison, exact replay, grounded analysis, and signed export remain
-visible as one investigation console. The interface is designed for tracing a
-decision, not presenting a marketing dashboard.
+The other surfaces support that workflow; they are not one fused simulator:
 
-![PlanMargin counterfactual evidence investigation workspace](docs/assets/planmargin-evidence-workspace-v3.1.jpg)
+| Surface | What it does | Important boundary |
+| --- | --- | --- |
+| Test health | Inspect execution checks, behavior-test coverage, and measured engineering decisions | Saved report, not live monitoring or a safety verdict |
+| Sensor lab | Play recorded camera frames with tracked boxes; inspect LiDAR and three real 3DGS reconstructions | A separate WOD Perception segment, not the campaign's planning scene |
+| Models | Review prediction accuracy, TensorRT measurements, and promotion decisions | Research results include explicit no-go decisions |
+| Ask PlanMargin | Retrieve verified aggregate facts and optionally synthesize an explanation with Gemini | Bounded topic routing, not an autonomous planning agent |
 
-![PlanMargin real SHARP 3DGS scene with calibrated recorded, JAX, and baseline paths](docs/assets/planmargin-sensor-trajectory-v1.1.png)
+The accepted light workspace surrounds the dark trajectory and sensor
+canvases. The [workbench guide](docs/using-the-workbench.md) walks through both
+public aggregate review and an authorized local investigation.
 
 ## Run it
 
@@ -78,8 +74,8 @@ npm ci
 npm start
 ```
 
-Open `http://127.0.0.1:4200`. Campaign and Evidence provide the real aggregate
-campaign record immediately. Replay and Sensors explain exactly which licensed
+Open `http://127.0.0.1:4200`. Investigate, Test health, and Models provide the
+real aggregate records immediately. Replay and Sensor lab explain which licensed
 local capabilities become available after an authenticated launch.
 
 There is intentionally no hosted dashboard in this release: the public bundle
@@ -88,6 +84,18 @@ records that must stay on the engineer's machine. The commands above are the
 supported public entry point.
 
 ### Open the complete local workbench
+
+**Only want to run a planning test?** Use the
+[planning-only setup](docs/running-experiments.md#first-time-setup). After
+installing dependencies and authorizing Waymo access:
+
+```bash
+uv run --frozen planmargin-prepare-planning --accept-waymo-terms
+uv run --frozen planmargin-workbench --planning-only
+```
+
+The full-workspace instructions below are for the recorded campaign and optional
+sensor/model studies. They are not required just to execute a new experiment.
 
 Python 3.11, [uv](https://docs.astral.sh/uv/), Node 24.15, and a C++20 compiler
 are required. The tested development platforms are current macOS on Apple
@@ -112,7 +120,8 @@ browser-session cookie, and removes the token from the address bar. Refreshes
 and additional local tabs reconnect automatically; disconnecting or closing the
 browser session clears access. There is no token-copy step and JavaScript cannot
 read the session credential. Private responses use `Cache-Control: no-store`,
-and source identifiers never enter the UI.
+and raw source identifiers are not displayed in the UI. Private exports and worker
+logs remain local and are subject to the dataset license.
 
 To enable Gemini explanations in that same workbench while keeping the Google
 project on its free tier:
@@ -299,9 +308,9 @@ flowchart LR
 | Learned mining    | PyTorch ensemble, grouped CV         | rank, budgeted selection, calibration, and no-go gates          |
 | Interaction study | PyTorch nearest-actor pooling        | same-data ego-only ablation and no-go gate                      |
 | NVIDIA runtime    | Python and C++17 `enqueueV3`         | device plus pinned-host end-to-end p50/p95/p99 contract         |
-| Assistant         | deterministic tools, optional Gemini | ten routed evidence topics, sealed citations, local conversation |
+| Assistant         | deterministic tools, optional Gemini | ten routed evidence topics, sealed citations, local greeting/help; no chat memory |
 | Replay retention  | Python, JAX, Waymax                  | proposal seal, trajectory-hash and metric matching              |
-| Test operations   | Python, DuckDB, JSON Schema          | owned SLOs, versioned suites, diagnostic paths, sealed report   |
+| Test operations   | Python, DuckDB, JSON Schema          | saved SLI checks, versioned suites, diagnostic paths, sealed report   |
 | Fault protection  | JAX, Waymax                          | 60 repeated rollouts and 80/80 frozen scene gates               |
 | Assistance V&V    | JAX, Waymax                          | 60 repeated rollouts, exact transitions, 90/90 frozen gates     |
 
@@ -333,10 +342,10 @@ To retain another accepted proposal locally, use its one-based campaign
 identity:
 
 ```bash
-uv run --frozen planmargin-retain-proposal-replay \\
-  --method random \\
-  --seed 1 \\
-  --selection-order 8 \\
+uv run --frozen planmargin-retain-proposal-replay \
+  --method random \
+  --seed 1 \
+  --selection-order 8 \
   --proposal-number 12
 ```
 

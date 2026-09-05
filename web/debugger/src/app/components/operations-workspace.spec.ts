@@ -22,9 +22,9 @@ describe('OperationsWorkspace', () => {
     const fixture = TestBed.createComponent(OperationsWorkspace);
     fixture.detectChanges();
     let text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('All release-critical tests completed.');
+    expect(text).toContain('The saved test run passed its checks.');
     expect(text).toContain('120/120test cells');
-    expect(text).toContain('7/7SLOs passing');
+    expect(text).toContain('7/7checks passed');
     expect(text).toContain('Pipeline stages');
     expect(text).toContain('Scaled FP16 drift exceeds the promotion gate');
 

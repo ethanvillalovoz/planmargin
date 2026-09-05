@@ -250,7 +250,7 @@ export class LocalEvidencePanel {
     try {
       const evidence = await this.local.connect(input.value);
       input.value = '';
-      this.store.loadRun(evidence.initialRun);
+      if (evidence.initialRun) this.store.loadRun(evidence.initialRun);
       this.close.emit();
     } catch {
       input.value = '';

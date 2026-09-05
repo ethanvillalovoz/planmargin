@@ -20,7 +20,7 @@
     "offline_deterministic",
     "gemini_public_aggregate"
   ],
-  "public_catalog_fingerprint": "278222566a8b0f7b5ce30d9073bfba2b2bbe7aeff246c08e4aa83ae605b788a8",
+  "public_catalog_fingerprint": "ddc9011d8e1eacb5d20875d9c1253e2507ed5083412f9a82ca4fa8231bfe50d9",
   "query_count": 10,
   "record_type": "planmargin.evidence_assistant_integration",
   "schema_version": 1,

@@ -170,7 +170,7 @@ describe('LocalEvidenceService', () => {
     const evidence = await service.connect('0123456789abcdef');
 
     expect(service.state()).toBe('connected');
-    expect(evidence.initialRun.synthetic).toBe(false);
+    expect(evidence.initialRun?.synthetic).toBe(false);
     expect(service.proposals()[0].proposalNumber).toBe(1);
     expect((await service.proposalAnalysis('cell_opaque', 1)).decisiveGate).toBe(
       'tested_controller_failure',
@@ -220,7 +220,7 @@ describe('LocalEvidenceService', () => {
   it('restores a browser session without exposing a token to JavaScript', async () => {
     const evidence = await service.restoreBrowserSession();
 
-    expect(evidence?.initialRun.runId).toBe('run_opaque');
+    expect(evidence?.initialRun?.runId).toBe('run_opaque');
     expect(service.state()).toBe('connected');
     expect(fetchMock).toHaveBeenCalledTimes(9);
     for (const [, options] of fetchMock.mock.calls as [string, RequestInit][]) {
@@ -284,5 +284,80 @@ describe('LocalEvidenceService', () => {
 
     const [, options] = fetchMock.mock.calls.at(-1) as [string, RequestInit];
     expect(options.signal).toBe(controller.signal);
+  });
+
+  it('does not report connected after a failed fetch and preserves the last selected record', async () => {
+    await service.connect('0123456789abcdef');
+    const previous = service.selectedProposal();
+    fetchMock.mockRejectedValueOnce(new TypeError('private transport details'));
+    await expect(service.selectCell('cell_opaque')).rejects.toThrow();
+    expect(service.connected()).toBe(false);
+    expect(service.error()).toContain('Local API unavailable');
+    expect(service.error()).not.toContain('private transport details');
+    expect(service.selectedProposal()).toBe(previous);
+    expect(service.loadingProposals()).toBe(false);
+  });
+
+  it('marks an expired session disconnected and offers recovery', async () => {
+    await service.connect('0123456789abcdef');
+    fetchMock.mockResolvedValueOnce(response({}, 401));
+    await expect(service.sensorScene()).rejects.toThrow('token was rejected');
+    expect(service.connected()).toBe(false);
+    expect(service.error()).toContain('Reconnect');
+  });
+
+  it('ignores late same-cell responses after a newer selection', async () => {
+    await service.connect('0123456789abcdef');
+    let resolveFirst!: (value: Response) => void;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFirst = resolve;
+        }),
+    );
+    const first = service.selectInvestigationProposal('cell_opaque', 1);
+    fetchMock.mockResolvedValueOnce(
+      response([...API_PROPOSALS, { ...API_PROPOSALS[0], proposal_number: 2 }]),
+    );
+    await service.selectInvestigationProposal('cell_opaque', 2);
+    resolveFirst(response(API_PROPOSALS));
+    await first;
+    expect(service.selectedProposalNumber()).toBe(2);
+  });
+
+  it('does not repopulate records when a pending selection finishes after disconnect', async () => {
+    await service.connect('0123456789abcdef');
+    let resolveSelection!: (value: Response) => void;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveSelection = resolve;
+        }),
+    );
+    const pending = service.selectCell('cell_opaque');
+    await service.disconnect();
+    resolveSelection(response(API_PROPOSALS));
+    await pending;
+    expect(service.proposals()).toEqual([]);
+    expect(service.selectedCellId()).toBeUndefined();
+    expect(service.loadingProposals()).toBe(false);
+  });
+
+  it('does not treat an intentional camera abort as a disconnected server', async () => {
+    await service.connect('0123456789abcdef');
+    const controller = new AbortController();
+    controller.abort();
+    fetchMock.mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'));
+    await expect(service.sensorFrame(99, controller.signal)).rejects.toThrow();
+    expect(service.connected()).toBe(true);
+    expect(service.error()).toBeUndefined();
+  });
+
+  it('checks server readiness again when the window regains focus', async () => {
+    await service.connect('0123456789abcdef');
+    fetchMock.mockRejectedValueOnce(new TypeError('offline'));
+    window.dispatchEvent(new Event('focus'));
+    await vi.waitFor(() => expect(service.connected()).toBe(false));
+    expect(service.error()).toContain('Local API unavailable');
   });
 });

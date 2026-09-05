@@ -55,7 +55,9 @@ def test_repository_report_matches_verified_real_campaign() -> None:
 
 def test_report_validates_against_schema_and_contains_no_private_identifiers() -> None:
     report = test_operations.load_report(PUBLIC_REPORT)
-    schema = json.loads((ROOT / "schemas/test-operations-report-v2.schema.json").read_text())
+    schema = json.loads(
+        (ROOT / "schemas/test-operations-report-v2.schema.json").read_text()
+    )
     jsonschema.Draft202012Validator(schema).validate(report)
     assert report["schema_version"] == "2.0.0"
     assert report["test_inventory"]["release_critical_cells"] == 120
@@ -68,7 +70,13 @@ def test_report_validates_against_schema_and_contains_no_private_identifiers() -
     }
     assert all("diagnostic" in issue for issue in report["issues"])
     serialized = json.dumps(report).lower()
-    for forbidden in ("scenario_id", "source_uri", "/users/", ".tfrecord", "synthetic_no_go"):
+    for forbidden in (
+        "scenario_id",
+        "source_uri",
+        "/users/",
+        ".tfrecord",
+        "synthetic_no_go",
+    ):
         assert forbidden not in serialized
 
 
@@ -150,8 +158,18 @@ def test_api_contract_accepts_degraded_health_evidence() -> None:
     not LOCAL_CAMPAIGN_AVAILABLE,
     reason="requires the authorized local evidence API workspace",
 )
-def test_authenticated_api_serves_the_sealed_operations_contract() -> None:
+def test_authenticated_api_serves_the_sealed_operations_contract(
+    tmp_path, monkeypatch
+) -> None:
     token = "test-operations-token-000000"
+    # Read real campaign evidence without competing with the user's live worker
+    # supervisor or modifying their experiment history during the test suite.
+    manager_type = evidence_api.experiment_jobs.ExperimentJobs
+    monkeypatch.setattr(
+        evidence_api.experiment_jobs,
+        "ExperimentJobs",
+        lambda root: manager_type(tmp_path),
+    )
     app = evidence_api.create_app(root=ROOT, token=token)
     with TestClient(app) as client:
         response = client.get(
@@ -159,7 +177,8 @@ def test_authenticated_api_serves_the_sealed_operations_contract() -> None:
         )
     assert response.status_code == 200
     body = response.json()
-    assert body["report_sha256"] == test_operations.load_report(PUBLIC_REPORT)[
-        "report_sha256"
-    ]
+    assert (
+        body["report_sha256"]
+        == test_operations.load_report(PUBLIC_REPORT)["report_sha256"]
+    )
     assert body["slo_summary"] == {"status": "healthy", "passing": 7, "total": 7}

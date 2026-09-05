@@ -62,7 +62,16 @@ export class App {
       try {
         const evidence = await recover();
         if (evidence === undefined) return;
-        this.debuggerStore.loadRun(evidence.initialRun);
+        const experiment = new URLSearchParams(window.location.search).get('experiment');
+        if (experiment) {
+          try {
+            this.debuggerStore.loadRun(await this.local.loadExperimentRun(experiment));
+          } catch {
+            this.local.error.set(
+              'The requested experiment replay could not be verified. Return to experiments and inspect its status.',
+            );
+          }
+        } else if (evidence.initialRun) this.debuggerStore.loadRun(evidence.initialRun);
         return;
       } catch (error: unknown) {
         if (!(error instanceof TypeError) || attempt === 1) {

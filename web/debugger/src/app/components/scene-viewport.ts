@@ -1,16 +1,4 @@
-import {
-  afterNextRender,
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  DestroyRef,
-  ElementRef,
-  effect,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
-import type * as THREE from 'three';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DebuggerStore } from '../debugger.store';
 import { Point2d, TrajectoryKind } from '../debugger.types';
 
@@ -19,7 +7,6 @@ const COLORS: Record<TrajectoryKind, number> = {
   reference: 0xe7dd55,
   tested: 0x76d786,
 };
-const LEAD_COLOR = 0xf09bb4;
 
 interface FallbackScene {
   readonly viewBox: string;
@@ -38,6 +25,8 @@ interface FallbackScene {
   readonly leadOriginalTrajectory: string;
   readonly leadCurrent: Point2d;
   readonly markerRadius: number;
+  readonly scaleX: number;
+  readonly scaleY: number;
 }
 
 @Component({
@@ -80,8 +69,16 @@ interface FallbackScene {
           [attr.rx]="fallbackScene().markerRadius * 0.35"
         />
       </g>
+      <g class="metric-scale" aria-hidden="true">
+        <line
+          [attr.x1]="fallbackScene().scaleX"
+          [attr.x2]="fallbackScene().scaleX + 10"
+          [attr.y1]="fallbackScene().scaleY"
+          [attr.y2]="fallbackScene().scaleY"
+        />
+        <text [attr.x]="fallbackScene().scaleX" [attr.y]="fallbackScene().scaleY - 0.5">10 m</text>
+      </g>
     </svg>
-    <div #viewport hidden></div>
     <div class="scene-label">
       <strong>Scene</strong>
       <span>{{ store.selectedHypothesis().label }}</span>
@@ -90,14 +87,13 @@ interface FallbackScene {
     <div class="legend" aria-label="Trajectory legend">
       <span><i class="tested"></i>Tested</span>
       <span><i class="reference"></i>Reference</span>
-      <span><i class="recorded"></i>Recorded</span>
+      <span><i class="recorded"></i>Original tested</span>
       <span><i class="lead"></i>Mutated lead</span>
     </div>
     <div class="planning-guide">
       <strong>Planner rollout · {{ store.timeSeconds().toFixed(1) }} s</strong>
       <span>Green, yellow, and gray compare ego planners. Pink is the mutated lead vehicle.</span>
     </div>
-    <div class="scale" aria-hidden="true"><i></i><span>10 m</span></div>
   `,
   styles: `
     :host {
@@ -130,6 +126,15 @@ interface FallbackScene {
     .fallback :is(polyline, polygon, rect) {
       vector-effect: non-scaling-stroke;
     }
+    .metric-scale line {
+      stroke: #aab9c4;
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+    .metric-scale text {
+      fill: #aab9c4;
+      font-size: 0.9px;
+    }
     .fallback polyline {
       fill: none;
       stroke-linecap: round;
@@ -145,24 +150,32 @@ interface FallbackScene {
       stroke-width: 1;
       stroke-dasharray: 4 4;
     }
-    .fallback .tested {
+    .fallback rect.tested {
       fill: var(--tested);
+    }
+    .fallback .tested {
       stroke: var(--tested);
       stroke-width: 2;
     }
-    .fallback .reference {
+    .fallback rect.reference {
       fill: var(--reference);
+    }
+    .fallback .reference {
       stroke: var(--reference);
       stroke-width: 2;
     }
-    .fallback .recorded {
+    .fallback rect.recorded {
       fill: var(--recorded);
+    }
+    .fallback .recorded {
       stroke: var(--recorded);
       stroke-width: 1.5;
       stroke-dasharray: 4 4;
     }
-    .fallback .lead {
+    .fallback rect.lead {
       fill: #f09bb4;
+    }
+    .fallback .lead {
       stroke: #f09bb4;
       stroke-width: 2;
     }
@@ -317,7 +330,6 @@ interface FallbackScene {
 })
 export class SceneViewport {
   protected readonly store = inject(DebuggerStore);
-  protected readonly rendererUnavailable = signal(true);
   protected readonly fallbackScene = computed((): FallbackScene => {
     const run = this.store.run();
     const hypothesis = this.store.selectedHypothesis();
@@ -403,229 +415,8 @@ export class SceneViewport {
       leadOriginalTrajectory: points(leadOriginal),
       leadCurrent: currentLead,
       markerRadius,
+      scaleX: centerX - viewWidth / 2 + 2,
+      scaleY: -centerY + viewHeight / 2 - 2,
     };
   });
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly viewport = viewChild.required<ElementRef<HTMLDivElement>>('viewport');
-  private renderer: THREE.WebGLRenderer | undefined;
-  private scene: THREE.Scene | undefined;
-  private camera: THREE.OrthographicCamera | undefined;
-  private three: typeof import('three') | undefined;
-  private resizeObserver: ResizeObserver | undefined;
-
-  constructor() {
-    effect(() => {
-      this.store.run();
-      this.store.selectedHypothesis();
-      this.store.timestepIndex();
-      this.renderScene();
-    });
-
-    afterNextRender(async () => {
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('webgl2');
-      if (context === null) {
-        this.rendererUnavailable.set(true);
-        return;
-      }
-      const THREE = await import('three');
-      if (this.destroyRef.destroyed) return;
-      this.three = THREE;
-      this.scene = new THREE.Scene();
-      this.camera = new THREE.OrthographicCamera(-42, 42, 28, -28, 0.1, 100);
-      this.camera.position.z = 20;
-      this.scene.background = new THREE.Color(0x080d11);
-      const host = this.viewport().nativeElement;
-      this.renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: false,
-        canvas,
-        context,
-      });
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      this.renderer.domElement.setAttribute('aria-hidden', 'true');
-      host.append(this.renderer.domElement);
-      this.resizeObserver = new ResizeObserver(() => this.resize());
-      this.resizeObserver.observe(host);
-      this.resize();
-      this.destroyRef.onDestroy(() => {
-        this.resizeObserver?.disconnect();
-        this.clearScene();
-        this.renderer?.dispose();
-      });
-    });
-  }
-
-  private resize(): void {
-    const renderer = this.renderer;
-    const camera = this.camera;
-    if (renderer === undefined || camera === undefined) return;
-    const { clientWidth, clientHeight } = this.viewport().nativeElement;
-    renderer.setSize(Math.max(1, clientWidth), Math.max(1, clientHeight), false);
-    this.renderScene();
-  }
-
-  private renderScene(): void {
-    const renderer = this.renderer;
-    const scene = this.scene;
-    const camera = this.camera;
-    if (renderer === undefined || scene === undefined || camera === undefined) return;
-    this.clearScene();
-    const run = this.store.run();
-    const hypothesis = this.store.selectedHypothesis();
-    const allPoints = [
-      ...run.roadCenterlines.flat(),
-      ...hypothesis.trajectories.tested,
-      ...hypothesis.trajectories.reference,
-      ...hypothesis.trajectories.recorded,
-      ...run.mutationTarget.original,
-      ...run.mutationTarget.counterfactual,
-    ];
-    const bounds = this.fitCamera(allPoints);
-    this.drawGrid(bounds);
-    run.roadCenterlines.forEach((line) => this.drawLine(line, 0x435766, 0));
-    if (run.conflictRegion.length >= 3) this.drawConflictRegion(run.conflictRegion);
-    (Object.keys(COLORS) as TrajectoryKind[]).forEach((kind) => {
-      this.drawLine(hypothesis.trajectories[kind], COLORS[kind], kind === 'recorded' ? 0.25 : 0.55);
-      const point = hypothesis.trajectories[kind][this.store.timestepIndex()];
-      this.drawVehicle(point, COLORS[kind], kind === 'tested' ? 1 : 0.65);
-    });
-    this.drawLine(run.mutationTarget.original, LEAD_COLOR, 0.22);
-    this.drawLine(run.mutationTarget.counterfactual, LEAD_COLOR, 0.72);
-    this.drawVehicle(
-      run.mutationTarget.counterfactual[this.store.timestepIndex()],
-      LEAD_COLOR,
-      0.9,
-    );
-    renderer.render(scene, camera);
-  }
-
-  private clearScene(): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
-    for (const child of [...scene.children]) {
-      child.traverse((object) => {
-        if (
-          object instanceof THREE.Mesh ||
-          object instanceof THREE.LineSegments ||
-          object instanceof THREE.Line
-        ) {
-          object.geometry.dispose();
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach((material) => material.dispose());
-        }
-      });
-      scene.remove(child);
-    }
-  }
-
-  private fitCamera(points: readonly Point2d[]): {
-    readonly minX: number;
-    readonly maxX: number;
-    readonly minY: number;
-    readonly maxY: number;
-  } {
-    const camera = this.camera;
-    if (camera === undefined || points.length === 0) {
-      return { minX: -32, maxX: 32, minY: -32, maxY: 32 };
-    }
-    const xs = points.map((point) => point.x);
-    const ys = points.map((point) => point.y);
-    const source = {
-      minX: Math.min(...xs),
-      maxX: Math.max(...xs),
-      minY: Math.min(...ys),
-      maxY: Math.max(...ys),
-    };
-    const centerX = (source.minX + source.maxX) / 2;
-    const centerY = (source.minY + source.maxY) / 2;
-    const { clientWidth, clientHeight } = this.viewport().nativeElement;
-    const aspect = clientWidth / Math.max(1, clientHeight);
-    const halfHeight = Math.max(
-      8,
-      (source.maxY - source.minY) * 0.6,
-      ((source.maxX - source.minX) * 0.6) / Math.max(0.25, aspect),
-    );
-    const halfWidth = halfHeight * aspect;
-    camera.left = centerX - halfWidth;
-    camera.right = centerX + halfWidth;
-    camera.top = centerY + halfHeight;
-    camera.bottom = centerY - halfHeight;
-    camera.position.set(0, 0, 20);
-    camera.updateProjectionMatrix();
-    return {
-      minX: camera.left,
-      maxX: camera.right,
-      minY: camera.bottom,
-      maxY: camera.top,
-    };
-  }
-
-  private drawGrid(bounds: {
-    readonly minX: number;
-    readonly maxX: number;
-    readonly minY: number;
-    readonly maxY: number;
-  }): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
-    const vertices: number[] = [];
-    const startX = Math.floor(bounds.minX / 5) * 5;
-    const startY = Math.floor(bounds.minY / 5) * 5;
-    for (let x = startX; x <= bounds.maxX; x += 5) {
-      vertices.push(x, bounds.minY, -2, x, bounds.maxY, -2);
-    }
-    for (let y = startY; y <= bounds.maxY; y += 5) {
-      vertices.push(bounds.minX, y, -2, bounds.maxX, y, -2);
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    scene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0x182731 })));
-  }
-
-  private drawLine(points: readonly Point2d[], color: number, opacity: number): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined || points.length < 2) return;
-    const geometry = new THREE.BufferGeometry().setFromPoints(
-      points.map((point) => new THREE.Vector3(point.x, point.y, 0)),
-    );
-    const material = new THREE.LineBasicMaterial({
-      color,
-      transparent: opacity < 1,
-      opacity: opacity || 1,
-    });
-    scene.add(new THREE.Line(geometry, material));
-  }
-
-  private drawConflictRegion(points: readonly Point2d[]): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
-    const shape = new THREE.Shape();
-    points.forEach((point, index) =>
-      index === 0 ? shape.moveTo(point.x, point.y) : shape.lineTo(point.x, point.y),
-    );
-    shape.closePath();
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xf16347,
-      transparent: true,
-      opacity: 0.08,
-      side: THREE.DoubleSide,
-    });
-    scene.add(new THREE.Mesh(new THREE.ShapeGeometry(shape), material));
-  }
-
-  private drawVehicle(point: Point2d, color: number, opacity: number): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
-    const geometry = new THREE.PlaneGeometry(4.4, 2.1);
-    const material = new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity });
-    const vehicle = new THREE.Mesh(geometry, material);
-    vehicle.position.set(point.x, point.y, 1);
-    scene.add(vehicle);
-  }
 }
