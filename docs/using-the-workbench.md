@@ -6,6 +6,17 @@ follow its decision to the exact evidence.
 
 ## Launch
 
+To execute new experiments without preparing the entire historical workspace,
+follow the [planning-only setup](running-experiments.md#first-time-setup), then run:
+
+```bash
+uv run --frozen planmargin-workbench --planning-only
+```
+
+This opens **New experiment**. Choose a scenario and braking change, run both
+controllers, and open that job's exact replay. Progress, cancellation, gate
+decisions, and history are live local job data—not saved campaign answers.
+
 From an installed, authorized workspace:
 
 ```bash
@@ -69,14 +80,20 @@ percentage of speed or time. A small gap or small edit alone is not a finding.
   visually similar path.
 - Press Play, drag the timeline, or use **−1 s / +1 s**. Metrics and vehicles
   advance together.
-- Tested, reference, and recorded tracks compare outcomes for the **same ego
-  vehicle**. Pink identifies the mutated lead vehicle.
+- Tested, reference, and original-tested tracks compare outcomes for the
+  **same ego vehicle**. Pink identifies the mutated lead vehicle. The third
+  track is the tested controller's trajectory before the edit, not the logged
+  recording. Markers are schematic; clearance uses recorded vehicle geometry.
+- **Inspect minimum clearance** seeks the frame with the smallest tested gap.
 - **Review candidate records** returns to Investigate and preserves the
   selected change.
 - Opening Replay directly before selecting a retained proposal shows the
   separately identified Stage-0 comparison. It is not campaign evidence.
-- Refresh restores the local session, but does not persist the exact proposal
-  or timeline position. Reopen the proposal from Investigate.
+- A new experiment's replay URL includes its job ID. Refresh reverifies and
+  restores that exact trajectory; it does not restore timeline position.
+  **Return to experiments** preserves its selection in the live history.
+- A historical campaign proposal's selection is not persisted on refresh.
+  Reopen it from Investigate; Stage 0 remains separately identified.
 
 The failure decision is made by the frozen gates—not by a single displayed
 separation or time-to-collision value.

@@ -44,16 +44,14 @@ describe('ExperimentService lifecycle', () => {
   let experiments: ExperimentService;
   let fetchMock: ReturnType<typeof vi.fn>;
   beforeEach(() => {
-    fetchMock = vi
-      .fn()
-      .mockImplementation((url: string) =>
-        Promise.resolve(
-          new Response(JSON.stringify(url.endsWith('/readiness') ? { ready: true } : []), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          }),
-        ),
-      );
+    fetchMock = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve(
+        new Response(JSON.stringify(url.endsWith('/readiness') ? { ready: true } : []), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
     vi.stubGlobal('fetch', fetchMock);
     TestBed.configureTestingModule({});
     local = TestBed.inject(LocalEvidenceService);

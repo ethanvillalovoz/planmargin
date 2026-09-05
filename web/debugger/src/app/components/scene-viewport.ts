@@ -2,11 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { DebuggerStore } from '../debugger.store';
 import { Point2d, TrajectoryKind } from '../debugger.types';
 
-const COLORS: Record<TrajectoryKind, number> = {
-  recorded: 0xa2a5a8,
-  reference: 0xe7dd55,
-  tested: 0x76d786,
-};
+const TRAJECTORY_KINDS: readonly TrajectoryKind[] = ['recorded', 'reference', 'tested'];
 
 interface FallbackScene {
   readonly viewBox: string;
@@ -16,10 +12,6 @@ interface FallbackScene {
     readonly kind: TrajectoryKind;
     readonly points: string;
     readonly current: Point2d;
-    readonly callout: Point2d;
-    readonly calloutStartX: number;
-    readonly labelX: number;
-    readonly labelAnchor: 'start' | 'end';
   }[];
   readonly leadTrajectory: string;
   readonly leadOriginalTrajectory: string;
@@ -93,6 +85,7 @@ interface FallbackScene {
     <div class="planning-guide">
       <strong>Planner rollout · {{ store.timeSeconds().toFixed(1) }} s</strong>
       <span>Green, yellow, and gray compare ego planners. Pink is the mutated lead vehicle.</span>
+      <span>Markers are schematic; clearance uses recorded vehicle geometry.</span>
     </div>
   `,
   styles: `
@@ -108,10 +101,6 @@ interface FallbackScene {
       --reference: #e7dd55;
       --recorded: #a2a5a8;
       background: #080d11;
-    }
-    .viewport {
-      position: absolute;
-      inset: 0;
     }
     .fallback {
       position: absolute;
@@ -185,11 +174,6 @@ interface FallbackScene {
       stroke-width: 1;
       stroke-dasharray: 2 5;
     }
-    .viewport canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
     .scene-label {
       position: absolute;
       top: 5rem;
@@ -256,13 +240,6 @@ interface FallbackScene {
     .legend .lead {
       background: #f09bb4;
     }
-    .scale {
-      position: absolute;
-      left: 24px;
-      bottom: 0.8rem;
-      color: #aab9c4;
-      font-size: 0.58rem;
-    }
     .planning-guide {
       position: absolute;
       left: 50%;
@@ -285,15 +262,6 @@ interface FallbackScene {
       color: #91a2ad;
       font-size: 0.56rem;
     }
-    .scale i {
-      display: block;
-      width: 58px;
-      height: 5px;
-      margin-bottom: 0.25rem;
-      border-right: 1px solid #aab9c4;
-      border-bottom: 1px solid #aab9c4;
-      border-left: 1px solid #aab9c4;
-    }
     @media (max-width: 760px) {
       .fallback {
         left: 0;
@@ -314,10 +282,6 @@ interface FallbackScene {
         width: min(330px, calc(100% - 1.3rem));
         transform: none;
         text-align: right;
-      }
-      .scale {
-        left: 1rem;
-        bottom: 4.6rem;
       }
     }
     @media (max-width: 560px) {
@@ -383,32 +347,16 @@ export class SceneViewport {
     const points = (line: readonly Point2d[]): string =>
       line.map((point) => `${point.x},${-point.y}`).join(' ');
     const markerRadius = Math.max(width, height) * 0.0065;
-    const calloutOffsets: Record<TrajectoryKind, number> = {
-      tested: -2.8,
-      reference: 0,
-      recorded: 2.8,
-    };
     return {
       viewBox: `${centerX - viewWidth / 2} ${-(centerY + viewHeight / 2)} ${viewWidth} ${viewHeight}`,
       roadCenterlines: roadCenterlines.map(points),
       conflictRegion: conflictRegion.length >= 3 ? points(conflictRegion) : '',
-      trajectories: (Object.keys(COLORS) as TrajectoryKind[]).map((kind) => {
+      trajectories: TRAJECTORY_KINDS.map((kind) => {
         const current = trajectories[kind][index];
-        const calloutDirection =
-          current.x > centerX + viewWidth * 0.18 || index === trajectories[kind].length - 1
-            ? -1
-            : 1;
         return {
           kind,
           points: points(trajectories[kind]),
           current,
-          calloutStartX: current.x + calloutDirection * markerRadius * 1.8,
-          callout: {
-            x: current.x + calloutDirection * markerRadius * 4.2,
-            y: -current.y + markerRadius * calloutOffsets[kind],
-          },
-          labelX: current.x + calloutDirection * markerRadius * (4.2 + 0.45),
-          labelAnchor: calloutDirection === 1 ? 'start' : 'end',
         };
       }),
       leadTrajectory: points(leadTrajectory),
