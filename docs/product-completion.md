@@ -27,9 +27,75 @@ research questions are resolved.
 
 ## Verification
 
-The implementation revision and measured checks are recorded here after the
-finish-pass tests and independent-checkout run. Until that entry is complete,
-this document defines the acceptance criteria rather than claiming sign-off.
+Verified on **2026-09-04** against implementation revision
+[`0ac6309`](https://github.com/ethanvillalovoz/planmargin/commit/0ac6309c0de93e0a378002d404146cbbefd3c07d).
+The documentation commit containing this record does not change executable code.
+See [PR #97](https://github.com/ethanvillalovoz/planmargin/pull/97) for the patch
+and its exact-head CI status. This is a commit-scoped acceptance record, not a
+guarantee about future dependencies or untested environments.
+The [implementation CI run](https://github.com/ethanvillalovoz/planmargin/actions/runs/33939313675)
+passed both data-free quality and scenario-debugger jobs.
+
+| Check | Observed result |
+| --- | --- |
+| Python suite in the authorized full workspace | 337 passed; six upstream PyTorch/ONNX warnings |
+| Python suite in a separate checkout and virtual environment | 335 passed, two explicitly skipped tests requiring the original full campaign/API workspace; six upstream warnings |
+| Locked frontend installation in the separate checkout | `npm ci` succeeded; npm reported zero known vulnerabilities at verification time |
+| Frontend formatting, typecheck, unit tests, and production build | Passed in both checkouts; 94 tests across 17 files |
+| Data-free Chromium browser suite | 17 passed; one mobile-only test intentionally skipped in the desktop project |
+| Live local workflow, without mocked API responses | Configuration reuse, result export, exact replay, moving footprints, navigation, and refresh passed |
+| Live route and accessibility checks | 11 views at 1440×1080 and 412×915; no axe WCAG 2 A/AA or 2.1 AA violations, horizontal overflow, page errors, or console errors in the checked states |
+| Live sensor verification | Camera annotations changed during playback; real LiDAR and SHARP assets loaded; source/viewpoint controls responded; overlay geometry passed at both widths |
+| Live assistant verification | An actual `gemini_public_aggregate` response returned cited campaign facts; greeting made no model request and was labeled as local; both widths passed axe checks |
+
+The 11 live views were the experiment result, exact replay, prediction study,
+runtime study, investigation, saved health, coverage, triage, camera, LiDAR, and
+3DGS. The assistant was checked separately. All six model studies and all three
+saved test suites were exercised by the data-free browser tests, including
+keyboard interaction, offline use, and source links. A human-visible screenshot
+review caught sensor-control intersections that axe did not; these were fixed
+and covered by the opt-in [`verify:sensors` check](using-the-workbench.md#verify-the-local-sensor-layout).
+Native in-app-browser inspection confirmed the final Models selection, expanded
+gates, and error-free console. Licensed sensor screenshots remain local.
+
+### Real experiment reproduction
+
+A separate checkout fetched from GitHub used its own virtual environment and
+frontend install. Its selection and empirical-support artifacts were prepared
+through the documented real-data commands, not copied from the original
+workspace. It repeated the documented scenario-8, +0.2 s, 0.879× experiment:
+
+| Tested configuration | Original minimum signed clearance | Changed minimum signed clearance | Outcome |
+| --- | --- | --- | --- |
+| Default IDM | 0.295291 m | 0.032252 m | Tested and reference succeed; not qualified |
+| Custom IDM: 24 m/s, 3 m spacing, 2.5 s headway | 2.681218 m | 2.555910 m | Tested and reference succeed; not qualified |
+
+Both repetitions matched **all four original/changed × tested/reference
+trajectory hashes**, metrics, outcomes, and finding gates. The default repeated
+the pre-extension result. Custom settings changed both tested trajectories and
+left both reference trajectories unchanged; the reference retained 4.796619 m
+minimum signed clearance in the changed scene. Each run also performed its
+internal deterministic repeats. Whole result-file hashes differ because job
+identity and timing are execution-specific.
+
+This is independent-checkout reproduction on the **same Mac, toolchain, and
+authorized dataset account**, not cross-hardware replication or an external
+review. The execution implementation was unchanged after `d6ad17d`; later
+finish-pass changes concerned UI, verification, and assistant wording. CI
+separately exercises the data-free code on Ubuntu x86-64.
+
+### Completion decision
+
+The six acceptance conditions above are satisfied for this bounded local
+research tool. The core workflow is usable without Gemini or sensor assets
+after authorized planning-data preparation. A public clone can immediately
+browse aggregate studies after the documented Node setup; it cannot run
+licensed-data experiments without the documented access and preparation.
+
+No remaining item below is disguised as an implemented capability. Broader
+research, additional platforms, and general-purpose planner/agent support
+would require a new contract rather than another claim that this one is
+"almost done."
 
 ## Boundaries that do not disappear at completion
 
