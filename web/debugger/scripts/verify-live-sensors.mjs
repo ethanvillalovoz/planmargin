@@ -25,6 +25,11 @@ try {
       page.getByRole('button', { name: 'Local workspace connected', exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Sensor lab', exact: true }).click();
+    const summaryResponse = await context.request.get('http://127.0.0.1:8765/api/v1/sensor-scene', {
+      headers: { 'X-PlanMargin-Token': token },
+    });
+    expect(summaryResponse.ok()).toBe(true);
+    const summary = await summaryResponse.json();
     await expect(page.locator('app-sensor-viewport img')).toBeVisible();
     // The camera's annotation panel is interactive; inspect its expanded desktop
     // placement and collapsed mobile placement before exercising spatial controls.
@@ -46,9 +51,37 @@ try {
       await expect(page.locator('.splat-viewport canvas')).toHaveCount(1);
       await expect(page.locator('.scenario-controls')).toHaveCount(0);
       await assertNoOverlap(page);
+      const sourceFrame =
+        mode === 'LiDAR'
+          ? summary.lidar.source_frame_index
+          : summary.reconstruction.source_frame_index;
+      await expect(page.locator('.spatial-summary')).toContainText(
+        `Source frame ${String(sourceFrame).padStart(3, '0')}`,
+      );
     }
     await page.getByRole('button', { name: 'Left', exact: true }).click();
     await expect(page.locator('.reconstruction-explainer')).toContainText('Left novel viewpoint');
+    await page.getByRole('button', { name: '060 · Approach', exact: true }).click();
+    await expect(page.locator('app-sensor-viewport .loading-state')).toHaveCount(0, {
+      timeout: 120_000,
+    });
+    await expect(page.locator('.spatial-summary')).toContainText(
+      `Source frame ${String(summary.reconstruction_context.source_frame_index).padStart(3, '0')}`,
+    );
+    await page.getByRole('tab', { name: 'LiDAR', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Reset view', exact: true })).toBeVisible({
+      timeout: 120_000,
+    });
+    await expect(page.locator('.spatial-summary')).toContainText(
+      `Source frame ${String(summary.lidar.source_frame_index).padStart(3, '0')}`,
+    );
+    await page.getByRole('tab', { name: '3DGS', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Source view', exact: true })).toBeVisible({
+      timeout: 120_000,
+    });
+    await expect(page.locator('.spatial-summary')).toContainText(
+      `Source frame ${String(summary.reconstruction_context.source_frame_index).padStart(3, '0')}`,
+    );
     expect(errors).toEqual([]);
     console.log(
       `PASS ${viewport.width}×${viewport.height}: real camera, LiDAR, 3DGS, viewpoint and overlay geometry`,

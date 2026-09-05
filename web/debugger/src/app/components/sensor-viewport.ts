@@ -92,7 +92,7 @@ import { SimulatorStore } from '../simulator.store';
               Reconstructed ·
               {{ compactCount(summary()?.reconstruction?.primitive_count) }} Gaussians
             } @else {
-              Same-frame LiDAR · {{ compactCount(summary()?.lidar?.primitive_count) }} returns
+              Recorded LiDAR · {{ compactCount(summary()?.lidar?.primitive_count) }} returns
             }
           </div>
 
@@ -669,10 +669,14 @@ export class SensorViewport {
       this.summary.set(summary);
       this.annotations.set(annotations);
       this.trajectory.set(trajectory);
+      const source =
+        this.simulator.sensorMode() === 'lidar'
+          ? summary.lidar
+          : (summary[this.reconstructionAsset()] ?? summary.reconstruction);
       this.simulator.configureScene(
         summary.frame_count,
         summary.frame_rate_hz,
-        summary.reconstruction.source_frame_index,
+        source.source_frame_index,
       );
       this.error.set(undefined);
       if (this.displayedFrame() !== undefined) this.updateVisibleBoxes(this.displayedFrame()!);
@@ -724,6 +728,7 @@ export class SensorViewport {
   }
 
   private async loadSplat(name: SensorAssetName): Promise<void> {
+    this.syncSpatialSource(name);
     if (this.currentAsset === name && this.splatReady()) return;
     if (this.requestedAsset === name && this.splatLoading()) return;
     const request = ++this.assetRequest;
@@ -741,6 +746,7 @@ export class SensorViewport {
       }
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       if (request !== this.assetRequest || this.destroyRef.destroyed) return;
+      this.syncSpatialSource(name);
       await this.renderSplat(bytes, name);
       if (request !== this.assetRequest || this.destroyRef.destroyed) return;
       this.currentAsset = name;
@@ -753,6 +759,11 @@ export class SensorViewport {
         this.splatLoading.set(false);
       }
     }
+  }
+
+  private syncSpatialSource(name: SensorAssetName): void {
+    const source = this.summary()?.[name];
+    if (source !== undefined) this.simulator.setSpatialSourceFrame(source.source_frame_index);
   }
 
   private async renderSplat(bytes: ArrayBuffer, name: SensorAssetName): Promise<void> {
@@ -874,13 +885,6 @@ export class SensorViewport {
     if (asset === this.reconstructionAsset()) return;
     this.reconstructionAsset.set(asset);
     this.reconstructionView.set('source');
-    const source =
-      asset === 'reconstruction'
-        ? this.summary()?.reconstruction
-        : asset === 'reconstruction_context'
-          ? this.summary()?.reconstruction_context
-          : this.summary()?.reconstruction_reference;
-    if (source !== undefined) this.simulator.setSpatialSourceFrame(source.source_frame_index);
     void this.loadSplat(asset);
   }
 
