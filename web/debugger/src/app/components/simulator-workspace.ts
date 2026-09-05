@@ -1300,7 +1300,7 @@ export class SimulatorWorkspace {
   protected spatialTitle(): string {
     return this.simulator.sensorMode() === 'reconstruction'
       ? '3D Gaussian reconstruction'
-      : 'Same-frame LiDAR field';
+      : 'Recorded LiDAR field';
   }
 
   protected seekFrame(event: Event): void {
