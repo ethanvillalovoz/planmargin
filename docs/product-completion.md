@@ -27,25 +27,30 @@ research questions are resolved.
 
 ## Verification
 
-Verified on **2026-09-04** against implementation revision
-[`0ac6309`](https://github.com/ethanvillalovoz/planmargin/commit/0ac6309c0de93e0a378002d404146cbbefd3c07d).
+Verified on **2026-09-04**: the finish implementation
+[`0ac6309`](https://github.com/ethanvillalovoz/planmargin/commit/0ac6309c0de93e0a378002d404146cbbefd3c07d)
+was merged in [PR #97](https://github.com/ethanvillalovoz/planmargin/pull/97).
+Its [main-merge CI run](https://github.com/ethanvillalovoz/planmargin/actions/runs/33939777334)
+passed both data-free quality and scenario-debugger jobs. A subsequent
+source-frame correction
+[`85a8874`](https://github.com/ethanvillalovoz/planmargin/commit/85a88747d1d68c65f9be28b2e881371ac23741fa)
+is tracked in [PR #98](https://github.com/ethanvillalovoz/planmargin/pull/98),
+with its exact-head CI status. Frontend, live-route, and sensor checks below were
+repeated on that correction; Python and experiment execution code did not change.
 The documentation commit containing this record does not change executable code.
-See [PR #97](https://github.com/ethanvillalovoz/planmargin/pull/97) for the patch
-and its exact-head CI status. This is a commit-scoped acceptance record, not a
-guarantee about future dependencies or untested environments.
-The [implementation CI run](https://github.com/ethanvillalovoz/planmargin/actions/runs/33939313675)
-passed both data-free quality and scenario-debugger jobs.
+This is a commit-scoped acceptance record, not a guarantee about future
+dependencies or untested environments.
 
 | Check | Observed result |
 | --- | --- |
 | Python suite in the authorized full workspace | 337 passed; six upstream PyTorch/ONNX warnings |
 | Python suite in a separate checkout and virtual environment | 335 passed, two explicitly skipped tests requiring the original full campaign/API workspace; six upstream warnings |
 | Locked frontend installation in the separate checkout | `npm ci` succeeded; npm reported zero known vulnerabilities at verification time |
-| Frontend formatting, typecheck, unit tests, and production build | Passed in both checkouts; 94 tests across 17 files |
+| Frontend formatting, typecheck, unit tests, and production build | Passed in both checkouts; 95 tests across 17 files |
 | Data-free Chromium browser suite | 17 passed; one mobile-only test intentionally skipped in the desktop project |
 | Live local workflow, without mocked API responses | Configuration reuse, result export, exact replay, moving footprints, navigation, and refresh passed |
 | Live route and accessibility checks | 11 views at 1440×1080 and 412×915; no axe WCAG 2 A/AA or 2.1 AA violations, horizontal overflow, page errors, or console errors in the checked states |
-| Live sensor verification | Camera annotations changed during playback; real LiDAR and SHARP assets loaded; source/viewpoint controls responded; overlay geometry passed at both widths |
+| Live sensor verification | Camera annotations changed during playback; real LiDAR and SHARP assets loaded; source/viewpoint controls responded; source frames matched loaded metadata, including cached mode switches; overlay geometry passed at both widths |
 | Live assistant verification | An actual `gemini_public_aggregate` response returned cited campaign facts; greeting made no model request and was labeled as local; both widths passed axe checks |
 
 The 11 live views were the experiment result, exact replay, prediction study,
@@ -55,6 +60,11 @@ saved test suites were exercised by the data-free browser tests, including
 keyboard interaction, offline use, and source links. A human-visible screenshot
 review caught sensor-control intersections that axe did not; these were fixed
 and covered by the opt-in [`verify:sensors` check](using-the-workbench.md#verify-the-local-sensor-layout).
+A final metadata comparison also found that LiDAR's source label could inherit
+the selected SHARP reconstruction frame. The correction binds it to the actual
+asset: primary reconstruction 020, context reconstruction 060, and recorded
+LiDAR 099. Unit and real-asset checks cover switching back to cached assets.
+The sensor assets and planning results were not changed by this label correction.
 Native in-app-browser inspection confirmed the final Models selection, expanded
 gates, and error-free console. Licensed sensor screenshots remain local.
 
