@@ -4,10 +4,148 @@ import { LocalEvidenceService } from '../local-evidence.service';
 import { SimulatorStore } from '../simulator.store';
 import { ProductShell } from './product-shell';
 import { DebuggerStore } from '../debugger.store';
-import { API_RUN } from '../local-evidence.test-fixtures';
-import { parseLocalRun } from '../local-evidence.parsers';
+import { API_RUN, API_PROPOSALS } from '../local-evidence.test-fixtures';
+import { parseLocalRun, parseProposals } from '../local-evidence.parsers';
 
 describe('ProductShell', () => {
+  it('brings the inspector tabs into view and focuses comparison on a narrow screen', () => {
+    history.replaceState(null, '', '/?view=evidence');
+    const fixture = TestBed.createComponent(ProductShell);
+    TestBed.inject(LocalEvidenceService).state.set('connected');
+    fixture.detectChanges();
+    const tabs = fixture.nativeElement.querySelector('.inspector-tabs') as HTMLElement;
+    const scrollIntoView = vi.fn();
+    tabs.scrollIntoView = scrollIntoView;
+    vi.stubGlobal('innerWidth', 412);
+    let reveal: FrameRequestCallback | undefined;
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      reveal = callback;
+      return 1;
+    });
+    const compare = tabs.querySelectorAll('button')[1];
+    compare.click();
+    fixture.detectChanges();
+    reveal?.(0);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' });
+    expect(document.activeElement).toBe(compare);
+    expect(compare.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('opens a visible comparison immediately and keeps both records across supporting pages', () => {
+    history.replaceState(null, '', '/?view=evidence&cell=cell_test');
+    const fixture = TestBed.createComponent(ProductShell);
+    const local = TestBed.inject(LocalEvidenceService);
+    local.state.set('connected');
+    local.cells.set([
+      {
+        cellId: 'cell_test',
+        method: 'random',
+        seed: 0,
+        selectionOrder: 2,
+        proposalCount: 32,
+        pipelineValidCount: 32,
+        supportAndPipelineValidCount: 32,
+        qualifyingFailureCount: 0,
+        validRatePercent: 100,
+        finalFeasibleHypervolume: 0.3,
+      },
+    ]);
+    local.selectedCellId.set('cell_test');
+    const proposal = parseProposals(API_PROPOSALS)[0];
+    local.proposals.set([
+      { ...proposal, proposalNumber: 1, criticality: 0.5 },
+      { ...proposal, proposalNumber: 2, criticality: 0.25 },
+      { ...proposal, proposalNumber: 3, criticality: 0.2 },
+    ]);
+    local.selectedProposalNumber.set(1);
+    fixture.detectChanges();
+    const compare = () =>
+      Array.from(
+        fixture.nativeElement.querySelectorAll(
+          'app-proposal-browser button.compare',
+        ) as NodeListOf<HTMLButtonElement>,
+      );
+    compare()[0].click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.comparison-dock')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-proposal-browser .comparison-dock')).toBeNull();
+    compare()[1].click();
+    fixture.detectChanges();
+    const table = () =>
+      fixture.nativeElement.querySelector('.comparison-table') as HTMLTableElement;
+    expect(table().textContent).toContain('1.00 m');
+    expect(table().textContent).toContain('3.00 m');
+    expect(compare()[2].disabled).toBe(true);
+    for (const label of ['Models', 'Investigate']) {
+      Array.from(
+        fixture.nativeElement.querySelectorAll(
+          '.product-header nav button',
+        ) as NodeListOf<HTMLButtonElement>,
+      )
+        .find((b) => b.textContent?.trim() === label)!
+        .click();
+      fixture.detectChanges();
+    }
+    expect(table().textContent).toContain('1.00 m');
+    expect(table().textContent).toContain('3.00 m');
+  });
+
+  it('removes unrelated health and model parameters when returning to Investigate', () => {
+    history.replaceState(
+      null,
+      '',
+      '/?view=health&health_source=live&section=health&issue=old&suite=lead_braking&job=old&study=prediction',
+    );
+    const fixture = TestBed.createComponent(ProductShell);
+    fixture.detectChanges();
+    Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.product-header nav button',
+      ) as NodeListOf<HTMLButtonElement>,
+    )
+      .find((b) => b.textContent?.trim() === 'Investigate')!
+      .click();
+    fixture.detectChanges();
+    const params = new URLSearchParams(location.search);
+    expect(params.get('view')).toBe('evidence');
+    for (const key of ['health_source', 'section', 'issue', 'suite', 'job', 'study'])
+      expect(params.has(key)).toBe(false);
+  });
+
+  it('restores saved health context after visiting model evidence', () => {
+    history.replaceState(
+      null,
+      '',
+      '/?view=health&health_source=saved&section=triage&issue=PM-TRT-011&suite=lead_braking',
+    );
+    const fixture = TestBed.createComponent(ProductShell);
+    TestBed.inject(LocalEvidenceService).state.set('connected');
+    fixture.detectChanges();
+    const clickNav = (label: string) => {
+      Array.from(
+        fixture.nativeElement.querySelectorAll(
+          '.product-header nav button',
+        ) as NodeListOf<HTMLButtonElement>,
+      )
+        .find((button) => button.textContent?.trim() === label)!
+        .click();
+      fixture.detectChanges();
+    };
+    clickNav('Models');
+    expect(new URLSearchParams(location.search).has('health_source')).toBe(false);
+    expect(new URLSearchParams(location.search).has('issue')).toBe(false);
+    clickNav('Test health');
+    const params = new URLSearchParams(location.search);
+    expect(params.get('health_source')).toBe('saved');
+    expect(params.get('section')).toBe('triage');
+    expect(params.get('issue')).toBe('PM-TRT-011');
+    expect(params.get('suite')).toBe('lead_braking');
+    expect(fixture.nativeElement.querySelector('.context-inspector').textContent).toContain(
+      'PM-TRT-011',
+    );
+    expect(fixture.nativeElement.querySelector('app-live-test-health')).toBeNull();
+  });
+
   it('keeps an experiment replay selected while visiting models and returning', () => {
     const fixture = TestBed.createComponent(ProductShell);
     const runId = 'experiment_' + 'a'.repeat(32);
@@ -275,9 +413,26 @@ describe('ProductShell', () => {
     explain.click();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Reproducible replay');
-    expect(text).toContain('Safety result');
+    expect(text).toContain('Closest approach');
     expect(text).toContain('Change size');
     expect(text).not.toContain('Criticality 0.400');
     expect(text).toContain('Proposal trajectory is not retained');
+    local.proposals.set([
+      {
+        ...local.proposals()[0],
+        attemptStatus: 'mutation_rejected',
+        objectiveAvailable: false,
+        criticality: 0,
+        minimality: 0,
+        pipelinePasses: false,
+        testedMutatedFailure: null,
+        referenceMutatedSuccess: null,
+      },
+    ]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No valid trajectory to replay');
+    expect(fixture.nativeElement.textContent).toContain('Not scored');
+    expect(fixture.nativeElement.textContent).not.toContain('100% of bounded range');
+    expect(fixture.nativeElement.textContent).not.toContain('verified outcomes and metrics');
   });
 });

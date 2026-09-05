@@ -3,10 +3,13 @@ import {
   Component,
   computed,
   effect,
+  inject,
   output,
   signal,
 } from '@angular/core';
 import { TEST_OPERATIONS, TestOperationIssue, TestSuiteHealth } from '../test-operations';
+import { LiveTestHealth } from './live-test-health';
+import { LocalEvidenceService } from '../local-evidence.service';
 
 type OperationsSection = 'health' | 'coverage' | 'triage';
 type IssueFilter = 'all' | 'blocked' | 'stopped' | 'pending_evidence';
@@ -21,339 +24,390 @@ function initialOperationsSection(): OperationsSection {
 @Component({
   selector: 'app-operations-workspace',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [LiveTestHealth],
   template: `
-    <main class="ops-workstation">
-      <header class="runbar">
-        <div class="run-context">
-          <span>Saved verification report / {{ report.coverage.plan_version }}</span>
-          <strong>Test health</strong>
-          <small>Campaign {{ report.campaign.campaign_id }} · report {{ shortSeal() }}</small>
-        </div>
-        <p class="snapshot-note">
-          Saved checks from a completed run.<br />Not live pipeline monitoring.
-        </p>
-        <button type="button" class="primary-action" (click)="openScenarioLab.emit()">
-          Review scenario changes
+    <nav class="health-source" aria-label="Test-health source">
+      <button type="button" [attr.aria-pressed]="liveSource()" (click)="liveSource.set(true)">
+        Live local runs
+      </button>
+      <button type="button" [attr.aria-pressed]="!liveSource()" (click)="liveSource.set(false)">
+        Saved campaign
+      </button>
+    </nav>
+    @if (liveSource()) {
+      <div class="live-source">
+        <app-live-test-health (inspectRequested)="openExperiments.emit()" />
+        <button type="button" class="primary-action" (click)="openExperiments.emit()">
+          Configure a behavior test
         </button>
-      </header>
-
-      <div class="workstation-grid" [class.health-layout]="section() === 'health'">
-        <aside class="suite-rail" aria-label="Test suite registry">
-          <header class="rail-heading">
-            <span>Test registry</span>
-            <b>{{ report.test_inventory.tracked_suites }} suites</b>
-          </header>
-          <div class="registry-summary">
-            <strong>Completed campaign</strong>
-            <span>{{ report.campaign.campaign_id }}</span>
-            <small>Real WOMD · sealed run</small>
+      </div>
+    } @else {
+      <main class="ops-workstation">
+        <header class="runbar">
+          <div class="run-context">
+            <span>Saved verification report / {{ report.coverage.plan_version }}</span>
+            <strong>Test health</strong>
+            <small>Campaign {{ report.campaign.campaign_id }} · report {{ shortSeal() }}</small>
           </div>
-          <nav aria-label="Tracked test suites">
-            @for (suite of report.test_inventory.suites; track suite.id) {
-              <button
-                type="button"
-                [class.selected]="selectedSuite().id === suite.id"
-                (click)="selectSuite(suite)"
-              >
-                <span class="suite-state"><i></i>{{ suite.status }}</span>
-                <strong>{{ suite.name }}</strong>
-                <small>{{ suite.plan_version }} · {{ suite.scenario_count }} scenarios</small>
-              </button>
-            }
-          </nav>
-          <footer>
-            <span>Source boundary</span>
-            <p>Research test evidence only. No fleet-health telemetry.</p>
-          </footer>
-        </aside>
+          <p class="snapshot-note">
+            Saved checks from a completed run.<br />Not live pipeline monitoring.
+          </p>
+          <button type="button" class="primary-action" (click)="openScenarioLab.emit()">
+            Review scenario changes
+          </button>
+        </header>
 
-        <section class="review-surface">
-          <header class="review-toolbar">
-            <div>
-              <span>Simulation test operations</span>
-              <strong>{{ sectionTitle() }}</strong>
+        <div class="workstation-grid" [class.health-layout]="section() === 'health'">
+          <aside class="suite-rail" aria-label="Test suite registry">
+            <header class="rail-heading">
+              <span>Test registry</span>
+              <b>{{ report.test_inventory.tracked_suites }} suites</b>
+            </header>
+            <div class="registry-summary">
+              <strong>Completed campaign</strong>
+              <span>{{ report.campaign.campaign_id }}</span>
+              <small>Real WOMD · sealed run</small>
             </div>
-            <nav class="ops-tabs" aria-label="Campaign views">
-              @for (item of sections; track item.id) {
+            <nav aria-label="Tracked test suites">
+              @for (suite of report.test_inventory.suites; track suite.id) {
                 <button
                   type="button"
-                  [class.active]="section() === item.id"
-                  (click)="section.set(item.id)"
+                  [class.selected]="selectedSuite().id === suite.id"
+                  (click)="selectSuite(suite)"
                 >
-                  {{ item.label }}
-                  @if (item.id === 'triage') {
-                    <span>{{ report.issues.length }}</span>
-                  }
+                  <span class="suite-state"><i></i>{{ suite.status }}</span>
+                  <strong>{{ suite.name }}</strong>
+                  <small>{{ suite.plan_version }} · {{ suite.scenario_count }} scenarios</small>
                 </button>
               }
             </nav>
-          </header>
+            <footer>
+              <span>Source boundary</span>
+              <p>Research test evidence only. No fleet-health telemetry.</p>
+            </footer>
+          </aside>
 
-          @if (section() === 'health') {
-            <div class="health-workspace">
-              <section class="health-summary" aria-labelledby="health-title">
-                <div>
-                  <span class="eyebrow">Execution verification</span>
-                  <h1 id="health-title">The saved test run passed its checks.</h1>
-                  <button type="button" class="secondary-action" (click)="openExperiments.emit()">
-                    View live local experiments
+          <section class="review-surface">
+            <header class="review-toolbar">
+              <div>
+                <span>Simulation test operations</span>
+                <strong>{{ sectionTitle() }}</strong>
+              </div>
+              <nav class="ops-tabs" aria-label="Campaign views">
+                @for (item of sections; track item.id) {
+                  <button
+                    type="button"
+                    [class.active]="section() === item.id"
+                    (click)="section.set(item.id)"
+                  >
+                    {{ item.label }}
+                    @if (item.id === 'triage') {
+                      <span>{{ report.issues.length }}</span>
+                    }
                   </button>
-                  <p>
-                    The checks below validate execution and evidence integrity, not planner safety.
-                    This report covers 100 search runs and 20 fault/handoff cases across the same
-                    ten recorded scenarios.
-                  </p>
-                </div>
-                <div class="health-kpis" aria-label="Release health summary">
-                  <article>
-                    <strong
-                      >{{ report.test_inventory.passing_release_critical_cells }}/{{
-                        report.test_inventory.release_critical_cells
-                      }}</strong
-                    >
-                    <span>test cells</span>
-                  </article>
-                  <article>
-                    <strong>{{ report.slo_summary.passing }}/{{ report.slo_summary.total }}</strong>
-                    <span>checks passed</span>
-                  </article>
-                  <article>
-                    <strong>{{ report.test_inventory.active_health_alerts }}</strong>
-                    <span>run-health alerts</span>
-                  </article>
-                </div>
-              </section>
+                }
+              </nav>
+            </header>
 
-              <section class="stage-panel" aria-labelledby="pipeline-health-title">
-                <header>
+            @if (section() === 'health') {
+              <div class="health-workspace">
+                <section class="health-summary" aria-labelledby="health-title">
                   <div>
-                    <span class="eyebrow">Automated health checks</span>
-                    <h2 id="pipeline-health-title">Pipeline stages</h2>
+                    <span class="eyebrow">Execution verification</span>
+                    <h1 id="health-title">The saved test run passed its checks.</h1>
+                    <button type="button" class="secondary-action" (click)="openExperiments.emit()">
+                      View live local experiments
+                    </button>
+                    <p>
+                      The checks below validate execution and evidence integrity, not planner
+                      safety. This report covers 100 search runs and 20 fault/handoff cases across
+                      the same ten recorded scenarios.
+                    </p>
                   </div>
-                  <b>{{ healthyStageCount() }}/{{ report.pipeline_stages.length }} healthy</b>
-                </header>
-                <div class="stage-table" role="table" aria-label="Pipeline stage health">
-                  @for (stage of report.pipeline_stages; track stage.id; let index = $index) {
-                    <div role="row">
-                      <span role="cell" class="stage-order">{{ index + 1 }}</span>
-                      <span role="cell" class="stage-name">
-                        <strong>{{ stage.name }}</strong>
-                        <small>{{ stage.detail }}</small>
-                      </span>
-                      <span role="cell" class="stage-observed">{{ stage.observed }}</span>
-                      <span role="cell" class="healthy-label"><i></i>{{ stage.status }}</span>
+                  <div class="health-kpis" aria-label="Release health summary">
+                    <article>
+                      <strong
+                        >{{ report.test_inventory.passing_release_critical_cells }}/{{
+                          report.test_inventory.release_critical_cells
+                        }}</strong
+                      >
+                      <span>test cells</span>
+                    </article>
+                    <article>
+                      <strong
+                        >{{ report.slo_summary.passing }}/{{ report.slo_summary.total }}</strong
+                      >
+                      <span>checks passed</span>
+                    </article>
+                    <article>
+                      <strong>{{ report.test_inventory.active_health_alerts }}</strong>
+                      <span>run-health alerts</span>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="stage-panel" aria-labelledby="pipeline-health-title">
+                  <header>
+                    <div>
+                      <span class="eyebrow">Automated health checks</span>
+                      <h2 id="pipeline-health-title">Pipeline stages</h2>
                     </div>
+                    <b>{{ healthyStageCount() }}/{{ report.pipeline_stages.length }} healthy</b>
+                  </header>
+                  <div class="stage-table" role="table" aria-label="Pipeline stage health">
+                    @for (stage of report.pipeline_stages; track stage.id; let index = $index) {
+                      <div role="row">
+                        <span role="cell" class="stage-order">{{ index + 1 }}</span>
+                        <span role="cell" class="stage-name">
+                          <strong>{{ stage.name }}</strong>
+                          <small>{{ stage.detail }}</small>
+                        </span>
+                        <span role="cell" class="stage-observed">{{ stage.observed }}</span>
+                        <span role="cell" class="healthy-label"><i></i>{{ stage.status }}</span>
+                      </div>
+                    }
+                  </div>
+                </section>
+
+                <section class="attention-panel" aria-labelledby="attention-title">
+                  <header>
+                    <div>
+                      <span class="eyebrow">Engineering attention</span>
+                      <h2 id="attention-title">Held decisions</h2>
+                    </div>
+                    <button type="button" (click)="section.set('triage')">Open triage</button>
+                  </header>
+                  <div class="attention-list">
+                    @for (issue of report.issues; track issue.id) {
+                      <button type="button" (click)="openIssue(issue)">
+                        <span class="severity" [class.high]="issue.severity === 'high'"></span>
+                        <span>
+                          <small>{{ issue.id }} · {{ issue.diagnostic.owner }}</small>
+                          <strong>{{ issue.title }}</strong>
+                        </span>
+                        <b>{{ stateLabel(issue.state) }}</b>
+                      </button>
+                    }
+                  </div>
+                </section>
+              </div>
+            }
+
+            @if (section() === 'coverage') {
+              <div class="coverage-workspace">
+                <header class="coverage-intro">
+                  <div>
+                    <span class="eyebrow">Versioned verification plans</span>
+                    <h1>Coverage that can be regenerated and reviewed.</h1>
+                  </div>
+                  <p>
+                    Every row is computed from sealed real-data artifacts and carries an explicit
+                    plan version, scenario population, and gate result.
+                  </p>
+                </header>
+                <section class="coverage-table" aria-label="Versioned behavior coverage">
+                  <header>
+                    <span>Test plan</span><span>Version</span><span>Scenarios</span
+                    ><span>Gates</span><span>Status</span>
+                  </header>
+                  @for (plan of report.coverage.versioned_plans; track plan.id) {
+                    <button type="button" (click)="selectPlan(plan.id)">
+                      <span>
+                        <strong>{{ suiteFor(plan.id).name }}</strong>
+                        <small>{{ humanize(plan.scenario_family) }}</small>
+                      </span>
+                      <code>{{ plan.plan_version }}</code>
+                      <span>{{ plan.scenario_count }}</span>
+                      <span>{{ plan.gate_passes }}/{{ plan.gate_total }}</span>
+                      <b><i></i>{{ plan.status }}</b>
+                    </button>
+                  }
+                </section>
+                <div class="coverage-gaps" aria-label="Known coverage gaps">
+                  @for (gap of report.coverage.known_gaps; track gap.id) {
+                    <section class="coverage-gap">
+                      <span class="eyebrow">Known gap</span>
+                      <div>
+                        <strong>{{ gap.label }}</strong>
+                        <p>{{ gap.next_test }}</p>
+                      </div>
+                      <b>Not covered</b>
+                    </section>
                   }
                 </div>
-              </section>
+              </div>
+            }
 
-              <section class="attention-panel" aria-labelledby="attention-title">
-                <header>
+            @if (section() === 'triage') {
+              <div class="triage-workspace">
+                <header class="triage-header">
                   <div>
-                    <span class="eyebrow">Engineering attention</span>
-                    <h2 id="attention-title">Held decisions</h2>
+                    <span class="eyebrow">Measured decisions</span>
+                    <h1>Investigate before changing the release path.</h1>
                   </div>
-                  <button type="button" (click)="section.set('triage')">Open triage</button>
+                  <div class="filter-row" aria-label="Issue filters">
+                    @for (filterItem of filters; track filterItem.id) {
+                      <button
+                        type="button"
+                        [class.active]="filter() === filterItem.id"
+                        (click)="setFilter(filterItem.id)"
+                      >
+                        {{ filterItem.label }}
+                      </button>
+                    }
+                  </div>
                 </header>
-                <div class="attention-list">
-                  @for (issue of report.issues; track issue.id) {
-                    <button type="button" (click)="openIssue(issue)">
+                <section class="issue-list" aria-label="Triage queue">
+                  @for (issue of filteredIssues(); track issue.id) {
+                    <button
+                      type="button"
+                      class="issue-row"
+                      [class.selected]="selectedIssue().id === issue.id"
+                      (click)="selectedIssue.set(issue)"
+                    >
                       <span class="severity" [class.high]="issue.severity === 'high'"></span>
-                      <span>
-                        <small>{{ issue.id }} · {{ issue.diagnostic.owner }}</small>
+                      <span class="issue-copy">
+                        <small>{{ issue.id }} · {{ issue.component }}</small>
                         <strong>{{ issue.title }}</strong>
+                        <p>{{ issue.diagnostic.impact }}</p>
+                      </span>
+                      <span class="issue-owner">
+                        <small>Owner</small>
+                        <strong>{{ issue.diagnostic.owner }}</strong>
                       </span>
                       <b>{{ stateLabel(issue.state) }}</b>
                     </button>
                   }
-                </div>
-              </section>
-            </div>
-          }
-
-          @if (section() === 'coverage') {
-            <div class="coverage-workspace">
-              <header class="coverage-intro">
-                <div>
-                  <span class="eyebrow">Versioned verification plans</span>
-                  <h1>Coverage that can be regenerated and reviewed.</h1>
-                </div>
-                <p>
-                  Every row is computed from sealed real-data artifacts and carries an explicit plan
-                  version, scenario population, and gate result.
-                </p>
-              </header>
-              <section class="coverage-table" aria-label="Versioned behavior coverage">
-                <header>
-                  <span>Test plan</span><span>Version</span><span>Scenarios</span><span>Gates</span
-                  ><span>Status</span>
-                </header>
-                @for (plan of report.coverage.versioned_plans; track plan.id) {
-                  <button type="button" (click)="selectPlan(plan.id)">
-                    <span>
-                      <strong>{{ suiteFor(plan.id).name }}</strong>
-                      <small>{{ humanize(plan.scenario_family) }}</small>
-                    </span>
-                    <code>{{ plan.plan_version }}</code>
-                    <span>{{ plan.scenario_count }}</span>
-                    <span>{{ plan.gate_passes }}/{{ plan.gate_total }}</span>
-                    <b><i></i>{{ plan.status }}</b>
-                  </button>
-                }
-              </section>
-              <div class="coverage-gaps" aria-label="Known coverage gaps">
-                @for (gap of report.coverage.known_gaps; track gap.id) {
-                  <section class="coverage-gap">
-                    <span class="eyebrow">Known gap</span>
-                    <div>
-                      <strong>{{ gap.label }}</strong>
-                      <p>{{ gap.next_test }}</p>
-                    </div>
-                    <b>Not covered</b>
-                  </section>
-                }
+                </section>
               </div>
-            </div>
-          }
+            }
+          </section>
 
-          @if (section() === 'triage') {
-            <div class="triage-workspace">
-              <header class="triage-header">
-                <div>
-                  <span class="eyebrow">Measured decisions</span>
-                  <h1>Investigate before changing the release path.</h1>
-                </div>
-                <div class="filter-row" aria-label="Issue filters">
-                  @for (filterItem of filters; track filterItem.id) {
-                    <button
-                      type="button"
-                      [class.active]="filter() === filterItem.id"
-                      (click)="setFilter(filterItem.id)"
-                    >
-                      {{ filterItem.label }}
-                    </button>
-                  }
-                </div>
-              </header>
-              <section class="issue-list" aria-label="Triage queue">
-                @for (issue of filteredIssues(); track issue.id) {
+          @if (section() !== 'health') {
+            <aside class="context-inspector" aria-label="Release evidence inspector">
+              @if (section() === 'coverage') {
+                <header><span>Coverage inspector</span><b>VERSIONED</b></header>
+                <section class="verdict">
+                  <span class="status"><i></i>{{ selectedSuite().status }}</span>
+                  <h2>{{ selectedSuite().name }}</h2>
+                  <p>
+                    {{ selectedSuite().scenario_count }} real-data scenarios on
+                    {{ selectedSuite().platform }}.
+                  </p>
+                </section>
+                <section class="inspector-block suite-inspector">
+                  <span>Verification contract</span>
+                  <dl>
+                    <div>
+                      <dt>Version</dt>
+                      <dd>{{ selectedSuite().plan_version }}</dd>
+                    </div>
+                    <div>
+                      <dt>Test cells</dt>
+                      <dd>{{ selectedSuite().test_cell_count }}</dd>
+                    </div>
+                    <div>
+                      <dt>Executions</dt>
+                      <dd>{{ selectedSuite().execution_count.toLocaleString() }}</dd>
+                    </div>
+                    <div>
+                      <dt>Unit</dt>
+                      <dd>{{ selectedSuite().execution_unit }}</dd>
+                    </div>
+                    <div>
+                      <dt>Gates</dt>
+                      <dd>{{ selectedSuite().gate_passes }}/{{ selectedSuite().gate_total }}</dd>
+                    </div>
+                  </dl>
+                </section>
+              } @else {
+                <header>
+                  <span>Diagnostic</span><b>{{ selectedIssue().id }}</b>
+                </header>
+                <section class="verdict issue-verdict">
+                  <span class="issue-state">{{ stateLabel(selectedIssue().state) }}</span>
+                  <h2>{{ selectedIssue().title }}</h2>
+                  <p>{{ selectedIssue().diagnostic.impact }}</p>
+                </section>
+                <section class="inspector-block">
+                  <span>Detected by</span>
+                  <strong>{{ selectedIssue().diagnostic.detected_by }}</strong>
+                  <small>Owner · {{ selectedIssue().diagnostic.owner }}</small>
+                </section>
+                <section class="root-cause" aria-label="Root cause path">
+                  <span>Isolation path</span>
+                  <ol>
+                    @for (
+                      step of selectedIssue().diagnostic.root_cause_path;
+                      track step;
+                      let index = $index
+                    ) {
+                      <li>
+                        <b>{{ index + 1 }}</b
+                        ><span>{{ step }}</span>
+                      </li>
+                    }
+                  </ol>
+                </section>
+                <section class="inspector-block action-block">
+                  <span>Resolution</span>
+                  <strong>{{ selectedIssue().diagnostic.resolution }}</strong>
                   <button
                     type="button"
-                    class="issue-row"
-                    [class.selected]="selectedIssue().id === issue.id"
-                    (click)="selectedIssue.set(issue)"
+                    class="secondary-action"
+                    (click)="openModelStudy.emit(issueStudy())"
                   >
-                    <span class="severity" [class.high]="issue.severity === 'high'"></span>
-                    <span class="issue-copy">
-                      <small>{{ issue.id }} · {{ issue.component }}</small>
-                      <strong>{{ issue.title }}</strong>
-                      <p>{{ issue.diagnostic.impact }}</p>
-                    </span>
-                    <span class="issue-owner">
-                      <small>Owner</small>
-                      <strong>{{ issue.diagnostic.owner }}</strong>
-                    </span>
-                    <b>{{ stateLabel(issue.state) }}</b>
+                    Inspect model evidence
                   </button>
-                }
-              </section>
-            </div>
+                </section>
+                <details class="release-contract prevention">
+                  <summary>Prevention</summary>
+                  <p>{{ selectedIssue().diagnostic.prevention }}</p>
+                  <code>{{ selectedIssue().source }}</code>
+                </details>
+              }
+              <footer>
+                <strong>Evidence boundary</strong>
+                <p>{{ report.claim_boundary }}</p>
+              </footer>
+            </aside>
           }
-        </section>
-
-        @if (section() !== 'health') {
-          <aside class="context-inspector" aria-label="Release evidence inspector">
-            @if (section() === 'coverage') {
-              <header><span>Coverage inspector</span><b>VERSIONED</b></header>
-              <section class="verdict">
-                <span class="status"><i></i>{{ selectedSuite().status }}</span>
-                <h2>{{ selectedSuite().name }}</h2>
-                <p>
-                  {{ selectedSuite().scenario_count }} real-data scenarios on
-                  {{ selectedSuite().platform }}.
-                </p>
-              </section>
-              <section class="inspector-block suite-inspector">
-                <span>Verification contract</span>
-                <dl>
-                  <div>
-                    <dt>Version</dt>
-                    <dd>{{ selectedSuite().plan_version }}</dd>
-                  </div>
-                  <div>
-                    <dt>Test cells</dt>
-                    <dd>{{ selectedSuite().test_cell_count }}</dd>
-                  </div>
-                  <div>
-                    <dt>Executions</dt>
-                    <dd>{{ selectedSuite().execution_count.toLocaleString() }}</dd>
-                  </div>
-                  <div>
-                    <dt>Unit</dt>
-                    <dd>{{ selectedSuite().execution_unit }}</dd>
-                  </div>
-                  <div>
-                    <dt>Gates</dt>
-                    <dd>{{ selectedSuite().gate_passes }}/{{ selectedSuite().gate_total }}</dd>
-                  </div>
-                </dl>
-              </section>
-            } @else {
-              <header>
-                <span>Diagnostic</span><b>{{ selectedIssue().id }}</b>
-              </header>
-              <section class="verdict issue-verdict">
-                <span class="issue-state">{{ stateLabel(selectedIssue().state) }}</span>
-                <h2>{{ selectedIssue().title }}</h2>
-                <p>{{ selectedIssue().diagnostic.impact }}</p>
-              </section>
-              <section class="inspector-block">
-                <span>Detected by</span>
-                <strong>{{ selectedIssue().diagnostic.detected_by }}</strong>
-                <small>Owner · {{ selectedIssue().diagnostic.owner }}</small>
-              </section>
-              <section class="root-cause" aria-label="Root cause path">
-                <span>Isolation path</span>
-                <ol>
-                  @for (
-                    step of selectedIssue().diagnostic.root_cause_path;
-                    track step;
-                    let index = $index
-                  ) {
-                    <li>
-                      <b>{{ index + 1 }}</b
-                      ><span>{{ step }}</span>
-                    </li>
-                  }
-                </ol>
-              </section>
-              <section class="inspector-block action-block">
-                <span>Resolution</span>
-                <strong>{{ selectedIssue().diagnostic.resolution }}</strong>
-                <button
-                  type="button"
-                  class="secondary-action"
-                  (click)="openModelStudy.emit(issueStudy())"
-                >
-                  Inspect model evidence
-                </button>
-              </section>
-              <details class="release-contract prevention">
-                <summary>Prevention</summary>
-                <p>{{ selectedIssue().diagnostic.prevention }}</p>
-                <code>{{ selectedIssue().source }}</code>
-              </details>
-            }
-            <footer>
-              <strong>Evidence boundary</strong>
-              <p>{{ report.claim_boundary }}</p>
-            </footer>
-          </aside>
-        }
-      </div>
-    </main>
+        </div>
+      </main>
+    }
   `,
   styles: `
+    .health-source {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 18px 24px 0;
+      background: #f4f6f3;
+    }
+    .health-source button {
+      border: 1px solid #cbd8d1;
+      border-radius: 999px;
+      padding: 10px 18px;
+      background: white;
+      color: #31564a;
+      cursor: pointer;
+    }
+    .health-source button[aria-pressed='true'] {
+      background: #dff3e7;
+      border-color: #83b99b;
+      color: #124a34;
+    }
+    .health-source button:focus-visible {
+      outline: 3px solid #1968fa;
+      outline-offset: 3px;
+    }
+    .live-source {
+      max-width: 1100px;
+      padding: 24px;
+      margin: auto;
+      display: grid;
+      gap: 20px;
+    }
     :host {
       display: block;
       height: calc(100dvh - 72px);
@@ -1324,6 +1378,12 @@ function initialOperationsSection(): OperationsSection {
   `,
 })
 export class OperationsWorkspace {
+  protected readonly liveSource = signal(
+    new URLSearchParams(window.location.search).get('health_source') === 'live' ||
+      (!new URLSearchParams(window.location.search).has('health_source') &&
+        !new URLSearchParams(window.location.search).has('section') &&
+        inject(LocalEvidenceService).connected()),
+  );
   readonly openExperiments = output<void>();
   readonly openModelStudy = output<string>();
   protected issueStudy(): string {
@@ -1347,6 +1407,7 @@ export class OperationsWorkspace {
   constructor() {
     effect(() => {
       const url = new URL(window.location.href);
+      url.searchParams.set('health_source', this.liveSource() ? 'live' : 'saved');
       url.searchParams.set('section', this.section());
       url.searchParams.set('issue', this.selectedIssue().id);
       url.searchParams.set('suite', this.selectedSuite().id);

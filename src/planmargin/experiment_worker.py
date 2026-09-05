@@ -22,6 +22,7 @@ from planmargin.experiment_jobs import (
     digest,
     read_json,
     support_path,
+    protocol_for,
     write_json,
 )
 
@@ -70,11 +71,18 @@ def build_tested_controller(config: ExperimentConfig) -> Any:
 def execute(root: Path, job_id: str) -> None:
     directory = confined(root, JOBS / job_id)
     request = read_json(directory / "request.json")
-    if request.get("job_id") != job_id or request.get("protocol") != PROTOCOL:
-        raise ValueError("Invalid worker request identity")
     config = ExperimentConfig.model_validate(request["config"])
+    if request.get("job_id") != job_id or request.get("protocol") != protocol_for(
+        config
+    ):
+        raise ValueError("Invalid worker request identity")
     progress = Progress(directory)
     progress.stage("inputs")
+    if config.test_plan != "lead_braking":
+        from planmargin.fault_experiment import execute_fault
+
+        execute_fault(root, job_id, config, progress)
+        return
     # Heavy libraries initialize only inside the worker, never during API polling.
     import jax
     import tensorflow as tf
@@ -159,7 +167,9 @@ def execute(root: Path, job_id: str) -> None:
     original = adapter.evaluate_original(scenario, candidate, tested, reference)
     variant = "mutated"
     progress.stage("mutation")
-    parameters = config.model_dump(exclude={"selection_order", "tested_controller"})
+    parameters = config.model_dump(
+        exclude={"selection_order", "tested_controller", "test_plan"}
+    )
     evaluation = adapter.evaluate_attempt(
         scenario,
         candidate,
@@ -192,6 +202,9 @@ def execute(root: Path, job_id: str) -> None:
         "job_id": job_id,
         "protocol": PROTOCOL,
         "config": config.record(),
+        "execution": {
+            key: request.get(key) for key in ("completion_deadline_seconds", "rerun_of")
+        },
         "controller_specs": {
             "tested": tested.report(),
             "reference": reference.report(),

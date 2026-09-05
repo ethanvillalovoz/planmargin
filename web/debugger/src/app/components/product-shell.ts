@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorDownloadSimple,
@@ -23,13 +16,11 @@ import { OperationsWorkspace } from './operations-workspace';
 import { ScenarioAssistant } from './scenario-assistant';
 import { ExperimentWorkspace } from './experiment-workspace';
 import { ModelsWorkspace } from './models-workspace';
+import { ProposalBrowser } from './proposal-browser';
 import { DebuggerRun } from '../debugger.types';
 
 type ProductView = 'operations' | 'investigate' | 'replay' | 'sensor' | 'experiments';
 type EvidenceView = 'campaign' | 'deployment';
-type ProposalSort = 'criticality' | 'minimality' | 'support' | 'sequence';
-type ProposalFilter = 'all' | 'eligible' | 'support-rejected' | 'pipeline-rejected';
-type InvestigationRank = 'closest' | 'minimal' | 'support';
 
 function initialProductView(): ProductView {
   const requested = new URLSearchParams(window.location.search).get('view');
@@ -57,6 +48,7 @@ function initialEvidenceView(): EvidenceView {
     ScenarioAssistant,
     ExperimentWorkspace,
     ModelsWorkspace,
+    ProposalBrowser,
   ],
   providers: [
     provideIcons({
@@ -319,481 +311,312 @@ function initialEvidenceView(): EvidenceView {
               </footer>
             </section>
           } @else {
-            <div class="investigation-layout" [class.browsing-cells]="browseCells()">
-              @if (local.investigation(); as campaign) {
-                <section class="campaign-index" aria-labelledby="campaign-index-title">
-                  <header>
-                    <div>
-                      <p>
-                        {{
-                          browseCells()
-                            ? 'Explore every search run'
-                            : 'Start with the smallest margins'
-                        }}
-                      </p>
-                      <h2 id="campaign-index-title">Scenario changes</h2>
-                    </div>
-                    <div class="rank-tabs" aria-label="Campaign ranking">
-                      <button
-                        type="button"
-                        [class.active]="rank() === 'closest'"
-                        (click)="rank.set('closest')"
-                      >
-                        Closest to failure
-                      </button>
-                      <button
-                        type="button"
-                        [class.active]="rank() === 'minimal'"
-                        (click)="rank.set('minimal')"
-                      >
-                        Smallest change
-                      </button>
-                      <button
-                        type="button"
-                        [class.active]="rank() === 'support'"
-                        (click)="rank.set('support')"
-                      >
-                        Strongest precedent
-                      </button>
-                    </div>
-                  </header>
-                  <div class="queue-controls">
-                    <p>
+            <div class="investigation-layout">
+              <app-proposal-browser
+                [compared]="comparison()"
+                (inspectRequested)="openCampaignProposal($event)"
+                (compareRequested)="toggleCompare($event)"
+                (comparisonRequested)="openComparison()"
+                (cellRequested)="selectCell($event)"
+              />
+              <section class="investigation-workspace" aria-label="Proposal inspector">
+                <nav class="inspector-tabs" aria-label="Inspection mode">
+                  <button
+                    type="button"
+                    [attr.aria-pressed]="!showComparison()"
+                    (click)="showComparison.set(false)"
+                  >
+                    Selected proposal
+                  </button>
+                  <button
+                    type="button"
+                    [attr.aria-pressed]="showComparison()"
+                    (click)="openComparison()"
+                  >
+                    Compare ({{ comparison().length }}/2)
+                  </button>
+                </nav>
+                @if (showComparison()) {
+                  <section class="comparison-dock" aria-labelledby="comparison-title" tabindex="-1">
+                    <header>
+                      <div>
+                        <p>2 · Compare measured outcomes</p>
+                        <h2 id="comparison-title">Proposal comparison</h2>
+                      </div>
+                      <button type="button" (click)="comparison.set([])">Clear selection</button>
+                    </header>
+                    <p class="comparison-instruction" role="status">
                       {{
-                        rank() === 'closest'
-                          ? 'Closest approaches first. A small gap alone does not qualify as a planner failure.'
-                          : rank() === 'minimal'
-                            ? 'Smallest edits first, under the same realism and reproducibility gates.'
-                            : 'Changes with the strongest support in recorded driving behavior.'
+                        comparison().length < 2
+                          ? 'Choose Compare on ' +
+                            (comparison().length === 0 ? 'two proposals' : 'one more proposal') +
+                            ' in the list. You can change scenarios without losing your selection.'
+                          : 'A and B are selected. Compare their measurements below, or open either saved replay.'
                       }}
                     </p>
-                    <button
-                      type="button"
-                      [attr.aria-expanded]="browseCells()"
-                      (click)="browseCells.set(!browseCells())"
-                    >
-                      {{ browseCells() ? 'Back to priority queue' : 'Browse all 100 search runs' }}
-                    </button>
-                  </div>
-                  @if (!browseCells()) {
-                    <div class="campaign-table" role="table" aria-label="Campaign-ranked proposals">
-                      <div class="campaign-row campaign-head" role="row">
-                        <span role="columnheader">Scenario / change</span>
-                        <span role="columnheader">Minimum gap</span>
-                        <span role="columnheader">Review</span>
-                      </div>
-                      @for (
-                        proposal of campaignRanking();
-                        track proposal.cellId + proposal.proposalNumber;
-                        let index = $index
-                      ) {
-                        <div
-                          class="campaign-row"
-                          role="row"
-                          [class.selected]="isSelected(proposal)"
-                        >
-                          <span role="cell" class="case-summary">
-                            <strong
-                              >Scenario {{ proposal.selectionOrder }}
-                              <small
-                                >{{ proposal.method }} · #{{ proposal.proposalNumber }}</small
-                              ></strong
-                            >
-                            <span>{{ mutationNarrative(proposal) }}</span>
-                            <small>{{ formatGate(proposal.decisiveGate) }}</small>
-                          </span>
-                          <span role="cell" class="gap-value"
-                            >{{ clearanceValue(proposal.criticality)
-                            }}<small>{{
-                              proposal.trajectoryAvailable ? 'Replay available' : 'Metrics only'
-                            }}</small></span
-                          >
-                          <span role="cell" class="row-actions">
-                            <button
-                              type="button"
-                              [attr.aria-label]="
-                                'Inspect ' +
-                                proposal.method +
-                                ' scenario ' +
-                                proposal.selectionOrder +
-                                ' seed ' +
-                                proposal.seed +
-                                ' proposal ' +
-                                proposal.proposalNumber
-                              "
-                              (click)="openCampaignProposal(proposal)"
-                            >
-                              {{ isSelected(proposal) ? 'Selected' : 'Inspect' }}
-                            </button>
-                            <button
-                              type="button"
-                              [attr.aria-pressed]="isCompared(proposal)"
-                              (click)="toggleCompare(proposal)"
-                            >
-                              {{ isCompared(proposal) ? 'Remove' : 'Compare' }}
-                            </button>
-                          </span>
-                        </div>
-                      }
-                    </div>
-                  }
-                  @if (comparison().length > 0) {
-                    <section class="comparison-dock" aria-label="Proposal comparison">
-                      <header>
-                        <strong>Comparison · {{ comparison().length }}/2</strong
-                        ><button type="button" (click)="comparison.set([])">Clear</button>
-                      </header>
-                      <div>
-                        @for (
-                          proposal of comparison();
-                          track proposal.cellId + proposal.proposalNumber
-                        ) {
-                          <article>
-                            <span
-                              >{{ proposal.method }} · S{{ proposal.selectionOrder }} · seed
-                              {{ proposal.seed }}</span
-                            >
-                            <h3>Proposal {{ proposal.proposalNumber }}</h3>
-                            <dl>
-                              <div>
-                                <dt>Safety result</dt>
-                                <dd>{{ proximityLabel(proposal.criticality) }}</dd>
-                              </div>
-                              <div>
-                                <dt>Change size</dt>
-                                <dd>{{ changeSizeLabel(proposal.minimality) }}</dd>
-                              </div>
-                              <div>
-                                <dt>Recorded precedent</dt>
-                                <dd>
-                                  {{
-                                    supportLabel(
-                                      proposal.empiricalSupportProbability,
-                                      proposal.supportPasses
-                                    )
-                                  }}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt>Why it stopped</dt>
-                                <dd>{{ formatGate(proposal.decisiveGate) }}</dd>
-                              </div>
-                            </dl>
-                            <button type="button" (click)="openCampaignProposal(proposal)">
-                              Open evidence
-                            </button>
-                          </article>
-                        }
-                      </div>
-                    </section>
-                  }
-                </section>
-              }
-              <section class="investigation-workspace">
-                @if (browseCells()) {
-                  <aside class="cell-rail" aria-labelledby="cell-matrix-title">
-                    <div class="rail-heading">
-                      <h2 id="cell-matrix-title">100 matched cells</h2>
-                      <span>scenario × seed × method</span>
-                    </div>
-                    <label class="run-picker"
-                      >Search run
-                      <select [value]="local.selectedCellId()" (change)="changeCell($event)">
-                        @for (cell of local.cells(); track cell.cellId) {
-                          <option [value]="cell.cellId">
-                            Scenario {{ cell.selectionOrder }} · {{ cell.method }} · seed
-                            {{ cell.seed }}
-                          </option>
-                        }
-                      </select>
-                    </label>
-                    <details class="run-matrix">
-                      <summary>Show run matrix</summary>
-                      <div class="cell-legend">
-                        <span><i class="random"></i>Random</span
-                        ><span><i class="bayesian"></i>Bayesian</span>
-                      </div>
-                      <div class="cell-grid">
-                        @for (cell of local.cells(); track cell.cellId) {
-                          <button
-                            type="button"
-                            [class.random]="cell.method === 'random'"
-                            [class.bayesian]="cell.method === 'bayesian'"
-                            [class.active]="local.selectedCellId() === cell.cellId"
-                            [style.--validity]="cell.validRatePercent + '%'"
-                            [attr.aria-label]="
-                              cell.method +
-                              ' scenario ' +
-                              cell.selectionOrder +
-                              ' seed ' +
-                              cell.seed +
-                              ', ' +
-                              cell.validRatePercent.toFixed(1) +
-                              ' percent eligible'
-                            "
-                            [attr.title]="
-                              cell.method +
-                              ' · scenario ' +
-                              cell.selectionOrder +
-                              ' · seed ' +
-                              cell.seed
-                            "
-                            (click)="selectCell(cell.cellId)"
-                          >
-                            {{ cell.selectionOrder }}·{{ cell.seed }}
-                          </button>
-                        }
-                      </div>
-                    </details>
-                    @if (local.selectedCell(); as cell) {
-                      <dl class="cell-summary">
-                        <div>
-                          <dt>Selected</dt>
-                          <dd>
-                            {{ cell.method }} · S{{ cell.selectionOrder }} · seed {{ cell.seed }}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Pipeline valid</dt>
-                          <dd>{{ cell.pipelineValidCount }} / 32</dd>
-                        </div>
-                        <div>
-                          <dt>Support + pipeline</dt>
-                          <dd>{{ cell.supportAndPipelineValidCount }} / 32</dd>
-                        </div>
-                        <div>
-                          <dt>Past realism gates</dt>
-                          <dd>
-                            {{ cell.supportAndPipelineValidCount }} / {{ cell.proposalCount }}
-                          </dd>
-                        </div>
-                      </dl>
-                    }
-                  </aside>
-                }
-                <section class="proposal-region">
-                  @if (browseCells()) {
-                    <div class="proposal-toolbar">
-                      <div>
-                        <h2>Proposal evidence</h2>
-                        <p>Rank the selected cell without changing its sealed sequence.</p>
-                      </div>
-                      <div class="toolbar-filters">
-                        <label
-                          >Show
-                          <select [value]="filter()" (change)="changeFilter($event)">
-                            <option value="all">All proposals</option>
-                            <option value="eligible">All feasibility gates</option>
-                            <option value="support-rejected">Support rejected</option>
-                            <option value="pipeline-rejected">Pipeline rejected</option>
-                          </select>
-                        </label>
-                        <label
-                          >Rank by
-                          <select [value]="sort()" (change)="changeSort($event)">
-                            <option value="criticality">Closest safety margin</option>
-                            <option value="minimality">Smallest mutation</option>
-                            <option value="support">Highest support</option>
-                            <option value="sequence">Original sequence</option>
-                          </select>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div class="gate-funnel" aria-label="Selected cell gate funnel">
-                      @for (gate of funnel(); track gate.label) {
-                        <div>
-                          <strong>{{ gate.count }}</strong
-                          ><span>{{ gate.label }}</span
-                          ><i [style.width.%]="(gate.count / 32) * 100"></i>
-                        </div>
-                      }
-                    </div>
-                  }
-                  <div class="proposal-layout" [class.with-list]="browseCells()">
-                    @if (browseCells()) {
-                      <div class="proposal-list" aria-label="Ranked proposal list">
-                        @if (local.loadingProposals()) {
-                          <p>Verifying 32 proposal seals…</p>
-                        }
-                        @for (proposal of rankedProposals(); track proposal.proposalNumber) {
-                          <button
-                            type="button"
-                            [class.active]="
-                              local.selectedProposalNumber() === proposal.proposalNumber
-                            "
-                            (click)="selectProposal(proposal.proposalNumber)"
-                          >
-                            <span>#{{ proposal.proposalNumber.toString().padStart(2, '0') }}</span>
-                            <div>
-                              <strong>{{ proposalTitle(proposal) }}</strong
-                              ><small>{{ gateReason(proposal) }}</small>
-                            </div>
-                            <b>{{ rankValue(proposal) }}</b>
-                          </button>
-                        }
-                      </div>
-                    }
-                    @if (local.loadingProposals()) {
-                      <p class="loading-state" role="status">
-                        Reading the selected scenario change…
+                    @if (
+                      comparison().length === 2 &&
+                      comparison()[0].selectionOrder !== comparison()[1].selectionOrder
+                    ) {
+                      <p class="comparison-boundary">
+                        Different recorded scenarios: these are separate experiments, not two
+                        planners in the same scene. A smaller gap alone does not mean a worse
+                        planner.
                       </p>
-                    } @else if (local.selectedProposal(); as proposal) {
-                      <article class="proposal-detail">
-                        <header>
-                          <div>
-                            <p>
-                              Scenario {{ local.selectedCell()?.selectionOrder }} ·
-                              {{ local.selectedCell()?.method }} · seed
-                              {{ local.selectedCell()?.seed }} · proposal
-                              {{ proposal.proposalNumber }}
-                            </p>
-                            <h2>{{ gateReason(proposal) }}</h2>
-                          </div>
-                          <button
-                            type="button"
-                            class="detail-help"
-                            [attr.aria-expanded]="showGateDetails()"
-                            (click)="showGateDetails.set(!showGateDetails())"
-                          >
-                            {{ showGateDetails() ? 'Hide gate details' : 'Explain decision' }}
-                          </button>
-                        </header>
-                        <p class="decision-explanation">{{ decisionExplanation(proposal) }}</p>
-                        <div class="parameter-strip">
-                          <div>
-                            <span>Braking onset shift</span
-                            ><strong>{{
-                              signedSeconds(proposal.brakingOnsetOffsetSeconds)
-                            }}</strong>
-                          </div>
-                          <div>
-                            <span>Lead speed scale</span
-                            ><strong
-                              >{{ (proposal.speedMultiplier * 100).toFixed(1) }}% of recorded
-                              speed</strong
-                            >
-                          </div>
-                          <div>
-                            <span>Safety result</span
-                            ><strong>{{ proximityLabel(proposal.criticality) }}</strong>
-                          </div>
-                          <div>
-                            <span>Change size</span
-                            ><strong>{{ changeSizeLabel(proposal.minimality) }}</strong>
-                          </div>
-                        </div>
-                        <div class="controller-comparison" aria-label="Planner outcomes">
-                          <div>
-                            <span>Tested planner</span>
-                            <strong [class.failure]="proposal.testedMutatedFailure === true">{{
-                              proposal.testedMutatedFailure === true
-                                ? 'Failed'
-                                : proposal.testedMutatedFailure === false
-                                  ? 'Succeeded'
-                                  : 'Not evaluated'
-                            }}</strong>
-                          </div>
-                          <div>
-                            <span>Reference planner</span>
-                            <strong [class.success]="proposal.referenceMutatedSuccess === true">{{
-                              proposal.referenceMutatedSuccess === true
-                                ? 'Succeeded'
-                                : proposal.referenceMutatedSuccess === false
-                                  ? 'Failed'
-                                  : 'Not evaluated'
-                            }}</strong>
-                          </div>
-                          <div>
-                            <span>Finding contract</span>
-                            <strong>{{
-                              proposal.policySpecificAvoidableFailure === true
-                                ? 'Qualified'
-                                : 'Not qualified'
-                            }}</strong>
-                          </div>
-                        </div>
-                        @if (showGateDetails()) {
-                          <ol class="gate-ladder">
-                            @for (gate of proposalGates(proposal); track gate.label) {
-                              <li [class.pass]="gate.pass" [class.stop]="gate.stop">
-                                <i>{{ gate.pass ? '✓' : gate.stop ? '×' : '—' }}</i>
-                                <div>
-                                  <strong>{{ gate.label }}</strong
-                                  ><span>{{ gate.detail }}</span>
-                                </div>
-                              </li>
+                    }
+                    @if (comparison().length > 0) {
+                      <table
+                        class="comparison-table"
+                        aria-label="Proposal measurements side by side"
+                      >
+                        <thead>
+                          <tr>
+                            <th scope="col">Measurement</th>
+                            @for (
+                              proposal of comparison();
+                              track proposal.cellId + ':' + proposal.proposalNumber;
+                              let index = $index
+                            ) {
+                              <th scope="col">
+                                <span class="comparison-slot">{{ index === 0 ? 'A' : 'B' }}</span
+                                ><strong
+                                  >Scenario {{ proposal.selectionOrder }}<br />Proposal
+                                  {{ proposal.proposalNumber }}</strong
+                                ><small>{{ proposal.method }} · seed {{ proposal.seed }}</small>
+                              </th>
                             }
-                          </ol>
-                        }
-                        <div class="replay-boundary">
-                          @if (proposal.trajectoryAvailable && proposal.replayRunId) {
-                            <strong>Exact proposal replay retained and verified.</strong>
-                            <p>
-                              Replay this exact change and inspect the moment of closest approach.
-                            </p>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (measurement of comparisonMeasurements; track measurement.key) {
+                            <tr>
+                              <th scope="row">{{ measurement.label }}</th>
+                              @for (
+                                proposal of comparison();
+                                track proposal.cellId + ':' + proposal.proposalNumber
+                              ) {
+                                <td>{{ comparisonValue(proposal, measurement.key) }}</td>
+                              }
+                            </tr>
+                          }
+                          <tr>
+                            <th scope="row">Inspect evidence</th>
+                            @for (
+                              proposal of comparison();
+                              track proposal.cellId + ':' + proposal.proposalNumber;
+                              let index = $index
+                            ) {
+                              <td class="comparison-actions">
+                                <button type="button" (click)="openCampaignProposal(proposal)">
+                                  Inspect {{ index === 0 ? 'A' : 'B' }}
+                                </button>
+                                @if (proposal.trajectoryAvailable && proposal.replayRunId) {
+                                  <button
+                                    type="button"
+                                    [disabled]="replayLoading()"
+                                    (click)="openComparedReplay(proposal)"
+                                  >
+                                    Open replay {{ index === 0 ? 'A' : 'B' }}
+                                  </button>
+                                } @else {
+                                  <span>Metrics only · trajectory not saved</span>
+                                }
+                                <button type="button" (click)="toggleCompare(proposal)">
+                                  Remove {{ index === 0 ? 'A' : 'B' }}
+                                </button>
+                              </td>
+                            }
+                          </tr>
+                        </tbody>
+                      </table>
+                      @if (comparison().length === 2) {
+                        <p class="comparison-limit">
+                          To compare another proposal, remove A or B first. Saved replays open
+                          individually; this panel compares measurements.
+                        </p>
+                      }
+                    }
+                    @if (replayError()) {
+                      <p role="alert">{{ replayError() }}</p>
+                    }
+                  </section>
+                } @else {
+                  <section class="proposal-region">
+                    <div class="proposal-layout">
+                      @if (local.loadingProposals()) {
+                        <p class="loading-state" role="status">
+                          Reading the selected scenario change…
+                        </p>
+                      } @else if (local.selectedProposal(); as proposal) {
+                        <article class="proposal-detail">
+                          <header>
+                            <div>
+                              <p>
+                                Scenario {{ local.selectedCell()?.selectionOrder }} ·
+                                {{ local.selectedCell()?.method }} · seed
+                                {{ local.selectedCell()?.seed }} · proposal
+                                {{ proposal.proposalNumber }}
+                              </p>
+                              <h2>{{ gateReason(proposal) }}</h2>
+                            </div>
                             <button
                               type="button"
-                              (click)="openProposalReplay(proposal.replayRunId)"
-                              [disabled]="replayLoading()"
+                              class="detail-help"
+                              [attr.aria-expanded]="showGateDetails()"
+                              (click)="showGateDetails.set(!showGateDetails())"
                             >
-                              <ng-icon name="phosphorPlay" size="15" />{{
-                                replayLoading()
-                                  ? 'Loading exact replay…'
-                                  : 'Open exact proposal replay'
+                              {{ showGateDetails() ? 'Hide gate details' : 'Explain decision' }}
+                            </button>
+                          </header>
+                          <p class="decision-explanation">{{ decisionExplanation(proposal) }}</p>
+                          <div class="parameter-strip">
+                            <div>
+                              <span>Braking onset shift</span
+                              ><strong>{{
+                                signedSeconds(proposal.brakingOnsetOffsetSeconds)
+                              }}</strong>
+                            </div>
+                            <div>
+                              <span>Lead speed scale</span
+                              ><strong
+                                >{{ (proposal.speedMultiplier * 100).toFixed(1) }}% of recorded
+                                speed</strong
+                              >
+                            </div>
+                            <div>
+                              <span>Closest approach</span
+                              ><strong>{{ proximityLabel(proposal.criticality) }}</strong>
+                            </div>
+                            <div>
+                              <span>Change size</span
+                              ><strong>{{
+                                proposal.objectiveAvailable
+                                  ? changeSizeLabel(proposal.minimality)
+                                  : 'Not scored'
+                              }}</strong>
+                            </div>
+                          </div>
+                          <div class="controller-comparison" aria-label="Planner outcomes">
+                            <div>
+                              <span>Tested planner</span>
+                              <strong [class.failure]="proposal.testedMutatedFailure === true">{{
+                                proposal.testedMutatedFailure === true
+                                  ? 'Failed'
+                                  : proposal.testedMutatedFailure === false
+                                    ? 'Succeeded'
+                                    : 'Not evaluated'
+                              }}</strong>
+                            </div>
+                            <div>
+                              <span>Reference planner</span>
+                              <strong [class.success]="proposal.referenceMutatedSuccess === true">{{
+                                proposal.referenceMutatedSuccess === true
+                                  ? 'Succeeded'
+                                  : proposal.referenceMutatedSuccess === false
+                                    ? 'Failed'
+                                    : 'Not evaluated'
+                              }}</strong>
+                            </div>
+                            <div>
+                              <span>Finding contract</span>
+                              <strong>{{
+                                proposal.policySpecificAvoidableFailure === true
+                                  ? 'Qualified'
+                                  : 'Not qualified'
+                              }}</strong>
+                            </div>
+                          </div>
+                          @if (showGateDetails()) {
+                            <ol class="gate-ladder">
+                              @for (gate of proposalGates(proposal); track gate.label) {
+                                <li [class.pass]="gate.pass" [class.stop]="gate.stop">
+                                  <i>{{ gate.pass ? '✓' : gate.stop ? '×' : '—' }}</i>
+                                  <div>
+                                    <strong>{{ gate.label }}</strong
+                                    ><span>{{ gate.detail }}</span>
+                                  </div>
+                                </li>
+                              }
+                            </ol>
+                          }
+                          <div class="replay-boundary">
+                            @if (proposal.trajectoryAvailable && proposal.replayRunId) {
+                              <strong>Exact proposal replay retained and verified.</strong>
+                              <p>
+                                Replay this exact change and inspect the moment of closest approach.
+                              </p>
+                              <button
+                                type="button"
+                                (click)="openProposalReplay(proposal.replayRunId)"
+                                [disabled]="replayLoading()"
+                              >
+                                <ng-icon name="phosphorPlay" size="15" />{{
+                                  replayLoading()
+                                    ? 'Loading exact replay…'
+                                    : 'Open exact proposal replay'
+                                }}
+                              </button>
+                            } @else if (!proposal.objectiveAvailable) {
+                              <strong>No valid trajectory to replay.</strong>
+                              <p>
+                                This proposal was rejected before a valid evaluation was completed.
+                                You can inspect its rejection record, but it has no scored clearance
+                                or saved replay.
+                              </p>
+                            } @else {
+                              <strong>Proposal trajectory is not retained.</strong>
+                              <p>
+                                This change has verified outcomes and metrics. Its full trajectory
+                                was not saved. Use “Saved replays only” in the scenario browser to
+                                find a saved path. These planning scenarios are separate from the
+                                Sensor lab's camera scenes.
+                              </p>
+                            }
+                            @if (replayError()) {
+                              <span class="replay-error" role="alert">{{ replayError() }}</span>
+                            }
+                          </div>
+                          <div class="detail-actions">
+                            <button
+                              type="button"
+                              (click)="groundAnalysis()"
+                              [disabled]="analysisLoading()"
+                            >
+                              <ng-icon name="phosphorSparkle" size="15" />{{
+                                analysisLoading()
+                                  ? 'Reading sealed record…'
+                                  : 'Analyze selected proposal'
                               }}
                             </button>
-                          } @else {
-                            <strong>Proposal trajectory is not retained.</strong>
-                            <p>
-                              This change has verified outcomes and metrics. Its full trajectory was
-                              not saved. Choose a row marked “Replay available” to inspect a saved
-                              path.
-                            </p>
+                            <button type="button" (click)="exportReport()">
+                              <ng-icon name="phosphorDownloadSimple" size="15" />Export
+                              investigation
+                            </button>
+                          </div>
+                          @if (analysis(); as answer) {
+                            <section class="grounded-analysis" aria-live="polite">
+                              <strong>Proposal-specific evidence analysis</strong>
+                              <p>{{ answer.explanation }}</p>
+                              <dl>
+                                @for (fact of answer.facts; track fact.label) {
+                                  <div>
+                                    <dt>{{ fact.label }}</dt>
+                                    <dd>{{ fact.value }}</dd>
+                                  </div>
+                                }
+                              </dl>
+                              <div>
+                                <code>sealed record · {{ answer.recordSha256.slice(0, 16) }}</code>
+                              </div>
+                            </section>
+                          } @else if (analysisError()) {
+                            <p class="analysis-error" role="alert">{{ analysisError() }}</p>
                           }
-                          @if (replayError()) {
-                            <span class="replay-error" role="alert">{{ replayError() }}</span>
-                          }
-                        </div>
-                        <div class="detail-actions">
-                          <button
-                            type="button"
-                            (click)="groundAnalysis()"
-                            [disabled]="analysisLoading()"
-                          >
-                            <ng-icon name="phosphorSparkle" size="15" />{{
-                              analysisLoading()
-                                ? 'Reading sealed record…'
-                                : 'Analyze selected proposal'
-                            }}
-                          </button>
-                          <button type="button" (click)="exportReport()">
-                            <ng-icon name="phosphorDownloadSimple" size="15" />Export investigation
-                          </button>
-                        </div>
-                        @if (analysis(); as answer) {
-                          <section class="grounded-analysis" aria-live="polite">
-                            <strong>Proposal-specific evidence analysis</strong>
-                            <p>{{ answer.explanation }}</p>
-                            <dl>
-                              @for (fact of answer.facts; track fact.label) {
-                                <div>
-                                  <dt>{{ fact.label }}</dt>
-                                  <dd>{{ fact.value }}</dd>
-                                </div>
-                              }
-                            </dl>
-                            <div>
-                              <code>sealed record · {{ answer.recordSha256.slice(0, 16) }}</code>
-                            </div>
-                          </section>
-                        } @else if (analysisError()) {
-                          <p class="analysis-error" role="alert">{{ analysisError() }}</p>
-                        }
-                      </article>
-                    }
-                  </div>
-                </section>
+                        </article>
+                      }
+                    </div>
+                  </section>
+                }
               </section>
             </div>
           }
@@ -923,25 +746,47 @@ export class ProductShell {
   protected readonly modelStudy = signal(
     new URLSearchParams(window.location.search).get('study') ?? 'prediction',
   );
-  protected readonly sort = signal<ProposalSort>('criticality');
-  protected readonly filter = signal<ProposalFilter>('all');
-  protected readonly rank = signal<InvestigationRank>('closest');
   protected readonly comparison = signal<readonly InvestigationProposal[]>([]);
+  protected readonly showComparison = signal(false);
+  protected readonly comparisonMeasurements = [
+    { key: 'gap', label: 'Minimum gap (m)' },
+    { key: 'onset', label: 'Braking onset shift (s)' },
+    { key: 'speed', label: 'Recorded lead speed (%)' },
+    { key: 'tested', label: 'Tested planner' },
+    { key: 'reference', label: 'Reference planner' },
+    { key: 'support', label: 'Recorded-behavior support' },
+    { key: 'regression', label: 'Qualifying regression' },
+  ];
+  protected comparisonValue(p: InvestigationProposal, key: string): string {
+    if (key === 'gap')
+      return p.objectiveAvailable ? this.clearanceValue(p.criticality) : 'Not evaluated';
+    if (key === 'onset') return this.signedSeconds(p.brakingOnsetOffsetSeconds);
+    if (key === 'speed') return (p.speedMultiplier * 100).toFixed(1) + '%';
+    if (key === 'tested')
+      return p.testedMutatedFailure === true
+        ? 'Failed'
+        : p.testedMutatedFailure === false
+          ? 'Succeeded'
+          : 'Not evaluated';
+    if (key === 'reference')
+      return p.referenceMutatedSuccess === true
+        ? 'Succeeded'
+        : p.referenceMutatedSuccess === false
+          ? 'Failed'
+          : 'Not evaluated';
+    if (key === 'support') return this.supportLabel(p.empiricalSupportProbability, p.supportPasses);
+    return p.policySpecificAvoidableFailure === true ? 'Yes' : 'No';
+  }
   protected readonly analysis = signal<ProposalAnalysis | undefined>(undefined);
   protected readonly analysisLoading = signal(false);
   protected readonly analysisError = signal<string | undefined>(undefined);
   protected readonly replayLoading = signal(false);
   protected readonly replayError = signal<string | undefined>(undefined);
-  protected readonly browseCells = signal(false);
   protected readonly showGateDetails = signal(false);
   private analysisGeneration = 0;
+  private readonly healthQueryKeys = ['health_source', 'section', 'issue', 'suite'];
+  private healthContext: URLSearchParams | undefined;
 
-  protected isSelected(proposal: InvestigationProposal): boolean {
-    return (
-      this.local.selectedCellId() === proposal.cellId &&
-      this.local.selectedProposalNumber() === proposal.proposalNumber
-    );
-  }
   protected clearanceValue(value: number): string {
     return value > 0 ? Math.max(1 / value - 1, 0).toFixed(2) + ' m' : '—';
   }
@@ -972,67 +817,33 @@ export class ProductShell {
     this.setView('investigate');
   }
 
-  protected readonly rankedProposals = computed(() => {
-    const proposals = this.local.proposals().filter((proposal) => {
-      if (this.filter() === 'eligible') {
-        return (
-          proposal.pipelinePasses && proposal.supportPasses === true && proposal.referencePasses
-        );
-      }
-      if (this.filter() === 'support-rejected') {
-        return proposal.pipelinePasses && proposal.supportPasses === false;
-      }
-      if (this.filter() === 'pipeline-rejected') return !proposal.pipelinePasses;
-      return true;
-    });
-    return proposals.sort((a, b) => {
-      if (this.sort() === 'sequence') return a.proposalNumber - b.proposalNumber;
-      if (this.sort() === 'minimality')
-        return b.minimality - a.minimality || b.criticality - a.criticality;
-      if (this.sort() === 'support')
-        return (
-          (b.empiricalSupportProbability ?? -1) - (a.empiricalSupportProbability ?? -1) ||
-          b.criticality - a.criticality
-        );
-      return b.criticality - a.criticality || b.minimality - a.minimality;
-    });
-  });
-  protected readonly funnel = computed(() => {
-    const proposals = this.local.proposals();
-    return [
-      { label: 'proposed', count: proposals.length },
-      { label: 'pipeline valid', count: proposals.filter((p) => p.pipelinePasses).length },
-      {
-        label: 'support valid',
-        count: proposals.filter((p) => p.pipelinePasses && p.supportPasses === true).length,
-      },
-      {
-        label: 'reference passes',
-        count: proposals.filter(
-          (p) => p.pipelinePasses && p.supportPasses === true && p.referencePasses,
-        ).length,
-      },
-      {
-        label: 'tested fails',
-        count: proposals.filter((p) => p.testedMutatedFailure === true).length,
-      },
-    ];
-  });
-
-  protected readonly campaignRanking = computed(() => {
-    const investigation = this.local.investigation();
-    if (investigation === undefined) return [];
-    if (this.rank() === 'minimal') return investigation.smallestMutation;
-    if (this.rank() === 'support') return investigation.highestSupport;
-    return investigation.closestMargin;
-  });
-
   protected setView(view: ProductView): void {
+    const url = new URL(window.location.href);
+    if (this.view() === 'operations' && view !== 'operations') {
+      // Keep the investigation in memory without leaking its route parameters
+      // onto unrelated pages. No credential or private evidence is retained.
+      this.healthContext = new URLSearchParams();
+      for (const key of this.healthQueryKeys) {
+        const value = url.searchParams.get(key);
+        if (value !== null) this.healthContext.set(key, value);
+      }
+    } else if (view === 'operations' && this.healthContext) {
+      for (const key of this.healthQueryKeys) {
+        const value = this.healthContext.get(key);
+        if (value === null) url.searchParams.delete(key);
+        else url.searchParams.set(key, value);
+      }
+    }
     if (view === 'replay') this.simulator.selectMode('planning');
     if (view === 'sensor') this.simulator.selectMode('camera');
     this.view.set(view);
     window.scrollTo({ top: 0, behavior: 'instant' });
-    const url = new URL(window.location.href);
+    if (view !== 'operations') {
+      for (const key of this.healthQueryKeys) url.searchParams.delete(key);
+    }
+    if (view !== 'experiments' && view !== 'operations') url.searchParams.delete('job');
+    if (!(view === 'investigate' && this.evidenceView() === 'deployment'))
+      url.searchParams.delete('study');
     url.searchParams.set(
       'view',
       view === 'operations'
@@ -1092,6 +903,7 @@ export class ProductShell {
     this.simulator.assistantOpen.update((value) => !value);
   }
   protected async openCampaignProposal(proposal: InvestigationProposal): Promise<void> {
+    this.showComparison.set(false);
     this.analysis.set(undefined);
     this.analysisError.set(undefined);
     this.analysisGeneration++;
@@ -1099,10 +911,7 @@ export class ProductShell {
     this.analysisLoading.set(false);
     try {
       await this.local.selectInvestigationProposal(proposal.cellId, proposal.proposalNumber);
-      if (window.innerWidth < 900)
-        document
-          .querySelector('.proposal-region')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.revealInspector();
     } catch {
       /* The connection banner exposes retry and the service error. */
     }
@@ -1116,15 +925,30 @@ export class ProductShell {
     );
     if (index >= 0) current.splice(index, 1);
     else if (current.length < 2) current.push(proposal);
-    else current.splice(0, 1, proposal);
     this.comparison.set(current);
+    this.openComparison();
   }
-  protected isCompared(proposal: InvestigationProposal): boolean {
-    return this.comparison().some(
-      (candidate) =>
-        candidate.cellId === proposal.cellId &&
-        candidate.proposalNumber === proposal.proposalNumber,
-    );
+  protected openComparison(): void {
+    this.showComparison.set(true);
+    this.revealInspector();
+  }
+  private revealInspector(): void {
+    requestAnimationFrame(() => {
+      const tabs = document.querySelector<HTMLElement>('.inspector-tabs');
+      tabs?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')?.focus({
+        preventScroll: true,
+      });
+      if (window.innerWidth < 900) tabs?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    });
+  }
+  protected async openComparedReplay(proposal: InvestigationProposal): Promise<void> {
+    if (!proposal.replayRunId) return;
+    try {
+      await this.local.selectInvestigationProposal(proposal.cellId, proposal.proposalNumber);
+      await this.openProposalReplay(proposal.replayRunId);
+    } catch {
+      this.replayError.set('Could not load this proposal. Reconnect the workspace and try again.');
+    }
   }
   protected formatGate(gate: string): string {
     return (
@@ -1172,38 +996,16 @@ export class ProductShell {
     this.analysisLoading.set(false);
     try {
       await this.local.selectCell(cellId);
+      // Select the closest evaluated proposal, which is also the default list order.
+      // Keep a rejected proposal inspectable when the whole run was rejected.
+      const first = [...this.local.proposals()].sort(
+        (a, b) => b.criticality - a.criticality || a.proposalNumber - b.proposalNumber,
+      )[0];
+      if (first && this.local.selectedCellId() === cellId)
+        this.local.selectProposal(first.proposalNumber);
     } catch {
       /* Service exposes the recoverable error. */
     }
-  }
-  protected selectProposal(proposalNumber: number): void {
-    this.analysisGeneration++;
-    this.analysisLoading.set(false);
-    this.analysis.set(undefined);
-    this.analysisError.set(undefined);
-    this.local.selectProposal(proposalNumber);
-  }
-  protected changeSort(event: Event): void {
-    this.sort.set((event.target as HTMLSelectElement).value as ProposalSort);
-  }
-  protected changeCell(event: Event): void {
-    void this.selectCell((event.target as HTMLSelectElement).value);
-  }
-  protected changeFilter(event: Event): void {
-    this.filter.set((event.target as HTMLSelectElement).value as ProposalFilter);
-  }
-  protected proposalTitle(proposal: LocalProposal): string {
-    return proposal.objectiveAvailable
-      ? this.mutationNarrative(proposal)
-      : proposal.attemptStatus.replaceAll('_', ' ');
-  }
-  protected rankValue(proposal: LocalProposal): string {
-    if (this.sort() === 'sequence') return `#${proposal.proposalNumber}`;
-    if (this.sort() === 'minimality') return this.changeSizeLabel(proposal.minimality);
-    if (this.sort() === 'support') {
-      return this.supportLabel(proposal.empiricalSupportProbability, proposal.supportPasses);
-    }
-    return this.proximityLabel(proposal.criticality);
   }
   protected gateReason(proposal: LocalProposal): string {
     if (proposal.attemptStatus === 'mutation_rejected') return 'Mutation gate rejected';

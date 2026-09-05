@@ -14,9 +14,9 @@ interface FallbackScene {
     readonly current: Point2d;
     readonly footprint: string;
   }[];
-  readonly leadTrajectory: string;
-  readonly leadOriginalTrajectory: string;
-  readonly leadCurrent: Point2d;
+  readonly leadTrajectory: readonly string[];
+  readonly leadOriginalTrajectory: readonly string[];
+  readonly leadCurrent: Point2d | null;
   readonly leadFootprint: string;
   readonly exactFootprints: boolean;
   readonly markerRadius: number;
@@ -60,15 +60,19 @@ interface FallbackScene {
             />
           }
         }
-        <polyline class="lead-original" [attr.points]="fallbackScene().leadOriginalTrajectory" />
-        <polyline class="lead" [attr.points]="fallbackScene().leadTrajectory" />
+        @for (segment of fallbackScene().leadOriginalTrajectory; track $index) {
+          <polyline class="lead-original" [attr.points]="segment" />
+        }
+        @for (segment of fallbackScene().leadTrajectory; track $index) {
+          <polyline class="lead" [attr.points]="segment" />
+        }
         @if (fallbackScene().leadFootprint) {
           <polygon class="vehicle-footprint lead" [attr.points]="fallbackScene().leadFootprint" />
-        } @else {
+        } @else if (fallbackScene().leadCurrent; as lead) {
           <rect
             class="lead"
-            [attr.x]="fallbackScene().leadCurrent.x - fallbackScene().markerRadius * 1.8"
-            [attr.y]="-fallbackScene().leadCurrent.y - fallbackScene().markerRadius"
+            [attr.x]="lead.x - fallbackScene().markerRadius * 1.8"
+            [attr.y]="-lead.y - fallbackScene().markerRadius"
             [attr.width]="fallbackScene().markerRadius * 3.6"
             [attr.height]="fallbackScene().markerRadius * 2"
             [attr.rx]="fallbackScene().markerRadius * 0.35"
@@ -91,14 +95,33 @@ interface FallbackScene {
     </div>
     <div class="orientation" aria-hidden="true"><span>Ego aligned</span><i></i></div>
     <div class="legend" aria-label="Trajectory legend">
-      <span><i class="tested"></i>Tested</span>
-      <span><i class="reference"></i>Reference</span>
-      <span><i class="recorded"></i>Original tested</span>
-      <span><i class="lead"></i>Mutated lead</span>
+      <span
+        ><i class="tested"></i
+        >{{ store.selectedHypothesis().trajectoryLabels?.tested ?? 'Tested' }}</span
+      >
+      <span
+        ><i class="reference"></i
+        >{{ store.selectedHypothesis().trajectoryLabels?.reference ?? 'Reference' }}</span
+      >
+      <span
+        ><i class="recorded"></i
+        >{{ store.selectedHypothesis().trajectoryLabels?.recorded ?? 'Original tested' }}</span
+      >
+      <span
+        ><i class="lead"></i
+        >{{ store.selectedHypothesis().behaviorDecision ? 'Recorded lead' : 'Mutated lead' }}</span
+      >
     </div>
     <div class="planning-guide">
       <strong>Planner rollout · {{ store.timeSeconds().toFixed(1) }} s</strong>
-      <span>Green, yellow, and gray compare ego planners. Pink is the mutated lead vehicle.</span>
+      @if (!fallbackScene().leadCurrent) {
+        <span>Recorded lead not observed at this frame. Separation and TTC are unavailable.</span>
+      }
+      <span>{{
+        store.selectedHypothesis().behaviorDecision
+          ? 'Three outcomes for the same ego vehicle. Pink is unchanged recorded traffic.'
+          : 'Green, yellow, and gray compare ego planners. Pink is the mutated lead vehicle.'
+      }}</span>
       @if (fallbackScene().exactFootprints) {
         <span>Vehicle footprints use the recorded dimensions and headings, to scale.</span>
       } @else {
@@ -125,8 +148,8 @@ interface FallbackScene {
       top: 0;
       right: 0;
       bottom: 0;
-      left: 0;
-      width: 100%;
+      left: 270px;
+      width: calc(100% - 270px);
       height: 100%;
       background: #080d11;
     }
@@ -345,8 +368,9 @@ export class SceneViewport {
       reference: hypothesis.trajectories.reference.map(transform),
       recorded: hypothesis.trajectories.recorded.map(transform),
     };
-    const leadOriginal = run.mutationTarget.original.map(transform);
-    const leadTrajectory = run.mutationTarget.counterfactual.map(transform);
+    const observedTransform = (point: Point2d | null) => (point === null ? null : transform(point));
+    const leadOriginal = run.mutationTarget.original.map(observedTransform);
+    const leadTrajectory = run.mutationTarget.counterfactual.map(observedTransform);
     const conflictRegion = run.conflictRegion.map(transform);
     const allPoints = [
       ...trajectories.tested,
@@ -355,7 +379,7 @@ export class SceneViewport {
       ...leadOriginal,
       ...leadTrajectory,
       ...conflictRegion,
-    ];
+    ].filter((point): point is Point2d => point !== null);
     const xs = allPoints.map((point) => point.x);
     const ys = allPoints.map((point) => point.y);
     const minX = Math.min(...xs);
@@ -368,18 +392,51 @@ export class SceneViewport {
     const viewportAspect = 16 / 9;
     const currentTested = trajectories.tested[index];
     const currentLead = leadTrajectory[index];
-    const viewWidth = Math.min(width + padding * 2, Math.max(72, width * 0.58));
-    const viewHeight = Math.max(34, viewWidth / viewportAspect);
-    const interactionCenterX = (currentTested.x + currentLead.x) / 2;
-    const interactionCenterY = (currentTested.y + currentLead.y) / 2;
-    const centerX = Math.min(maxX - viewWidth * 0.32, interactionCenterX + viewWidth * 0.08);
-    const centerY = interactionCenterY;
+    let viewWidth = Math.min(width + padding * 2, Math.max(72, width * 0.58));
+    let viewHeight = Math.max(34, viewWidth / viewportAspect);
+    const interactionCenterX = currentLead
+      ? (currentTested.x + currentLead.x) / 2
+      : currentTested.x;
+    const interactionCenterY = currentLead
+      ? (currentTested.y + currentLead.y) / 2
+      : currentTested.y;
+    let centerX = Math.min(maxX - viewWidth * 0.32, interactionCenterX + viewWidth * 0.08);
+    let centerY = interactionCenterY;
+    if (hypothesis.behaviorDecision) {
+      // Command loss can stop one policy while others continue. Keep all measured
+      // ego outcomes in view; following only the stopped one hides the comparison.
+      const current = [
+        ...Object.values(trajectories).map((line) => line[index]),
+        ...(currentLead ? [currentLead] : []),
+      ];
+      const left = Math.min(...current.map((p) => p.x));
+      const right = Math.max(...current.map((p) => p.x));
+      const bottom = Math.min(...current.map((p) => p.y));
+      const top = Math.max(...current.map((p) => p.y));
+      viewWidth = Math.max(72, right - left + 20, (top - bottom + 20) * viewportAspect);
+      viewHeight = Math.max(34, viewWidth / viewportAspect);
+      centerX = (left + right) / 2;
+      centerY = (bottom + top) / 2;
+    }
     const points = (line: readonly Point2d[]): string =>
       line.map((point) => `${point.x},${-point.y}`).join(' ');
+    const segments = (line: readonly (Point2d | null)[]): readonly string[] => {
+      const result: string[] = [];
+      let segment: Point2d[] = [];
+      for (const point of [...line, null]) {
+        if (point === null) {
+          if (segment.length > 1) result.push(points(segment));
+          segment = [];
+        } else segment.push(point);
+      }
+      return result;
+    };
     const markerRadius = Math.max(width, height) * 0.0065;
     const footprints = hypothesis.vehicleFootprints;
-    const footprint = (kind: TrajectoryKind | 'lead'): string =>
-      footprints ? points(footprints[kind][index].map(transform)) : '';
+    const footprint = (kind: TrajectoryKind | 'lead'): string => {
+      const frame = footprints?.[kind][index];
+      return frame ? points(frame.map(transform)) : '';
+    };
     return {
       viewBox: `${centerX - viewWidth / 2} ${-(centerY + viewHeight / 2)} ${viewWidth} ${viewHeight}`,
       roadCenterlines: roadCenterlines.map(points),
@@ -393,8 +450,8 @@ export class SceneViewport {
           footprint: footprint(kind),
         };
       }),
-      leadTrajectory: points(leadTrajectory),
-      leadOriginalTrajectory: points(leadOriginal),
+      leadTrajectory: segments(leadTrajectory),
+      leadOriginalTrajectory: segments(leadOriginal),
       leadCurrent: currentLead,
       leadFootprint: footprint('lead'),
       exactFootprints: !!footprints,

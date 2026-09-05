@@ -19,9 +19,9 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MANIFEST = Path("artifacts/stage-0/scenario-selection.json")
 SUPPORT = Path("artifacts/realism/lead-braking-support-v1-00c3727/model.json")
@@ -45,6 +45,10 @@ STAGES = {
     "validation": "Evaluating realism and reproducibility",
     "export": "Verifying and retaining exact trajectories",
     "complete": "Experiment complete",
+    "baseline": "Running the primary baseline twice",
+    "unprotected": "Running command loss without protection twice",
+    "protected": "Running fallback and recovery protection twice",
+    "behavior_validation": "Checking behavior gates and repeatability",
 }
 RECOVERY = {
     "inputs": "Prepare planning inputs with the planning setup command, then retry.",
@@ -71,11 +75,30 @@ class ExperimentConfig(BaseModel):
     braking_onset_offset_s: float = Field(ge=0, le=0.5)
     speed_multiplier: float = Field(ge=0.75, le=1)
     tested_controller: TestedControllerConfig | None = None
+    test_plan: Literal["lead_braking", "command_dropout", "assistance_handoff"] = (
+        "lead_braking"
+    )
+
+    @model_validator(mode="after")
+    def fixed_fault_protocol(self) -> ExperimentConfig:
+        if self.test_plan != "lead_braking" and (
+            self.braking_onset_offset_s != 0
+            or self.speed_multiplier != 1
+            or self.tested_controller is not None
+        ):
+            raise ValueError("Fault plans use unchanged traffic and fixed controllers")
+        return self
 
     def record(self) -> dict[str, Any]:
         # Keep existing default requests byte-compatible. An explicit custom
         # configuration records every parameter, including supplied defaults.
-        return self.model_dump(exclude={"request_id"}, exclude_none=True)
+        value = self.model_dump(
+            exclude={"request_id", "completion_deadline_seconds", "rerun_of"},
+            exclude_none=True,
+        )
+        if self.test_plan == "lead_braking":
+            value.pop("test_plan")
+        return value
 
     @field_validator("braking_onset_offset_s")
     @classmethod
@@ -87,6 +110,16 @@ class ExperimentConfig(BaseModel):
 
 class ExperimentRequest(ExperimentConfig):
     request_id: str = Field(pattern=r"^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$")
+    completion_deadline_seconds: int = Field(default=120, ge=10, le=MAX_SECONDS)
+    rerun_of: str | None = Field(default=None, pattern=r"^[0-9a-f]{32}$")
+
+
+def protocol_for(config: ExperimentConfig) -> str:
+    return (
+        PROTOCOL
+        if config.test_plan == "lead_braking"
+        else f"interactive-{config.test_plan.replace('_', '-')}-v1"
+    )
 
 
 def digest(value: Any) -> str:
@@ -198,6 +231,7 @@ class ExperimentJobs:
             "ready": not missing,
             "missing": missing,
             "protocol": PROTOCOL,
+            "test_plans": ["lead_braking", "command_dropout", "assistance_handoff"],
             "empirical_support_ready": support_path(self.root).is_file(),
             "maximum_seconds": MAX_SECONDS,
             "maximum_concurrent_jobs": 1,
@@ -243,11 +277,25 @@ class ExperimentJobs:
             config = request.record()
             for existing in records:
                 if existing["request_id"] == request.request_id:
-                    if existing["config"] != config:
+                    if (
+                        existing["config"] != config
+                        or existing.get("rerun_of") != request.rerun_of
+                        or existing.get("completion_deadline_seconds", 120)
+                        != request.completion_deadline_seconds
+                    ):
                         raise ValueError(
                             "Request ID was already used for another configuration"
                         )
                     return existing
+            if request.rerun_of:
+                try:
+                    parent = self.get(request.rerun_of)
+                except KeyError:
+                    raise ValueError("Rerun source does not exist") from None
+                if parent["status"] not in TERMINAL or parent["config"] != config:
+                    raise ValueError(
+                        "A linked rerun must repeat a finished configuration"
+                    )
             if self._active:
                 raise BusyError(
                     "One experiment is already running. Wait or cancel it first."
@@ -266,8 +314,10 @@ class ExperimentJobs:
             record = {
                 "job_id": job_id,
                 "request_id": request.request_id,
-                "protocol": PROTOCOL,
+                "protocol": protocol_for(request),
                 "config": config,
+                "completion_deadline_seconds": request.completion_deadline_seconds,
+                "rerun_of": request.rerun_of,
                 "status": "running",
                 "stage": "starting",
                 "stage_label": STAGES["starting"],
@@ -281,7 +331,13 @@ class ExperimentJobs:
             write_json(directory / "state.json", record)
             write_json(
                 directory / "request.json",
-                {"job_id": job_id, "protocol": PROTOCOL, "config": config},
+                {
+                    "job_id": job_id,
+                    "protocol": protocol_for(request),
+                    "config": config,
+                    "completion_deadline_seconds": request.completion_deadline_seconds,
+                    "rerun_of": request.rerun_of,
+                },
             )
             environment = dict(os.environ)
             for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
@@ -340,7 +396,21 @@ class ExperimentJobs:
             )
             or result.get("job_id") != job_id
             or result.get("config") != record["config"]
-            or result.get("protocol") != PROTOCOL
+            or result.get("protocol") != record["protocol"]
+            or (
+                "completion_deadline_seconds" in record
+                and result.get("execution")
+                != {
+                    key: record.get(key)
+                    for key in ("completion_deadline_seconds", "rerun_of")
+                }
+            )
+            or result.get("decision")
+            not in (
+                {"qualified", "not_qualified", "invalid_mutation"}
+                if record["config"].get("test_plan", "lead_braking") == "lead_braking"
+                else {"checks_passed", "checks_failed"}
+            )
         ):
             raise ValueError("Experiment result integrity mismatch")
         return result
@@ -442,6 +512,15 @@ def main() -> None:
     parser.add_argument("--onset", type=float, required=True)
     parser.add_argument("--speed", type=float, required=True)
     parser.add_argument(
+        "--test-plan",
+        choices=["lead_braking", "command_dropout", "assistance_handoff"],
+        default="lead_braking",
+    )
+    parser.add_argument("--completion-deadline-seconds", type=int, default=120)
+    parser.add_argument(
+        "--rerun-of", help="Opaque ID of a finished, identical configuration"
+    )
+    parser.add_argument(
         "--tested-controller-config",
         type=Path,
         help="Local JSON containing bounded IDM speed, spacing, and headway parameters",
@@ -451,6 +530,9 @@ def main() -> None:
         selection_order=args.selection_order,
         braking_onset_offset_s=args.onset,
         speed_multiplier=args.speed,
+        test_plan=args.test_plan,
+        completion_deadline_seconds=args.completion_deadline_seconds,
+        rerun_of=args.rerun_of,
         request_id=str(uuid.uuid4()),
         tested_controller=TestedControllerConfig.model_validate(
             read_json(args.tested_controller_config, limit=4096)

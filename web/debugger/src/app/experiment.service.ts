@@ -4,6 +4,7 @@ import { parseLocalRun } from './local-evidence.parsers';
 import { DebuggerRun } from './debugger.types';
 
 export interface ExperimentConfig {
+  test_plan?: 'lead_braking' | 'command_dropout' | 'assistance_handoff';
   selection_order: number;
   braking_onset_offset_s: number;
   speed_multiplier: number;
@@ -36,6 +37,7 @@ export function validControllerConfig(value: unknown): value is TestedController
 export function sameExperimentConfig(a: ExperimentConfig, b: ExperimentConfig): boolean {
   return (
     a.selection_order === b.selection_order &&
+    (a.test_plan ?? 'lead_braking') === (b.test_plan ?? 'lead_braking') &&
     a.braking_onset_offset_s === b.braking_onset_offset_s &&
     a.speed_multiplier === b.speed_multiplier &&
     (a.tested_controller === undefined
@@ -47,7 +49,9 @@ export function sameExperimentConfig(a: ExperimentConfig, b: ExperimentConfig): 
   );
 }
 export interface ExperimentResult {
-  decision: 'qualified' | 'not_qualified' | 'invalid_mutation';
+  decision: 'qualified' | 'not_qualified' | 'invalid_mutation' | 'checks_passed' | 'checks_failed';
+  behavior_events?: { step: number; time_seconds: number; label: string }[];
+  qualification?: Record<string, { post_fault_progress_m?: number }>;
   explanation: string;
   gates: Record<string, boolean>;
   support_probability: number | null;
@@ -65,6 +69,8 @@ export interface ExperimentResult {
   original_controllers?: ExperimentResult['controllers'];
 }
 export interface ExperimentJob {
+  completion_deadline_seconds?: number;
+  rerun_of?: string | null;
   job_id: string;
   config: ExperimentConfig;
   status:
@@ -85,6 +91,61 @@ export interface ExperimentReadiness {
   boundary: string;
 }
 
+export interface ExperimentHealth {
+  status: 'empty' | 'healthy' | 'running' | 'attention';
+  total_jobs: number;
+  active_incidents: number;
+  resolved_incidents: number;
+  deadline_measured_jobs: number;
+  on_time_completed_jobs: number;
+  unmeasured_jobs: number;
+  incidents: {
+    job_id: string;
+    kind: string;
+    selection_order: number;
+    test_plan: string;
+    component: string;
+    stage_label: string;
+    elapsed_seconds: number;
+    deadline_seconds: number | null;
+    recovery: string;
+    resolved_by: string | null;
+  }[];
+}
+
+export function parseExperimentHealth(value: unknown): ExperimentHealth {
+  const health = value as ExperimentHealth | null;
+  if (
+    !health ||
+    !['empty', 'healthy', 'running', 'attention'].includes(health.status) ||
+    ![
+      'total_jobs',
+      'active_incidents',
+      'resolved_incidents',
+      'deadline_measured_jobs',
+      'on_time_completed_jobs',
+      'unmeasured_jobs',
+    ].every(
+      (key) =>
+        Number.isInteger(health[key as keyof ExperimentHealth]) &&
+        Number(health[key as keyof ExperimentHealth]) >= 0,
+    ) ||
+    !Array.isArray(health.incidents) ||
+    health.incidents.some(
+      (item) =>
+        !item ||
+        !/^[0-9a-f]{32}$/.test(item.job_id) ||
+        typeof item.recovery !== 'string' ||
+        typeof item.kind !== 'string' ||
+        typeof item.stage_label !== 'string' ||
+        (item.resolved_by !== null && !/^[0-9a-f]{32}$/.test(item.resolved_by)),
+    )
+  ) {
+    throw new Error('Invalid live test-health response');
+  }
+  return health;
+}
+
 export function parseExperimentJob(value: unknown): ExperimentJob {
   if (typeof value !== 'object' || value === null) throw new Error('Invalid experiment response');
   const item = value as ExperimentJob;
@@ -100,6 +161,14 @@ export function parseExperimentJob(value: unknown): ExperimentJob {
       'timed_out',
     ].includes(item.status) ||
     !item.config ||
+    !['lead_braking', 'command_dropout', 'assistance_handoff'].includes(
+      item.config.test_plan ?? 'lead_braking',
+    ) ||
+    (item.rerun_of != null && !/^[0-9a-f]{32}$/.test(item.rerun_of)) ||
+    (item.completion_deadline_seconds !== undefined &&
+      (!Number.isInteger(item.completion_deadline_seconds) ||
+        item.completion_deadline_seconds < 10 ||
+        item.completion_deadline_seconds > 900)) ||
     !Number.isInteger(item.config.selection_order) ||
     item.config.selection_order < 1 ||
     item.config.selection_order > 10 ||
@@ -132,7 +201,13 @@ export function parseExperimentJob(value: unknown): ExperimentJob {
     item.result !== null &&
     (!item.result ||
       typeof item.result.explanation !== 'string' ||
-      !['qualified', 'not_qualified', 'invalid_mutation'].includes(item.result.decision) ||
+      ![
+        'qualified',
+        'not_qualified',
+        'invalid_mutation',
+        'checks_passed',
+        'checks_failed',
+      ].includes(item.result.decision) ||
       !item.result.gates ||
       Object.values(item.result.gates).some((value) => typeof value !== 'boolean') ||
       !/^[0-9a-f]{64}$/.test(item.result.result_sha256))
@@ -161,6 +236,7 @@ export class ExperimentService {
   private readonly root = `http://${window.location.hostname === 'localhost' ? 'localhost' : '127.0.0.1'}:8765/api/v1/experiments`;
   readonly jobs = signal<readonly ExperimentJob[]>([]);
   readonly readiness = signal<ExperimentReadiness | undefined>(undefined);
+  readonly health = signal<ExperimentHealth | undefined>(undefined);
   readonly selectedId = signal<string | undefined>(
     new URLSearchParams(window.location.search).get('job') ??
       new URLSearchParams(window.location.search).get('experiment') ??
@@ -177,8 +253,13 @@ export class ExperimentService {
   readonly busy = signal(false);
   private generation = 0;
   private refreshSequence = 0;
+  private refreshFailure?: string;
   private timer?: ReturnType<typeof setTimeout>;
-  private pending?: ExperimentConfig & { request_id: string };
+  private pending?: ExperimentConfig & {
+    request_id: string;
+    completion_deadline_seconds: number;
+    rerun_of?: string;
+  };
 
   selectJob(jobId: string): void {
     if (!this.jobs().some((job) => job.job_id === jobId)) return;
@@ -197,6 +278,7 @@ export class ExperimentService {
       else {
         this.jobs.set([]);
         this.readiness.set(undefined);
+        this.health.set(undefined);
         this.error.set(undefined);
       }
     });
@@ -237,9 +319,10 @@ export class ExperimentService {
     const sequence = ++this.refreshSequence;
     clearTimeout(this.timer);
     try {
-      const [readiness, history] = await Promise.all([
+      const [readiness, history, health] = await Promise.all([
         this.request('/readiness'),
         this.request(''),
+        this.request('/health'),
       ]);
       if (generation !== this.generation || sequence !== this.refreshSequence) return;
       if (
@@ -253,16 +336,20 @@ export class ExperimentService {
       }
       this.readiness.set(readiness as ExperimentReadiness);
       this.jobs.set(history.map(parseExperimentJob));
+      this.health.set(parseExperimentHealth(health));
+      if (this.error() === this.refreshFailure) this.error.set(undefined);
+      this.refreshFailure = undefined;
       if (!this.selectedId() || !this.jobs().some((job) => job.job_id === this.selectedId())) {
         this.selectedId.set(this.jobs()[0]?.job_id);
       }
     } catch (error) {
       if (generation !== this.generation || sequence !== this.refreshSequence) return;
-      this.error.set(
+      this.health.set(undefined);
+      this.refreshFailure =
         error instanceof Error && error.name !== 'TypeError'
           ? error.message
-          : 'Cannot reach the experiment runner. Reconnect or retry; saved jobs are retained.',
-      );
+          : 'Cannot reach the experiment runner. Reconnect or retry; saved jobs are retained.';
+      this.error.set(this.refreshFailure);
     } finally {
       if (
         generation === this.generation &&
@@ -274,13 +361,23 @@ export class ExperimentService {
     }
   }
 
-  async start(config: ExperimentConfig): Promise<void> {
+  async start(config: ExperimentConfig, deadline = 120, rerunOf?: string): Promise<void> {
     if (this.busy() || !this.local.connected()) return;
     const generation = this.generation;
     this.busy.set(true);
     this.error.set(undefined);
-    if (!this.pending || !sameExperimentConfig(this.pending, config)) {
-      this.pending = { ...config, request_id: crypto.randomUUID() };
+    if (
+      !this.pending ||
+      !sameExperimentConfig(this.pending, config) ||
+      this.pending.completion_deadline_seconds !== deadline ||
+      this.pending.rerun_of !== rerunOf
+    ) {
+      this.pending = {
+        ...config,
+        request_id: crypto.randomUUID(),
+        completion_deadline_seconds: deadline,
+        ...(rerunOf ? { rerun_of: rerunOf } : {}),
+      };
     }
     try {
       const job = parseExperimentJob(await this.request('', this.pending));
@@ -329,7 +426,10 @@ export class ExperimentService {
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = `planmargin-experiment-${jobId.slice(0, 8)}.json`;
+    anchor.hidden = true;
+    document.body.appendChild(anchor);
     anchor.click();
+    anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }

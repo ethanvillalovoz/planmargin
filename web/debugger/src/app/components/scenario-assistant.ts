@@ -511,8 +511,12 @@ export class ScenarioAssistant {
       return 'Open a retained replay to inspect its exact path and smallest margin.';
     const hypothesis = this.store.selectedHypothesis();
     const minimum = hypothesis.metrics.reduce((best, value) =>
-      value.signedSeparationMeters < best.signedSeparationMeters ? value : best,
+      (value.signedSeparationMeters ?? Infinity) < (best.signedSeparationMeters ?? Infinity)
+        ? value
+        : best,
     );
+    if (minimum.signedSeparationMeters === null)
+      return 'This replay has no observed lead-vehicle separation measurements.';
     return `${hypothesis.label} reaches ${minimum.signedSeparationMeters.toFixed(2)} m signed separation at ${minimum.timeSeconds.toFixed(1)} s. The tested controller ${hypothesis.controllerOutcome.tested}; the reference controller ${hypothesis.controllerOutcome.reference}.`;
   });
   protected readonly scenarioComparison = computed(() => {
@@ -613,7 +617,10 @@ export class ScenarioAssistant {
     const metrics = this.store.selectedHypothesis().metrics;
     const minimumIndex = metrics.reduce(
       (best, value, index) =>
-        value.signedSeparationMeters < metrics[best].signedSeparationMeters ? index : best,
+        (value.signedSeparationMeters ?? Infinity) <
+        (metrics[best].signedSeparationMeters ?? Infinity)
+          ? index
+          : best,
       0,
     );
     this.simulator.showPlanningFrame(minimumIndex);

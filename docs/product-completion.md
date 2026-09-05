@@ -27,6 +27,28 @@ research questions are resolved.
 
 ## Verification
 
+### September 5 workflow follow-up
+
+The subsequent workflow changes add interactive command-loss/recovery tests,
+declared job deadlines and linked-rerun health diagnostics, and a scenario-first
+proposal browser with a visible two-record measurement comparison. Saved
+replays open individually; the comparison is not simultaneous scene playback.
+
+The combined working implementation passed **356 Python tests**, **109 frontend
+tests**, formatting/typechecks, native package and frontend builds, and **19
+Chromium browser cases** across desktop/mobile on September 5. One mobile-only
+case is deliberately skipped in the desktop project. The first browser pass
+caught a lost health selection and outdated proposal selectors; the fixes were
+verified by rerunning the entire suite, not by removing the assertions.
+
+Manual use of the authenticated local application also exercised proposal
+browsing, two-record comparison, individually retained replays, and the
+saved-health → model-evidence → same-health-issue round trip. Browser fixture
+tests remain distinct from real-data verification. The September 4 acceptance
+record below is retained as historical evidence, not relabeled as a fresh run.
+
+### September 4 acceptance record
+
 Verified on **2026-09-04**: the finish implementation
 [`0ac6309`](https://github.com/ethanvillalovoz/planmargin/commit/0ac6309c0de93e0a378002d404146cbbefd3c07d)
 was merged in [PR #97](https://github.com/ethanvillalovoz/planmargin/pull/97).

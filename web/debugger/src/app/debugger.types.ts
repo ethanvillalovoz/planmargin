@@ -7,7 +7,7 @@ export interface Point2d {
 
 export interface MetricSample {
   readonly timeSeconds: number;
-  readonly signedSeparationMeters: number;
+  readonly signedSeparationMeters: number | null;
   readonly longitudinalTtcSeconds: number | null;
 }
 
@@ -18,8 +18,8 @@ export interface TrajectorySet {
 }
 
 export interface MutationTarget {
-  readonly original: readonly Point2d[];
-  readonly counterfactual: readonly Point2d[];
+  readonly original: readonly (Point2d | null)[];
+  readonly counterfactual: readonly (Point2d | null)[];
 }
 
 export interface ControllerOutcome {
@@ -28,6 +28,10 @@ export interface ControllerOutcome {
 }
 
 export interface DebuggerHypothesis {
+  readonly behaviorEvents?: readonly { step: number; timeSeconds: number; label: string }[];
+  readonly behaviorDecision?: 'checks_passed' | 'checks_failed';
+  readonly behaviorBoundary?: string;
+  readonly trajectoryLabels?: Readonly<Record<TrajectoryKind, string>>;
   readonly id: string;
   readonly label: string;
   readonly onsetSeconds: number;
@@ -41,7 +45,7 @@ export interface DebuggerHypothesis {
   readonly trajectories: TrajectorySet;
   readonly metrics: readonly MetricSample[];
   readonly vehicleFootprints?: Readonly<
-    Record<TrajectoryKind | 'lead', readonly (readonly Point2d[])[]>
+    Record<TrajectoryKind | 'lead', readonly (readonly Point2d[] | null)[]>
   >;
 }
 

@@ -19,6 +19,19 @@ const JOB = {
   result: null,
   error: null,
 };
+const HEALTH = {
+  status: 'empty',
+  total_jobs: 0,
+  active_incidents: 0,
+  resolved_incidents: 0,
+  deadline_measured_jobs: 0,
+  on_time_completed_jobs: 0,
+  unmeasured_jobs: 0,
+  incidents: [],
+};
+function pollResponse(url: string): object {
+  return url.endsWith('/readiness') ? { ready: true } : url.endsWith('/health') ? HEALTH : [];
+}
 
 describe('experiment response contract', () => {
   it('validates custom controller settings and distinguishes drafts by all parameters', () => {
@@ -70,7 +83,7 @@ describe('ExperimentService lifecycle', () => {
   beforeEach(() => {
     fetchMock = vi.fn().mockImplementation((url: string) =>
       Promise.resolve(
-        new Response(JSON.stringify(url.endsWith('/readiness') ? { ready: true } : []), {
+        new Response(JSON.stringify(pollResponse(url)), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
@@ -91,8 +104,8 @@ describe('ExperimentService lifecycle', () => {
   it('does not restore private history from a request that finishes after disconnect', async () => {
     let resolveHistory!: (value: Response) => void;
     fetchMock.mockImplementation((url: string) =>
-      url.endsWith('/readiness')
-        ? Promise.resolve(new Response(JSON.stringify({ ready: true })))
+      url.endsWith('/readiness') || url.endsWith('/health')
+        ? Promise.resolve(new Response(JSON.stringify(pollResponse(url))))
         : new Promise((resolve) => {
             resolveHistory = resolve;
           }),
@@ -113,9 +126,7 @@ describe('ExperimentService lifecycle', () => {
         requests.push(JSON.parse(options.body as string));
         return Promise.reject(new Error('Test-only lost response'));
       }
-      return Promise.resolve(
-        new Response(JSON.stringify(url.endsWith('/readiness') ? { ready: true } : [])),
-      );
+      return Promise.resolve(new Response(JSON.stringify(pollResponse(url))));
     });
     await experiments.start(JOB.config);
     await experiments.start(JOB.config);
@@ -131,9 +142,7 @@ describe('ExperimentService lifecycle', () => {
         requests.push(JSON.parse(options.body as string));
         return Promise.reject(new Error('Test-only lost response'));
       }
-      return Promise.resolve(
-        new Response(JSON.stringify(url.endsWith('/readiness') ? { ready: true } : [])),
-      );
+      return Promise.resolve(new Response(JSON.stringify(pollResponse(url))));
     });
     const controller = { desired_vel_mps: 24, min_spacing_m: 3, safe_time_headway_s: 2.5 };
     await experiments.start({ ...JOB.config, tested_controller: controller });

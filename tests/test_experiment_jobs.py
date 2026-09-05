@@ -18,7 +18,6 @@ from planmargin.experiment_jobs import (
     ExperimentRequest,
     JOBS,
     MANIFEST,
-    PROTOCOL,
     TERMINAL,
     confined,
     digest,
@@ -88,14 +87,57 @@ def wait_finished(manager, job_id):
 def seal_result(manager, record, decision="not_qualified"):
     value = {
         "job_id": record["job_id"],
-        "protocol": PROTOCOL,
+        "protocol": record["protocol"],
         "config": record["config"],
+        "execution": {
+            key: record.get(key) for key in ("completion_deadline_seconds", "rerun_of")
+        },
         "decision": decision,
         "collection_sha256": None,
     }
     value["result_sha256"] = digest(value)
     write_json(manager.path(record["job_id"]) / "result.json", value)
     return value
+
+
+def test_fault_request_and_linked_rerun_preserve_identity(workspace):
+    manager, created = workspace
+    config = request(test_plan="assistance_handoff", speed_multiplier=1.0)
+    first = manager.start(config)
+    assert first["protocol"] == "interactive-assistance-handoff-v1"
+    assert first["completion_deadline_seconds"] == 120
+    manager.cancel(first["job_id"])
+    with pytest.raises(ValueError, match="repeat a finished configuration"):
+        manager.start(request(rerun_of=first["job_id"]))
+    with pytest.raises(ValueError, match="does not exist"):
+        manager.start(request(rerun_of="b" * 32))
+    retry = request(
+        test_plan="assistance_handoff",
+        speed_multiplier=1.0,
+        rerun_of=first["job_id"],
+        completion_deadline_seconds=180,
+    )
+    second = manager.start(retry)
+    assert second["rerun_of"] == first["job_id"]
+    assert manager.start(retry)["job_id"] == second["job_id"]
+    with pytest.raises(ValueError, match="already used"):
+        manager.start(retry.model_copy(update={"completion_deadline_seconds": 240}))
+    seal_result(manager, second, decision="checks_passed")
+    created[-1][0].returncode = 0
+    assert wait_finished(manager, second["job_id"])["status"] == "succeeded"
+    assert manager.get(first["job_id"])["status"] == "cancelled"
+
+
+def test_result_cannot_change_the_declared_execution_deadline(workspace):
+    manager, created = workspace
+    record = manager.start(request())
+    result = seal_result(manager, record)
+    result["execution"]["completion_deadline_seconds"] = 900
+    result.pop("result_sha256")
+    result["result_sha256"] = digest(result)
+    write_json(manager.path(record["job_id"]) / "result.json", result)
+    created[-1][0].returncode = 0
+    assert wait_finished(manager, record["job_id"])["status"] == "failed"
 
 
 @pytest.mark.parametrize(
@@ -121,6 +163,17 @@ def seal_result(manager, record, decision="not_qualified"):
         {"tested_controller": {"safe_time_headway_s": True}},
         {"tested_controller": {"safe_time_headway_s": 5.1}},
         {"request_id": "../../outside"},
+        {"test_plan": "shell"},
+        {"test_plan": "command_dropout"},
+        {
+            "test_plan": "assistance_handoff",
+            "speed_multiplier": 1.0,
+            "tested_controller": {},
+        },
+        {"completion_deadline_seconds": 9},
+        {"completion_deadline_seconds": 901},
+        {"completion_deadline_seconds": True},
+        {"rerun_of": "../../outside"},
     ],
 )
 def test_configuration_is_bounded(overrides):
@@ -307,6 +360,11 @@ def test_planning_only_api_auth_csrf_and_missing_setup(tmp_path):
     headers = {"X-PlanMargin-Token": TOKEN}
     with TestClient(app) as client:
         assert client.get("/api/v1/experiments").status_code == 401
+        assert client.get("/api/v1/experiments/health").status_code == 401
+        assert (
+            client.get("/api/v1/experiments/health", headers=headers).json()["status"]
+            == "empty"
+        )
         assert (
             client.get("/api/v1/health", headers=headers).json()["campaign_ready"]
             is False

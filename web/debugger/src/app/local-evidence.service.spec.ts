@@ -255,6 +255,17 @@ describe('LocalEvidenceService', () => {
     expect(service.error()).toBeUndefined();
   });
 
+  it('allows first-use browsing with no API, but reports loss of an established connection', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('network unavailable'));
+    await expect(service.restoreBrowserSession()).resolves.toBeUndefined();
+    expect(service.state()).toBe('disconnected');
+    expect(service.error()).toBeUndefined();
+    service.state.set('connected');
+    fetchMock.mockRejectedValueOnce(new TypeError('network unavailable'));
+    await expect(service.restoreBrowserSession()).rejects.toThrow();
+    expect(service.state()).toBe('error');
+  });
+
   it('loads bounded assistant answers and Gaussian bytes through authenticated routes', async () => {
     await service.connect('0123456789abcdef');
 

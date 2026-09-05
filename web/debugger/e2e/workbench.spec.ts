@@ -266,11 +266,14 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
   await page.getByRole('button', { name: 'Investigate', exact: true }).click();
 
   await expect(page.getByText('Counterfactual investigation')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Scenario changes' })).toBeVisible();
-  await page.getByRole('button', { name: 'Strongest precedent' }).click();
-  await page.getByRole('button', { name: 'Compare' }).click();
-  await expect(page.getByText('Comparison · 1/2')).toBeVisible();
-  await page.getByRole('button', { name: /^Inspect bayesian scenario/ }).click();
+  await expect(page.getByRole('heading', { name: 'Browse recorded tests' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Sort proposals' }).selectOption('support');
+  await page.getByRole('button', { name: /^Compare scenario/ }).click();
+  await expect(page.getByRole('heading', { name: 'Proposal comparison' })).toBeVisible();
+  await expect(
+    page.getByRole('table', { name: 'Proposal measurements side by side' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Inspect A', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Tested planner still succeeds' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Analyze selected proposal' }).click();
@@ -351,7 +354,7 @@ test('an expired evidence session produces a recovery state rather than an empty
   await page.route('**/api/v1/cells/cell_opaque/proposals', (route) =>
     route.fulfill({ status: 401, body: '{}' }),
   );
-  await page.getByRole('button', { name: /^Inspect bayesian scenario/ }).click();
+  await page.getByRole('button', { name: /^Inspect scenario/ }).click();
   await expect(
     page.getByRole('button', { name: 'Reconnect workspace', exact: true }),
   ).toBeVisible();
