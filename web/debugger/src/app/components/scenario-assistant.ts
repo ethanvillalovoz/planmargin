@@ -1,10 +1,14 @@
 import {
   ChangeDetectionStrategy,
+  afterNextRender,
   Component,
   computed,
   effect,
   inject,
+  output,
   signal,
+  viewChild,
+  ElementRef,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -24,9 +28,24 @@ import {
 } from '../product-evidence.types';
 import { SimulatorStore } from '../simulator.store';
 
+interface LocalAssistantReply {
+  readonly heading: string;
+  readonly body: string;
+}
+
 export function classifyAssistantQuestion(value: string): AssistantQueryId | undefined {
   const question = value.trim().toLowerCase();
   if (!question) return undefined;
+  if (/\b(test health|pipeline health|release health|healthy|slo|alert|on time)\b/.test(question)) {
+    return 'test_health';
+  }
+  if (
+    /\b(behavior coverage|test coverage|fault protection|command dropout|remote assistance|assistance handoff|off[- ]nominal)\b/.test(
+      question,
+    )
+  ) {
+    return 'behavior_coverage';
+  }
   if (/\b(tensorrt|fp16|fp32|inference|latency|throughput|t4)\b/.test(question)) {
     return 'inference_qualification';
   }
@@ -67,21 +86,18 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
     }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(keydown.escape)': 'close()' },
   template: `
     <aside class="assistant" aria-labelledby="assistant-title">
       <header>
         <div>
           <ng-icon name="phosphorSparkle" size="17" aria-hidden="true" />
           <div>
-            <strong id="assistant-title">{{ title() }}</strong
+            <strong id="assistant-title">PlanMargin assistant</strong
             ><span>{{ providerLabel() }}</span>
           </div>
         </div>
-        <button
-          type="button"
-          aria-label="Close analysis"
-          (click)="simulator.assistantOpen.set(false)"
-        >
+        <button type="button" aria-label="Close analysis" (click)="close()">
           <ng-icon name="phosphorX" size="16" />
         </button>
       </header>
@@ -103,6 +119,14 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
                     : 'Reading sealed evidence'
                 }}
               </div>
+            } @else if (localReply(); as reply) {
+              <div class="local-reply-label"><i></i>Local guide</div>
+              <h2>{{ reply.heading }}</h2>
+              <p>{{ reply.body }}</p>
+              <small>
+                Evidence questions use deterministic routing and verified tool results. Gemini only
+                synthesizes the returned public aggregate packet.
+              </small>
             } @else if (answer(); as response) {
               @if (usedFallback()) {
                 <p class="fallback-note">
@@ -111,8 +135,8 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
               }
               <p>{{ response.explanation.summary }}</p>
               <p>{{ response.explanation.interpretation }}</p>
-              <section class="verified-facts" aria-label="Verified facts used in this answer">
-                <strong>Verified facts</strong>
+              <details class="verified-facts">
+                <summary>Show verified facts ({{ response.tool_result.facts.length }})</summary>
                 <dl>
                   @for (fact of response.tool_result.facts; track fact.fact_id) {
                     <div>
@@ -124,35 +148,54 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
                     </div>
                   }
                 </dl>
-              </section>
+              </details>
               <small>{{ response.explanation.limitation }}</small>
             } @else {
-              <p>{{ scenarioInsight() }}</p>
-              <p>{{ scenarioComparison() }}</p>
+              <div class="local-reply-label"><i></i>Connected</div>
+              <h2>What should we inspect?</h2>
+              <p>
+                Ask about test health, behavior coverage, held engineering decisions, campaign
+                evidence, or model qualification.
+              </p>
               <small
-                >Trajectory evidence is privacy-reduced WOMD Motion; the visual sensor scene is a
-                separate WOD Perception segment.</small
+                >Campaign answers use verified aggregate records. For a specific change, use
+                “Analyze selected proposal” in Investigate.</small
               >
             }
           </article>
 
           <div class="assistant-actions">
-            <button type="button" (click)="showConflictFrame()">
-              <ng-icon name="phosphorPlayCircle" size="15" />Show planning conflict
-            </button>
-            @for (question of questions(); track question.query_id) {
+            <span>Suggested investigations</span>
+            @for (question of suggestedQuestions(); track question.query_id) {
               <button type="button" (click)="ask(question.query_id)">
                 <ng-icon name="phosphorChartLine" size="15" />{{ question.question }}
               </button>
             }
           </div>
+          @if (remainingQuestions().length > 0) {
+            <details class="more-actions">
+              <summary>
+                More evidence topics <b>{{ remainingQuestions().length }}</b>
+              </summary>
+              <div>
+                @for (question of remainingQuestions(); track question.query_id) {
+                  <button type="button" (click)="ask(question.query_id)">
+                    {{ question.question }}
+                  </button>
+                }
+              </div>
+            </details>
+          }
+          @if (store.hasRun()) {
+            <button type="button" class="context-action" (click)="showConflictFrame()">
+              <ng-icon name="phosphorPlayCircle" size="15" />Jump to smallest margin in the loaded
+              replay
+            </button>
+          }
         }
       </div>
 
       <form (submit)="submit($event)">
-        @if (notice()) {
-          <p class="notice" role="status">{{ notice() }}</p>
-        }
         @if (error()) {
           <p class="error" role="alert">{{ error() }}</p>
         }
@@ -160,6 +203,7 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
           #question
           type="text"
           name="question"
+          aria-label="Ask about campaign evidence…"
           autocomplete="off"
           placeholder="Ask about campaign evidence…"
           [disabled]="!local.connected() || loading()"
@@ -181,272 +225,283 @@ export function classifyAssistantQuestion(value: string): AssistantQueryId | und
     .assistant {
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
-      width: 100%;
-      max-height: min(64vh, 580px);
+      height: min(720px, calc(100dvh - 160px));
       overflow: hidden;
-      border: 1px solid rgb(132 155 168 / 28%);
-      border-radius: 12px;
-      background: rgb(5 13 20 / 94%);
-      color: #eef4f5;
-      box-shadow: 0 18px 50px rgb(0 0 0 / 30%);
-      backdrop-filter: blur(18px);
+      border: 1px solid #d6e1db;
+      border-radius: 16px;
+      background: #fff;
+      color: #172b22;
+      box-shadow: 0 12px 40px #12281e20;
     }
     header {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      min-height: 58px;
-      padding: 0 1rem;
-      border-bottom: 1px solid rgb(132 155 168 / 18%);
+      align-items: center;
+      gap: 12px;
+      padding: 18px;
+      border-bottom: 1px solid #e1e9e4;
     }
     header > div {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 10px;
     }
     header strong,
     header span {
       display: block;
     }
     header strong {
-      font-size: 0.82rem;
+      font-size: 15px;
     }
     header span {
-      margin-top: 0.12rem;
-      color: #78909e;
-      font-size: 0.58rem;
+      margin-top: 5px;
+      color: #65726c;
+      font-size: 10px;
+      line-height: 1.4;
     }
     header ng-icon {
-      color: #e6edf0;
+      color: #0c846b;
+    }
+    button,
+    input {
+      font: inherit;
+    }
+    button {
+      cursor: pointer;
     }
     header button {
       display: grid;
-      width: 30px;
-      height: 30px;
       place-items: center;
+      width: 32px;
+      height: 32px;
       border: 0;
-      border-radius: 6px;
-      background: transparent;
-      color: #92a3ad;
-    }
-    header button:hover {
-      background: rgb(255 255 255 / 7%);
-      color: #fff;
+      border-radius: 50%;
+      color: #60716b;
+      background: #f0f4f1;
     }
     .assistant-body {
-      min-height: 0;
-      padding: 0.8rem;
       overflow: auto;
+      min-height: 0;
+      padding: 20px;
     }
-    .answer {
-      padding: 0.85rem;
-      border: 1px solid rgb(132 155 168 / 14%);
-      border-radius: 9px;
-      background: rgb(255 255 255 / 3.5%);
+    .answer h2 {
+      font-size: 20px;
+      line-height: 1.3;
+      margin: 10px 0;
+      letter-spacing: -0.5px;
     }
     .answer p {
-      margin: 0;
-      color: #dce5e8;
-      font-size: 0.76rem;
-      line-height: 1.55;
-    }
-    .answer p + p {
-      margin-top: 0.65rem;
-    }
-    .answer .fallback-note {
-      margin: 0 0 0.7rem;
-      padding: 0.55rem 0.6rem;
-      border: 1px solid rgb(240 163 59 / 32%);
-      border-radius: 5px;
-      background: rgb(240 163 59 / 8%);
-      color: #eac17f;
-      font-size: 0.58rem;
+      font-size: 14px;
+      line-height: 1.7;
+      margin: 0 0 14px;
+      color: #43594d;
     }
     .answer small {
       display: block;
-      margin-top: 0.8rem;
-      padding-top: 0.65rem;
-      border-top: 1px solid rgb(132 155 168 / 13%);
-      color: #7f929d;
-      font-size: 0.6rem;
-      line-height: 1.5;
+      font-size: 11px;
+      color: #65766b;
+      line-height: 1.6;
+    }
+    .local-reply-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #20724e;
+      font-weight: 650;
+    }
+    .fallback-note,
+    .error {
+      padding: 12px;
+      background: #fff2e4;
+      color: #8a4b0b;
+      border-radius: 8px;
     }
     .verified-facts {
-      margin-top: 0.8rem;
-      padding-top: 0.7rem;
-      border-top: 1px solid rgb(132 155 168 / 13%);
+      margin: 18px 0;
+      border-block: 1px solid #e1e9e4;
+      padding: 14px 0;
     }
-    .verified-facts > strong {
-      color: #9dafb8;
-      font-size: 0.58rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
+    .verified-facts summary {
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 650;
+      color: #286846;
     }
     .verified-facts dl {
-      display: grid;
-      gap: 0.45rem;
-      margin: 0.55rem 0 0;
+      margin: 5px 0 0;
     }
-    .verified-facts div {
+    .verified-facts dl > div {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: baseline;
-      gap: 0.75rem;
+      gap: 6px;
+      padding: 12px 0;
+      border-bottom: 1px solid #edf1ee;
     }
     .verified-facts dt {
-      color: #9dafb8;
-      font-size: 0.58rem;
-      line-height: 1.4;
+      font-size: 12px;
+      color: #627167;
+      line-height: 1.5;
     }
     .verified-facts dd {
       margin: 0;
-      color: #eef4f5;
-      font-size: 0.64rem;
-      font-weight: 700;
-      text-align: right;
+      font-size: 13px;
+      font-weight: 600;
     }
     .assistant-actions {
+      margin: 28px 0 14px;
       display: grid;
-      gap: 0.45rem;
-      margin-top: 0.65rem;
+      gap: 8px;
     }
-    .assistant-actions button {
+    .assistant-actions > span {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #65726b;
+      margin-bottom: 4px;
+    }
+    .assistant-actions button,
+    .more-actions button {
       display: flex;
       align-items: center;
-      min-height: 39px;
-      gap: 0.55rem;
-      padding: 0 0.75rem;
-      border: 1px solid rgb(132 155 168 / 25%);
-      border-radius: 7px;
-      background: transparent;
-      color: #dce5e8;
-      font: inherit;
-      font-size: 0.69rem;
+      gap: 9px;
       text-align: left;
+      color: #25493b;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 12px;
+      border: 1px solid #dce6df;
+      border-radius: 8px;
+      background: #f7faf8;
     }
-    .assistant-actions button:hover {
-      border-color: #35c5d3;
-      color: #fff;
+    .assistant-actions button:hover,
+    .more-actions button:hover {
+      border-color: #86baa1;
+      background: #eaf5ef;
+    }
+    .more-actions summary {
+      cursor: pointer;
+      font-size: 12px;
+      color: #567061;
+      padding: 8px 0;
+    }
+    .more-actions > div {
+      display: grid;
+      gap: 6px;
+      padding-top: 8px;
+    }
+    .context-action {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border: 0;
+      border-top: 1px solid #e4eae6;
+      background: transparent;
+      color: #0c5ec6;
+      font-size: 12px;
+      padding: 18px 0 0;
+      margin-top: 20px;
+      text-align: left;
     }
     form {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 38px;
-      gap: 0.4rem;
-      padding: 0.75rem;
-      border-top: 1px solid rgb(132 155 168 / 18%);
-    }
-    form :is(.notice, .error) {
-      grid-column: 1 / -1;
-      margin: 0 0 0.25rem;
-      padding: 0.55rem 0.65rem;
-      border-radius: 6px;
-      background: rgb(255 255 255 / 4%);
+      grid-template-columns: minmax(0, 1fr) 42px;
+      gap: 8px;
+      padding: 16px;
+      border-top: 1px solid #e1e9e4;
     }
     input {
       min-width: 0;
-      min-height: 38px;
-      padding: 0 0.7rem;
-      border: 1px solid rgb(132 155 168 / 26%);
-      border-radius: 7px;
-      outline: 0;
-      background: rgb(255 255 255 / 3%);
-      color: #eef4f5;
-      font: inherit;
-      font-size: 0.69rem;
-    }
-    input:focus {
-      border-color: #35c5d3;
+      padding: 12px;
+      border: 1px solid #becfc4;
+      border-radius: 8px;
+      background: #fff;
+      color: #172b22;
+      font-size: 13px;
     }
     form button {
       display: grid;
       place-items: center;
-      border: 1px solid rgb(132 155 168 / 26%);
-      border-radius: 7px;
-      background: rgb(255 255 255 / 3%);
-      color: #35c5d3;
+      background: #1769ff;
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+    }
+    button:focus-visible,
+    input:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid #1769ff;
+      outline-offset: 3px;
     }
     :is(input, button):disabled {
+      opacity: 0.5;
       cursor: not-allowed;
-      opacity: 0.48;
-    }
-    .assistant-empty {
-      padding: 1rem;
-      text-align: center;
-    }
-    .assistant-empty strong {
-      font-size: 0.72rem;
-    }
-    .assistant-empty p {
-      color: #8496a1;
-      font-size: 0.63rem;
-      line-height: 1.5;
     }
     .error {
-      color: #ff806c;
-      font-size: 0.61rem;
+      grid-column: 1 / -1;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0;
     }
-    .notice {
-      color: #91a7b2;
-      font-size: 0.61rem;
-      line-height: 1.45;
+    .assistant-empty {
+      font-size: 14px;
+      line-height: 1.6;
     }
     .thinking {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      color: #93a4ae;
-      font-size: 0.63rem;
+      font-size: 13px;
+      color: #49785f;
+      padding: 16px 0;
     }
     .thinking span {
+      display: inline-block;
       width: 4px;
       height: 4px;
+      margin-right: 5px;
+      background: #00977a;
       border-radius: 50%;
-      background: #35c5d3;
       animation: pulse 1s infinite alternate;
-    }
-    .thinking span:nth-child(2) {
-      animation-delay: 0.15s;
-    }
-    .thinking span:nth-child(3) {
-      animation-delay: 0.3s;
-      margin-right: 0.2rem;
     }
     @keyframes pulse {
       to {
-        opacity: 0.25;
-        transform: translateY(-2px);
+        opacity: 0.3;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .thinking span {
+        animation: none;
       }
     }
   `,
 })
 export class ScenarioAssistant {
+  readonly planningRequested = output<void>();
+  private readonly questionInput = viewChild<ElementRef<HTMLInputElement>>('question');
   protected readonly local = inject(LocalEvidenceService);
   protected readonly simulator = inject(SimulatorStore);
-  private readonly store = inject(DebuggerStore);
+  protected readonly store = inject(DebuggerStore);
   protected readonly status = signal<AssistantStatus | undefined>(undefined);
   protected readonly questions = signal<readonly AssistantQuestion[]>([]);
   protected readonly answer = signal<AssistantAnswer | undefined>(undefined);
+  protected readonly localReply = signal<LocalAssistantReply | undefined>(undefined);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | undefined>(undefined);
-  protected readonly notice = signal<string | undefined>(undefined);
   protected readonly usedFallback = computed(
     () =>
       this.status()?.gemini_configured === true &&
       this.answer()?.provider.id === 'offline_deterministic',
   );
 
-  protected readonly title = computed(() =>
-    this.status()?.gemini_configured ? 'Gemini analysis' : 'Evidence analysis',
-  );
   protected readonly providerLabel = computed(() => {
     const status = this.status();
     if (status === undefined)
       return this.local.connected() ? 'Loading provider' : 'Local evidence required';
     return status.gemini_configured
-      ? `${status.model ?? 'Gemini'} · public aggregate only`
-      : 'Deterministic local provider';
+      ? `Gemini synthesis · verified aggregates · ${status.model ?? 'configured model'}`
+      : 'Verified local evidence · deterministic synthesis';
   });
+  protected readonly suggestedQuestions = computed(() => this.questions().slice(0, 3));
+  protected readonly remainingQuestions = computed(() => this.questions().slice(3));
   protected readonly scenarioInsight = computed(() => {
+    if (!this.store.hasRun())
+      return 'Open a retained replay to inspect its exact path and smallest margin.';
     const hypothesis = this.store.selectedHypothesis();
     const minimum = hypothesis.metrics.reduce((best, value) =>
       value.signedSeparationMeters < best.signedSeparationMeters ? value : best,
@@ -464,14 +519,21 @@ export class ScenarioAssistant {
   });
 
   constructor() {
+    afterNextRender(() => this.questionInput()?.nativeElement.focus());
     effect(() => {
       if (this.local.connected() && this.status() === undefined) void this.loadCatalog();
       if (!this.local.connected()) {
         this.status.set(undefined);
         this.questions.set([]);
         this.answer.set(undefined);
+        this.localReply.set(undefined);
       }
     });
+  }
+
+  protected close(): void {
+    this.simulator.assistantOpen.set(false);
+    queueMicrotask(() => document.querySelector<HTMLButtonElement>('.assistant-launch')?.focus());
   }
 
   private async loadCatalog(): Promise<void> {
@@ -489,7 +551,7 @@ export class ScenarioAssistant {
     if (!this.local.connected() || this.loading()) return;
     this.loading.set(true);
     this.error.set(undefined);
-    this.notice.set(undefined);
+    this.localReply.set(undefined);
     try {
       this.answer.set(await this.local.askAssistant(queryId));
     } catch (error: unknown) {
@@ -505,20 +567,42 @@ export class ScenarioAssistant {
     const input = form.elements.namedItem('question') as HTMLInputElement;
     const value = input.value.trim();
     if (!value) return;
-    const query = classifyAssistantQuestion(value);
-    if (query === undefined) {
-      this.notice.set(
-        /\b(path|planning|replay|scenario|case)\b/i.test(value)
-          ? 'Only trajectory packages that pass the replay-link verification can open. Close analysis and use Review candidate records to see availability.'
-          : 'I could not route that question safely. Choose one of the verified evidence questions above.',
-      );
+    input.value = '';
+    this.error.set(undefined);
+    if (/^(hi|hello|hey|good (morning|afternoon|evening))[!. ]*$/i.test(value)) {
+      this.answer.set(undefined);
+      this.localReply.set({
+        heading: 'Hi. I’m ready to inspect the run.',
+        body: 'I can explain release health, versioned behavior coverage, campaign results, model and TensorRT qualification, or the evidence boundary. Ask naturally or choose a suggested investigation.',
+      });
       return;
     }
-    input.value = '';
+    if (/\b(what can you do|help|capabilit(?:y|ies)|how do i use)\b/i.test(value)) {
+      this.answer.set(undefined);
+      this.localReply.set({
+        heading: 'I explain verified PlanMargin evidence.',
+        body: 'Natural-language questions are routed to a sealed evidence query. The backend retrieves cited facts, then Gemini—when configured—writes a bounded explanation without receiving your raw question or private scene data.',
+      });
+      return;
+    }
+    const query = classifyAssistantQuestion(value);
+    if (query === undefined) {
+      this.answer.set(undefined);
+      this.localReply.set({
+        heading: /\b(path|planning|replay|scenario|case)\b/i.test(value)
+          ? 'That requires an exact retained replay.'
+          : 'That question is outside the verified evidence boundary.',
+        body: /\b(path|planning|replay|scenario|case)\b/i.test(value)
+          ? 'Only proposals with a verified replay link can open a trajectory. Use Investigate to select an available record, or ask me about the current campaign’s replay provenance.'
+          : 'I will not invent an answer. Try asking about test health, behavior coverage, campaign results, model qualification, or claim limitations.',
+      });
+      return;
+    }
     void this.ask(query);
   }
 
   protected showConflictFrame(): void {
+    if (!this.store.hasRun()) return;
     const metrics = this.store.selectedHypothesis().metrics;
     const minimumIndex = metrics.reduce(
       (best, value, index) =>
@@ -526,6 +610,7 @@ export class ScenarioAssistant {
       0,
     );
     this.simulator.showPlanningFrame(minimumIndex);
+    this.planningRequested.emit();
   }
 
   private message(error: unknown): string {

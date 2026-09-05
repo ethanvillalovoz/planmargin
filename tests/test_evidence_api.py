@@ -554,7 +554,7 @@ def test_assistant_and_gaussian_workspaces_are_authenticated(
             "gemini_configured": False,
             "explanation_only": True,
         }
-        assert len(questions.json()) == 8
+        assert len(questions.json()) == 10
         assert answer.status_code == 200
         assert answer.json()["question"]["query_id"] == "method_comparison"
         assert answer.json()["privacy"]["private_data_sent_to_provider"] is False

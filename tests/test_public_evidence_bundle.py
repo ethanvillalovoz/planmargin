@@ -82,7 +82,7 @@ def test_public_bundle_hashes_and_scope() -> None:
         / "debugger"
         / "public"
         / "data"
-        / "test-operations-v1.json",
+        / "test-operations-v2.json",
     }
     for name, source in expected_sources.items():
         public = json.loads((BUNDLE / "data" / name).read_text(encoding="utf-8"))

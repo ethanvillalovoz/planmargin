@@ -1,24 +1,8 @@
-import {
-  afterNextRender,
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  DestroyRef,
-  ElementRef,
-  effect,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
-import type * as THREE from 'three';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DebuggerStore } from '../debugger.store';
 import { Point2d, TrajectoryKind } from '../debugger.types';
 
-const COLORS: Record<TrajectoryKind, number> = {
-  tested: 0xf16347,
-  reference: 0x0ba8bd,
-  recorded: 0x83919c,
-};
+const TRAJECTORY_KINDS: readonly TrajectoryKind[] = ['recorded', 'reference', 'tested'];
 
 interface FallbackScene {
   readonly viewBox: string;
@@ -28,12 +12,13 @@ interface FallbackScene {
     readonly kind: TrajectoryKind;
     readonly points: string;
     readonly current: Point2d;
-    readonly callout: Point2d;
-    readonly calloutStartX: number;
-    readonly labelX: number;
-    readonly labelAnchor: 'start' | 'end';
   }[];
+  readonly leadTrajectory: string;
+  readonly leadOriginalTrajectory: string;
+  readonly leadCurrent: Point2d;
   readonly markerRadius: number;
+  readonly scaleX: number;
+  readonly scaleY: number;
 }
 
 @Component({
@@ -64,26 +49,28 @@ interface FallbackScene {
             [attr.height]="fallbackScene().markerRadius * 2"
             [attr.rx]="fallbackScene().markerRadius * 0.35"
           />
-          <line
-            class="marker-callout"
-            [attr.x1]="trajectory.calloutStartX"
-            [attr.y1]="-trajectory.current.y"
-            [attr.x2]="trajectory.callout.x"
-            [attr.y2]="trajectory.callout.y"
-          />
-          <text
-            class="marker-label"
-            [attr.x]="trajectory.labelX"
-            [attr.y]="trajectory.callout.y + fallbackScene().markerRadius * 0.35"
-            [attr.font-size]="fallbackScene().markerRadius * 1.35"
-            [attr.text-anchor]="trajectory.labelAnchor"
-          >
-            {{ trajectory.kind }}
-          </text>
         }
+        <polyline class="lead-original" [attr.points]="fallbackScene().leadOriginalTrajectory" />
+        <polyline class="lead" [attr.points]="fallbackScene().leadTrajectory" />
+        <rect
+          class="lead"
+          [attr.x]="fallbackScene().leadCurrent.x - fallbackScene().markerRadius * 1.8"
+          [attr.y]="-fallbackScene().leadCurrent.y - fallbackScene().markerRadius"
+          [attr.width]="fallbackScene().markerRadius * 3.6"
+          [attr.height]="fallbackScene().markerRadius * 2"
+          [attr.rx]="fallbackScene().markerRadius * 0.35"
+        />
+      </g>
+      <g class="metric-scale" aria-hidden="true">
+        <line
+          [attr.x1]="fallbackScene().scaleX"
+          [attr.x2]="fallbackScene().scaleX + 10"
+          [attr.y1]="fallbackScene().scaleY"
+          [attr.y2]="fallbackScene().scaleY"
+        />
+        <text [attr.x]="fallbackScene().scaleX" [attr.y]="fallbackScene().scaleY - 0.5">10 m</text>
       </g>
     </svg>
-    <div #viewport hidden></div>
     <div class="scene-label">
       <strong>Scene</strong>
       <span>{{ store.selectedHypothesis().label }}</span>
@@ -92,13 +79,14 @@ interface FallbackScene {
     <div class="legend" aria-label="Trajectory legend">
       <span><i class="tested"></i>Tested</span>
       <span><i class="reference"></i>Reference</span>
-      <span><i class="recorded"></i>Recorded</span>
+      <span><i class="recorded"></i>Original tested</span>
+      <span><i class="lead"></i>Mutated lead</span>
     </div>
     <div class="planning-guide">
       <strong>Planner rollout · {{ store.timeSeconds().toFixed(1) }} s</strong>
-      <span>Three planner outcomes for the same ego vehicle—not three traffic actors.</span>
+      <span>Green, yellow, and gray compare ego planners. Pink is the mutated lead vehicle.</span>
+      <span>Markers are schematic; clearance uses recorded vehicle geometry.</span>
     </div>
-    <div class="scale" aria-hidden="true"><i></i><span>10 m</span></div>
   `,
   styles: `
     :host {
@@ -108,24 +96,33 @@ interface FallbackScene {
       min-width: 0;
       min-height: 0;
       overflow: hidden;
-      background: var(--app-bg);
-    }
-    .viewport {
-      position: absolute;
-      inset: 0;
+      --divider: #2a3239;
+      --tested: #76d786;
+      --reference: #e7dd55;
+      --recorded: #a2a5a8;
+      background: #080d11;
     }
     .fallback {
       position: absolute;
       top: 0;
       right: 0;
       bottom: 0;
-      left: 280px;
-      width: calc(100% - 280px);
+      left: 0;
+      width: 100%;
       height: 100%;
-      background: var(--app-bg);
+      background: #080d11;
     }
     .fallback :is(polyline, polygon, rect) {
       vector-effect: non-scaling-stroke;
+    }
+    .metric-scale line {
+      stroke: #aab9c4;
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+    .metric-scale text {
+      fill: #aab9c4;
+      font-size: 0.9px;
     }
     .fallback polyline {
       fill: none;
@@ -142,43 +139,45 @@ interface FallbackScene {
       stroke-width: 1;
       stroke-dasharray: 4 4;
     }
-    .fallback .tested {
+    .fallback rect.tested {
       fill: var(--tested);
+    }
+    .fallback .tested {
       stroke: var(--tested);
       stroke-width: 2;
     }
-    .fallback .reference {
+    .fallback rect.reference {
       fill: var(--reference);
+    }
+    .fallback .reference {
       stroke: var(--reference);
       stroke-width: 2;
     }
-    .fallback .recorded {
+    .fallback rect.recorded {
       fill: var(--recorded);
+    }
+    .fallback .recorded {
       stroke: var(--recorded);
       stroke-width: 1.5;
       stroke-dasharray: 4 4;
     }
-    .fallback .marker-label {
-      fill: #dce5e8;
-      paint-order: stroke;
-      stroke: #080d11;
-      stroke-width: 0.35px;
-      text-transform: capitalize;
+    .fallback rect.lead {
+      fill: #f09bb4;
     }
-    .fallback .marker-callout {
-      stroke: #8496a1;
-      stroke-width: 0.65;
-      vector-effect: non-scaling-stroke;
+    .fallback .lead {
+      stroke: #f09bb4;
+      stroke-width: 2;
     }
-    .viewport canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
+    .fallback .lead-original {
+      fill: none;
+      stroke: #f09bb488;
+      stroke-width: 1;
+      stroke-dasharray: 2 5;
     }
     .scene-label {
       position: absolute;
       top: 5rem;
-      left: 296px;
+      left: 24px;
       display: flex;
       align-items: baseline;
       gap: 0.75rem;
@@ -238,16 +237,12 @@ interface FallbackScene {
       height: 1px;
       border-top: 1px dashed var(--recorded);
     }
-    .scale {
-      position: absolute;
-      left: 296px;
-      bottom: 0.8rem;
-      color: #aab9c4;
-      font-size: 0.58rem;
+    .legend .lead {
+      background: #f09bb4;
     }
     .planning-guide {
       position: absolute;
-      left: calc(50% + 140px);
+      left: 50%;
       bottom: 0.8rem;
       display: grid;
       max-width: 390px;
@@ -266,15 +261,6 @@ interface FallbackScene {
     .planning-guide span {
       color: #91a2ad;
       font-size: 0.56rem;
-    }
-    .scale i {
-      display: block;
-      width: 58px;
-      height: 5px;
-      margin-bottom: 0.25rem;
-      border-right: 1px solid #aab9c4;
-      border-bottom: 1px solid #aab9c4;
-      border-left: 1px solid #aab9c4;
     }
     @media (max-width: 760px) {
       .fallback {
@@ -297,10 +283,6 @@ interface FallbackScene {
         transform: none;
         text-align: right;
       }
-      .scale {
-        left: 1rem;
-        bottom: 4.6rem;
-      }
     }
     @media (max-width: 560px) {
       .scene-label,
@@ -312,7 +294,6 @@ interface FallbackScene {
 })
 export class SceneViewport {
   protected readonly store = inject(DebuggerStore);
-  protected readonly rendererUnavailable = signal(true);
   protected readonly fallbackScene = computed((): FallbackScene => {
     const run = this.store.run();
     const hypothesis = this.store.selectedHypothesis();
@@ -334,11 +315,15 @@ export class SceneViewport {
       reference: hypothesis.trajectories.reference.map(transform),
       recorded: hypothesis.trajectories.recorded.map(transform),
     };
+    const leadOriginal = run.mutationTarget.original.map(transform);
+    const leadTrajectory = run.mutationTarget.counterfactual.map(transform);
     const conflictRegion = run.conflictRegion.map(transform);
     const allPoints = [
       ...trajectories.tested,
       ...trajectories.reference,
       ...trajectories.recorded,
+      ...leadOriginal,
+      ...leadTrajectory,
       ...conflictRegion,
     ];
     const xs = allPoints.map((point) => point.x);
@@ -351,255 +336,35 @@ export class SceneViewport {
     const height = Math.max(10, maxY - minY);
     const padding = Math.max(3, width * 0.08, height * 0.08);
     const viewportAspect = 16 / 9;
-    let viewWidth = width + padding * 2;
-    let viewHeight = height + padding * 2;
-    if (viewWidth / viewHeight < viewportAspect) viewWidth = viewHeight * viewportAspect;
-    else viewHeight = viewWidth / viewportAspect;
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
+    const currentTested = trajectories.tested[index];
+    const currentLead = leadTrajectory[index];
+    const viewWidth = Math.min(width + padding * 2, Math.max(72, width * 0.58));
+    const viewHeight = Math.max(34, viewWidth / viewportAspect);
+    const interactionCenterX = (currentTested.x + currentLead.x) / 2;
+    const interactionCenterY = (currentTested.y + currentLead.y) / 2;
+    const centerX = Math.min(maxX - viewWidth * 0.32, interactionCenterX + viewWidth * 0.08);
+    const centerY = interactionCenterY;
     const points = (line: readonly Point2d[]): string =>
       line.map((point) => `${point.x},${-point.y}`).join(' ');
-    const markerRadius = Math.max(width, height) * 0.009;
-    const calloutOffsets: Record<TrajectoryKind, number> = {
-      tested: -2.8,
-      reference: 0,
-      recorded: 2.8,
-    };
+    const markerRadius = Math.max(width, height) * 0.0065;
     return {
       viewBox: `${centerX - viewWidth / 2} ${-(centerY + viewHeight / 2)} ${viewWidth} ${viewHeight}`,
       roadCenterlines: roadCenterlines.map(points),
       conflictRegion: conflictRegion.length >= 3 ? points(conflictRegion) : '',
-      trajectories: (Object.keys(COLORS) as TrajectoryKind[]).map((kind) => {
+      trajectories: TRAJECTORY_KINDS.map((kind) => {
         const current = trajectories[kind][index];
-        const calloutDirection = current.x > centerX + viewWidth * 0.18 ? -1 : 1;
         return {
           kind,
           points: points(trajectories[kind]),
           current,
-          calloutStartX: current.x + calloutDirection * markerRadius * 1.8,
-          callout: {
-            x: current.x + calloutDirection * markerRadius * 4.2,
-            y: -current.y + markerRadius * calloutOffsets[kind],
-          },
-          labelX: current.x + calloutDirection * markerRadius * (4.2 + 0.45),
-          labelAnchor: calloutDirection === 1 ? 'start' : 'end',
         };
       }),
+      leadTrajectory: points(leadTrajectory),
+      leadOriginalTrajectory: points(leadOriginal),
+      leadCurrent: currentLead,
       markerRadius,
+      scaleX: centerX - viewWidth / 2 + 2,
+      scaleY: -centerY + viewHeight / 2 - 2,
     };
   });
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly viewport = viewChild.required<ElementRef<HTMLDivElement>>('viewport');
-  private renderer: THREE.WebGLRenderer | undefined;
-  private scene: THREE.Scene | undefined;
-  private camera: THREE.OrthographicCamera | undefined;
-  private three: typeof import('three') | undefined;
-  private resizeObserver: ResizeObserver | undefined;
-
-  constructor() {
-    effect(() => {
-      this.store.run();
-      this.store.selectedHypothesis();
-      this.store.timestepIndex();
-      this.renderScene();
-    });
-
-    afterNextRender(async () => {
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('webgl2');
-      if (context === null) {
-        this.rendererUnavailable.set(true);
-        return;
-      }
-      const THREE = await import('three');
-      if (this.destroyRef.destroyed) return;
-      this.three = THREE;
-      this.scene = new THREE.Scene();
-      this.camera = new THREE.OrthographicCamera(-42, 42, 28, -28, 0.1, 100);
-      this.camera.position.z = 20;
-      this.scene.background = new THREE.Color(0x080d11);
-      const host = this.viewport().nativeElement;
-      this.renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: false,
-        canvas,
-        context,
-      });
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      this.renderer.domElement.setAttribute('aria-hidden', 'true');
-      host.append(this.renderer.domElement);
-      this.resizeObserver = new ResizeObserver(() => this.resize());
-      this.resizeObserver.observe(host);
-      this.resize();
-      this.destroyRef.onDestroy(() => {
-        this.resizeObserver?.disconnect();
-        this.clearScene();
-        this.renderer?.dispose();
-      });
-    });
-  }
-
-  private resize(): void {
-    const renderer = this.renderer;
-    const camera = this.camera;
-    if (renderer === undefined || camera === undefined) return;
-    const { clientWidth, clientHeight } = this.viewport().nativeElement;
-    renderer.setSize(Math.max(1, clientWidth), Math.max(1, clientHeight), false);
-    this.renderScene();
-  }
-
-  private renderScene(): void {
-    const renderer = this.renderer;
-    const scene = this.scene;
-    const camera = this.camera;
-    if (renderer === undefined || scene === undefined || camera === undefined) return;
-    this.clearScene();
-    const run = this.store.run();
-    const hypothesis = this.store.selectedHypothesis();
-    const allPoints = [
-      ...run.roadCenterlines.flat(),
-      ...hypothesis.trajectories.tested,
-      ...hypothesis.trajectories.reference,
-      ...hypothesis.trajectories.recorded,
-    ];
-    const bounds = this.fitCamera(allPoints);
-    this.drawGrid(bounds);
-    run.roadCenterlines.forEach((line) => this.drawLine(line, 0x435766, 0));
-    if (run.conflictRegion.length >= 3) this.drawConflictRegion(run.conflictRegion);
-    (Object.keys(COLORS) as TrajectoryKind[]).forEach((kind) => {
-      this.drawLine(hypothesis.trajectories[kind], COLORS[kind], kind === 'recorded' ? 0.25 : 0.55);
-      const point = hypothesis.trajectories[kind][this.store.timestepIndex()];
-      this.drawVehicle(point, COLORS[kind], kind === 'tested' ? 1 : 0.65);
-    });
-    renderer.render(scene, camera);
-  }
-
-  private clearScene(): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
-    for (const child of [...scene.children]) {
-      child.traverse((object) => {
-        if (
-          object instanceof THREE.Mesh ||
-          object instanceof THREE.LineSegments ||
-          object instanceof THREE.Line
-        ) {
-          object.geometry.dispose();
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach((material) => material.dispose());
-        }
-      });
-      scene.remove(child);
-    }
-  }
-
-  private fitCamera(points: readonly Point2d[]): {
-    readonly minX: number;
-    readonly maxX: number;
-    readonly minY: number;
-    readonly maxY: number;
-  } {
-    const camera = this.camera;
-    if (camera === undefined || points.length === 0) {
-      return { minX: -32, maxX: 32, minY: -32, maxY: 32 };
-    }
-    const xs = points.map((point) => point.x);
-    const ys = points.map((point) => point.y);
-    const source = {
-      minX: Math.min(...xs),
-      maxX: Math.max(...xs),
-      minY: Math.min(...ys),
-      maxY: Math.max(...ys),
-    };
-    const centerX = (source.minX + source.maxX) / 2;
-    const centerY = (source.minY + source.maxY) / 2;
-    const { clientWidth, clientHeight } = this.viewport().nativeElement;
-    const aspect = clientWidth / Math.max(1, clientHeight);
-    const halfHeight = Math.max(
-      8,
-      (source.maxY - source.minY) * 0.6,
-      ((source.maxX - source.minX) * 0.6) / Math.max(0.25, aspect),
-    );
-    const halfWidth = halfHeight * aspect;
-    camera.left = centerX - halfWidth;
-    camera.right = centerX + halfWidth;
-    camera.top = centerY + halfHeight;
-    camera.bottom = centerY - halfHeight;
-    camera.position.set(0, 0, 20);
-    camera.updateProjectionMatrix();
-    return {
-      minX: camera.left,
-      maxX: camera.right,
-      minY: camera.bottom,
-      maxY: camera.top,
-    };
-  }
-
-  private drawGrid(bounds: {
-    readonly minX: number;
-    readonly maxX: number;
-    readonly minY: number;
-    readonly maxY: number;
-  }): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
-    const vertices: number[] = [];
-    const startX = Math.floor(bounds.minX / 5) * 5;
-    const startY = Math.floor(bounds.minY / 5) * 5;
-    for (let x = startX; x <= bounds.maxX; x += 5) {
-      vertices.push(x, bounds.minY, -2, x, bounds.maxY, -2);
-    }
-    for (let y = startY; y <= bounds.maxY; y += 5) {
-      vertices.push(bounds.minX, y, -2, bounds.maxX, y, -2);
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    scene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0x182731 })));
-  }
-
-  private drawLine(points: readonly Point2d[], color: number, opacity: number): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined || points.length < 2) return;
-    const geometry = new THREE.BufferGeometry().setFromPoints(
-      points.map((point) => new THREE.Vector3(point.x, point.y, 0)),
-    );
-    const material = new THREE.LineBasicMaterial({
-      color,
-      transparent: opacity < 1,
-      opacity: opacity || 1,
-    });
-    scene.add(new THREE.Line(geometry, material));
-  }
-
-  private drawConflictRegion(points: readonly Point2d[]): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
-    const shape = new THREE.Shape();
-    points.forEach((point, index) =>
-      index === 0 ? shape.moveTo(point.x, point.y) : shape.lineTo(point.x, point.y),
-    );
-    shape.closePath();
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xf16347,
-      transparent: true,
-      opacity: 0.08,
-      side: THREE.DoubleSide,
-    });
-    scene.add(new THREE.Mesh(new THREE.ShapeGeometry(shape), material));
-  }
-
-  private drawVehicle(point: Point2d, color: number, opacity: number): void {
-    const THREE = this.three;
-    const scene = this.scene;
-    if (THREE === undefined || scene === undefined) return;
-    const geometry = new THREE.PlaneGeometry(4.4, 2.1);
-    const material = new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity });
-    const vehicle = new THREE.Mesh(geometry, material);
-    vehicle.position.set(point.x, point.y, 1);
-    scene.add(vehicle);
-  }
 }

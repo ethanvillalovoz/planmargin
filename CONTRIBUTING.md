@@ -21,6 +21,7 @@ uv run --frozen ruff check .
 uv run --frozen pytest
 uv build
 cd web/debugger && npm run check
+npm run e2e
 ```
 
 Changes to a rendered workflow also require interaction testing at desktop and
@@ -40,8 +41,11 @@ compact widths. A passing build alone is not visual verification.
 - Do not commit WOD files, scenario IDs, trajectories, Parquet, DuckDB, PLY,
   checkpoints, tokens, or cloud credentials.
 - Public API responses must remain allowlisted and privacy-reduced.
-- The local evidence API stays loopback-only, read-only, token-authenticated,
-  and `no-store`.
+- The local API stays loopback-only, authenticated, and `no-store`. Campaign
+  evidence remains read-only. The separate experiment routes accept only
+  bounded configurations and cancellation, never commands, paths, or SQL.
+- Cover worker lifecycle and replay integrity when changing experiment
+  execution. Keep new job results separate from the frozen campaign.
 - Update schemas and tests together when a record contract changes.
 
 ## Pull requests

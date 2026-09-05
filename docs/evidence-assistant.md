@@ -20,10 +20,12 @@ flowchart LR
     F --> G
 ```
 
-The classifier chooses exactly one of eight query IDs:
+The classifier chooses exactly one of ten query IDs:
 
 | Query ID                  | Evidence responsibility                                                                  |
 | ------------------------- | ---------------------------------------------------------------------------------------- |
+| `test_health`             | Release-critical cell completion, SLOs, pipeline stages, alerts, and held decisions      |
+| `behavior_coverage`       | Versioned lead-braking, command-dropout, assistance-handoff, and known-gap coverage      |
 | `campaign_overview`       | Frozen v1 execution, cost, findings, and held-out state                                  |
 | `method_comparison`       | Random/Bayesian aggregate validity, hypervolume, findings, and H3 status                 |
 | `hypothesis_decisions`    | Frozen H1, H2, and H3 decisions without reinterpreting censored values                   |
@@ -33,7 +35,11 @@ The classifier chooses exactly one of eight query IDs:
 | `inference_qualification` | Measured NVIDIA latency, throughput, FP32 parity, and FP16 no-go evidence                |
 | `workbench_provenance`    | Aggregate campaign, exact replay, 3DGS, record-separation, and redistribution boundaries |
 
-Unknown questions fail closed. The question never becomes SQL, a filesystem
+The graphical assistant also handles greetings and capability questions in a
+clearly labeled local-guide layer, so normal conversational input is useful
+without pretending that a language model produced evidence. Unsupported
+evidence questions fail closed with a concise explanation and relevant next
+topics. The question never becomes SQL, a filesystem
 path, a model-selected function, or a network request. Public facts embed the
 SHA-256 seals of their tracked source documents, and tests fail if those
 sources drift without an explicit evidence update. Local mode reuses the
@@ -119,7 +125,7 @@ use; PlanMargin never upgrades a project or enables billing.
 
 ## Verified boundary
 
-Data-free tests cover all eight routes, JSON Schema validation, source-seal
+Data-free tests cover all ten routes, JSON Schema validation, source-seal
 drift, unknown-query rejection, raw-question exclusion from the simulated
 Gemini payload, public-only provider input, structured-output configuration,
 free-tier confirmation, invalid citations, generated-number rejection, and

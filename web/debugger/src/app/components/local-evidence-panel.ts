@@ -122,10 +122,12 @@ import { SimulatorStore } from '../simulator.store';
   styles: `
     .error {
       padding: 0.6rem 0.7rem;
-      border-left: 2px solid var(--failure);
-      border: 1px solid rgb(255 107 85 / 30%);
-      background: #281716;
-      color: #ff9b8c;
+      border: 1px solid #f1b7ad;
+      border-left: 3px solid var(--failure);
+      border-radius: 8px;
+      background: #fff2ef;
+      color: #8b3429;
+      font-weight: 600;
     }
     .connected-error {
       margin: 0.75rem 1.4rem 0;
@@ -248,7 +250,7 @@ export class LocalEvidencePanel {
     try {
       const evidence = await this.local.connect(input.value);
       input.value = '';
-      this.store.loadRun(evidence.initialRun);
+      if (evidence.initialRun) this.store.loadRun(evidence.initialRun);
       this.close.emit();
     } catch {
       input.value = '';

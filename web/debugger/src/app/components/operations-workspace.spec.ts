@@ -2,15 +2,30 @@ import { TestBed } from '@angular/core/testing';
 import { OperationsWorkspace } from './operations-workspace';
 
 describe('OperationsWorkspace', () => {
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+    TestBed.resetTestingModule();
+  });
 
-  it('separates healthy execution, behavior outcome, coverage gaps, and promotion issues', () => {
+  it('opens a requested review section for reproducible local inspection', () => {
+    window.history.replaceState(null, '', '/?section=coverage');
+    const fixture = TestBed.createComponent(OperationsWorkspace);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Versioned behavior coverage');
+    expect(fixture.nativeElement.querySelector('.ops-tabs button.active').textContent).toContain(
+      'Coverage',
+    );
+  });
+
+  it('separates release health, versioned coverage, and measured decisions', () => {
     const fixture = TestBed.createComponent(OperationsWorkspace);
     fixture.detectChanges();
     let text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Execution healthy100/100');
-    expect(text).toContain('Behavior outcome0qualifying regressions');
-    expect(text).toContain('7/7 stages healthy');
+    expect(text).toContain('The saved test run passed its checks.');
+    expect(text).toContain('120/120test cells');
+    expect(text).toContain('7/7checks passed');
+    expect(text).toContain('Pipeline stages');
     expect(text).toContain('Scaled FP16 drift exceeds the promotion gate');
 
     const coverage = Array.from(
@@ -19,11 +34,11 @@ describe('OperationsWorkspace', () => {
     coverage.click();
     fixture.detectChanges();
     text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Behavior coverage');
-    expect(text).toContain('Off-nominal behavior V&V');
-    expect(text).toContain('80/80 gates');
+    expect(text).toContain('Coverage that can be regenerated and reviewed.');
+    expect(text).toContain('Command-dropout fallback');
+    expect(text).toContain('80/80');
     expect(text).toContain('Assistance handoff recovery');
-    expect(text).toContain('90/90 gates');
+    expect(text).toContain('90/90');
     expect(text).toContain('Cross-simulator agreement');
     expect(text).toContain('Not covered');
   });
@@ -33,19 +48,31 @@ describe('OperationsWorkspace', () => {
     fixture.detectChanges();
     const issues = Array.from(
       fixture.nativeElement.querySelectorAll('.ops-tabs button') as NodeListOf<HTMLButtonElement>,
-    ).find((button) => button.textContent?.includes('Issues'))!;
+    ).find((button) => button.textContent?.includes('Triage'))!;
     issues.click();
     fixture.detectChanges();
     const pending = Array.from(
       fixture.nativeElement.querySelectorAll('.filter-row button') as NodeListOf<HTMLButtonElement>,
-    ).find((button) => button.textContent?.includes('Pending evidence'))!;
+    ).find((button) => button.textContent?.includes('Pending'))!;
     pending.click();
     fixture.detectChanges();
-    const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Local numerical proxy passed');
-    expect(text).toContain('PM-TRT-011');
-    expect(text).toContain('No gate is marked failed');
-    expect(text).not.toContain('Scaled FP16 drift exceeds');
-    expect(text).not.toContain('Learned ranker did not generalize');
+    const triageText = fixture.nativeElement.querySelector('.triage-workspace')
+      .textContent as string;
+    const inspectorText = fixture.nativeElement.querySelector('.context-inspector')
+      .textContent as string;
+    expect(triageText).toContain('Local numerical proxy passed');
+    expect(triageText).toContain('PM-TRT-011');
+    expect(inspectorText).toContain('deployment-evidence completeness gate');
+    expect(triageText).not.toContain('Scaled FP16 drift exceeds');
+    expect(triageText).not.toContain('Learned ranker did not generalize');
+  });
+
+  it('opens the retained planning replay from the operations command bar', () => {
+    const fixture = TestBed.createComponent(OperationsWorkspace);
+    fixture.detectChanges();
+    let opened = false;
+    fixture.componentInstance.openScenarioLab.subscribe(() => (opened = true));
+    fixture.nativeElement.querySelector('.primary-action').click();
+    expect(opened).toBe(true);
   });
 });

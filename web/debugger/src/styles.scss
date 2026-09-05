@@ -1,27 +1,27 @@
 :root {
-  color-scheme: dark;
-  --app-bg: #071018;
-  --surface: #0a141c;
-  --surface-subtle: #0d1821;
-  --rail: #08121a;
-  --primary: #edf3f4;
-  --secondary: #91a2ad;
-  --tertiary: #82939d;
-  --divider: #20303a;
-  --divider-soft: #172630;
-  --divider-strong: #31434e;
-  --grid: #213540;
-  --tested: #ff6b55;
-  --reference: #35c5d3;
-  --recorded: #54d68a;
-  --success: #54d68a;
-  --failure: #ff6b55;
-  --accent-coral: #ff6b55;
-  --accent-green: #54d68a;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow-sm: 0 2px 12px rgb(0 0 0 / 20%);
-  --shadow: 0 18px 50px rgb(0 0 0 / 34%);
+  color-scheme: light;
+  --app-bg: #f4f6f3;
+  --surface: #ffffff;
+  --surface-subtle: #f0f2ef;
+  --rail: #fafbf8;
+  --primary: #141b2d;
+  --secondary: #4d5764;
+  --tertiary: #59636f;
+  --divider: #dfe3e1;
+  --divider-soft: #ebeeeb;
+  --divider-strong: #c5cbc9;
+  --grid: #303336;
+  --tested: #76d786;
+  --reference: #0758c7;
+  --recorded: #9099a7;
+  --success: #176b43;
+  --failure: #ef705f;
+  --accent-coral: #ef705f;
+  --accent-green: #176b43;
+  --radius: 20px;
+  --radius-sm: 12px;
+  --shadow-sm: 0 4px 16px rgb(22 37 48 / 8%);
+  --shadow: 0 22px 60px rgb(22 37 48 / 14%);
   font-family:
     Inter,
     ui-sans-serif,
@@ -41,6 +41,7 @@ body {
   min-height: 100%;
   margin: 0;
   background: var(--app-bg);
+  color: var(--primary);
 }
 button,
 input,
@@ -85,7 +86,7 @@ app-local-evidence-panel .backdrop {
   place-items: center;
   padding: 1.5rem;
   overflow: auto;
-  background: rgb(13 31 44 / 58%);
+  background: rgb(12 25 43 / 38%);
   backdrop-filter: blur(8px);
 }
 app-local-evidence-panel .panel {
@@ -93,8 +94,8 @@ app-local-evidence-panel .panel {
   max-height: calc(100dvh - 3rem);
   overflow: auto;
   border: 1px solid var(--divider);
-  border-radius: var(--radius);
-  background: #0a141c;
+  border-radius: 24px;
+  background: #ffffff;
   box-shadow: 0 30px 90px rgb(13 31 44 / 28%);
 }
 app-local-evidence-panel header {
@@ -109,9 +110,9 @@ app-local-evidence-panel :is(h1, h2, p) {
   margin: 0;
 }
 app-local-evidence-panel h1 {
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
+  font-size: 1.45rem;
+  font-weight: 520;
+  letter-spacing: -0.04em;
 }
 app-local-evidence-panel header p,
 app-local-evidence-panel form > p {
@@ -121,10 +122,10 @@ app-local-evidence-panel form > p {
   line-height: 1.5;
 }
 app-local-evidence-panel :is(button, select, input) {
-  min-height: 34px;
+  min-height: 42px;
   border: 1px solid var(--divider);
-  border-radius: 2px;
-  background: #0d1922;
+  border-radius: 999px;
+  background: #f4f6f3;
   color: var(--primary);
   font: inherit;
   font-size: 0.68rem;
@@ -162,7 +163,7 @@ app-local-evidence-panel form code {
 app-local-evidence-panel form input {
   width: 100%;
   padding: 0 0.7rem;
-  background: #071018;
+  background: #ffffff;
 }
 app-local-evidence-panel .form-actions {
   display: flex;

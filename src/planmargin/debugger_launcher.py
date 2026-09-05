@@ -32,15 +32,21 @@ def _port_available(host: str, port: int) -> bool:
     return True
 
 
-def _workbench_url(token: str) -> str:
+def _workbench_url(token: str, planning_only: bool = False) -> str:
     """Return a loopback URL whose fragment bootstraps an in-memory session."""
-    return f"http://127.0.0.1:{WEB_PORT}/#{urlencode({'token': token})}"
+    query = "?view=experiments" if planning_only else ""
+    return f"http://127.0.0.1:{WEB_PORT}/{query}#{urlencode({'token': token})}"
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument(
+        "--planning-only",
+        action="store_true",
+        help="Start experiments without the frozen campaign or sensor research artifacts.",
+    )
     parser.add_argument(
         "--assistant-provider", choices=("offline", "gemini"), default="offline"
     )
@@ -81,6 +87,7 @@ def main() -> None:
         assistant_provider=args.assistant_provider,
         confirm_gemini_free_tier=args.confirm_gemini_free_tier,
         gemini_model=args.gemini_model,
+        planning_only=args.planning_only,
     )
     server = uvicorn.Server(
         uvicorn.Config(app, host="127.0.0.1", port=API_PORT, log_level="warning")
@@ -103,13 +110,15 @@ def main() -> None:
         str(WEB_PORT),
     ]
     web = subprocess.Popen(command, cwd=debugger)
-    url = _workbench_url(token)
+    url = _workbench_url(token, args.planning_only)
     print("\nPlanMargin workbench")
     print(f"Open: {url}")
     print(f"Evidence assistant: {args.assistant_provider}")
     if args.assistant_provider == "gemini":
         print(f"Gemini model: {args.gemini_model} (public aggregates only)")
-    print("The browser verifies the local session and removes the token from the address bar.")
+    print(
+        "The browser verifies the local session and removes the token from the address bar."
+    )
     print("Press Ctrl-C to stop both services.\n")
     opener: threading.Timer | None = None
     if not args.no_browser:

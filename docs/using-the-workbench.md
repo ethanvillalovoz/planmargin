@@ -1,153 +1,186 @@
 # Using the PlanMargin workbench
 
-PlanMargin has three task surfaces. They intentionally preserve different
-evidence scopes instead of pretending every artifact is synchronized.
+PlanMargin asks: **what realistic change could make this planner fail while a
+conservative reference still succeeds?** Start with a scenario change, then
+follow its decision to the exact evidence.
 
 ## Launch
 
-From an installed authorized workspace:
+To execute new experiments without preparing the entire historical workspace,
+follow the [planning-only setup](running-experiments.md#first-time-setup), then run:
+
+```bash
+uv run --frozen planmargin-workbench --planning-only
+```
+
+This opens **New experiment**. Choose a scenario and braking change, run both
+controllers, and open that job's exact replay. Progress, cancellation, gate
+decisions, and history are live local job data—not saved campaign answers.
+
+From an installed, authorized workspace:
 
 ```bash
 uv run --frozen planmargin-doctor --require full
 uv run --frozen planmargin-workbench
 ```
 
-If the doctor is not yet green, resume every required real-data phase with:
+If required real-data artifacts are missing, review the dataset terms and use:
 
 ```bash
 uv run --frozen planmargin-bootstrap-workbench --accept-waymo-terms
 ```
 
-The bootstrap skips already verified capabilities and ends by rerunning the
-full doctor. It never substitutes synthetic records for missing WOD access.
+Bootstrap resumes verified phases. It does not fabricate missing records or
+bypass dataset access. See [workspace reproduction](reproducing-the-workspace.md)
+for prerequisites and stages.
 
-The launcher starts the local API and web application, then opens an ephemeral
-authenticated URL. The token is exchanged once for an HttpOnly same-site
-browser-session cookie and removed from the address bar. Refreshes and fresh
-local tabs reconnect automatically without exposing the credential to
-JavaScript. Disconnecting or closing the browser session clears access. Use the
-manual connection dialog only when automatic launch did not complete.
+The launcher starts the local API and web app, then opens an authenticated URL.
+Its one-time token is exchanged for an HttpOnly browser-session cookie and
+removed from the address bar. Keep the launcher terminal running. After a
+restart, use its new URL rather than an old token.
 
-## Workbench: inspect the retained planning replay
+A public clone without licensed data opens **aggregate evidence**. It cannot
+show the private scenario queue, camera frames, or trajectories. This is an
+explicit data boundary, not a broken download or a synthetic fallback.
 
-The default surface is the planning workbench.
+## Investigate — start here
 
-1. Read the decision banner first. It says whether the tested planner failed,
-   the reference planner failed, or the tested planner retained margin.
-2. Press play or drag the timeline. The tested, reference, and recorded paths
-   advance on the same retained WOMD run.
-3. Use **−1 s** and **+1 s** to move by a visible interval; the step counter and
-   metrics update with the scene.
-4. Read signed separation and time-to-collision together. A raw value is never
-   the decision by itself; the frozen gates define the decision.
-5. Use **Review candidate records** to move from the retained trajectory to the
-   ranked campaign proposals. Those records preserve outcomes and metrics;
-   separately verified replay packages can add an exact full path.
+The default local view shows two panes: ranked changes and the selected
+change's evidence. The nearest approach is selected initially.
 
-The default replay is the retained Stage-0 controller comparison. It is not
-silently substituted for a campaign proposal.
+1. Read the campaign outcome. The current campaign has **zero qualifying
+   regressions**, even though some changes produce very small gaps.
+2. Select **Inspect** on a row. The detail pane shows the scenario, method,
+   seed, proposal, braking shift, speed scale, and both planner outcomes.
+3. Read the decision explanation. Use **Explain decision** to reveal the
+   individual gates when needed.
+4. Choose **Open exact proposal replay** when available. For **Metrics only**
+   rows, no full path is available. The UI does not substitute Stage 0.
+5. Use **Analyze selected proposal** for a deterministic explanation of that
+   specific sealed record. It does not call Gemini or send private data.
+6. **Export investigation** downloads self-contained HTML plus a SHA-256
+   digest over the privacy-reduced payload. This is an integrity digest, not
+   an identity-authenticated digital signature. Treat exported local evidence
+   according to the dataset terms.
 
-## Sensors: inspect recorded perception evidence
+The three rankings emphasize proximity, edit size, or empirical support.
+**Compare** holds up to two rows. **Browse all 100 search runs** exposes the
+scenario × seed × method matrix and each run's 32 attempts; these advanced
+controls are intentionally hidden during the first investigation.
 
-Choose **Sensors** to open the WOD Perception track.
+“Minimum gap” is recovered from criticality as
+`max(1 / criticality - 1, 0)` metres. It saturates at zero at contact and is not
+a penetration-depth measurement. “Change size” normalizes Euclidean distance
+within the frozen two-dimensional mutation bounds; it is not a physical
+percentage of speed or time. A small gap or small edit alone is not a finding.
 
-- **Camera** plays 199 recorded FRONT frames. Native boxes change with each
-  frame rather than remaining fixed on the video.
-- **3DGS** switches among three pinned Apple SHARP source-frame
-  reconstructions: moving frame 20, approach frame 60, and stopped frame 99.
-  Drag to orbit and scroll to zoom. These are spatial assets, so video playback
-  is correctly disabled.
-- **LiDAR** loads the same-frame point field as the reconstruction. It is also a
-  spatial asset rather than a disguised camera frame.
+## Replay — follow the selected evidence
 
-The Perception segment and the WOMD planning replay are separate authorized
-records. PlanMargin labels that boundary and does not claim sensor-to-planning
-registration.
+- An exact-replay button loads that proposal's verified trajectory, not another
+  visually similar path.
+- Press Play, drag the timeline, or use **−1 s / +1 s**. Metrics and vehicles
+  advance together.
+- Tested, reference, and original-tested tracks compare outcomes for the
+  **same ego vehicle**. Pink identifies the mutated lead vehicle. The third
+  track is the tested controller's trajectory before the edit, not the logged
+  recording. Markers are schematic; clearance uses recorded vehicle geometry.
+- **Inspect minimum clearance** seeks the frame with the smallest tested gap.
+- **Review candidate records** returns to Investigate and preserves the
+  selected change.
+- Opening Replay directly before selecting a retained proposal shows the
+  separately identified Stage-0 comparison. It is not campaign evidence.
+- A new experiment's replay URL includes its job ID. Refresh reverifies and
+  restores that exact trajectory; it does not restore timeline position.
+  **Return to experiments** preserves its selection in the live history.
+- A historical campaign proposal's selection is not persisted on refresh.
+  Reopen it from Investigate; Stage 0 remains separately identified.
 
-## Evidence: review candidate counterfactuals
+The failure decision is made by the frozen gates—not by a single displayed
+separation or time-to-collision value.
 
-Choose **Evidence** to inspect the immutable search campaign.
+## Test health — inspect a completed run
 
-The authenticated surface is an investigation console rather than a report
-page. A compact command bar keeps campaign/runtime scope and record status
-visible. The priority queue, campaign gate counts, matched-cell matrix, ranked
-proposal list, and selected proposal inspector remain in one continuous
-workspace, so selecting a candidate does not discard the surrounding search
-context.
+This page displays a **saved, sealed report**, not live fleet telemetry or a
+continuously refreshing incident feed.
 
-1. Select a queue: **Closest to failure**, **Smallest change**, or **Strongest
-   precedent**.
-2. Read **Why it stopped**. This is the first failed gate, expressed in planner
-   language rather than only as a score.
-3. Open a candidate to see the complete gate ladder. Later gates are marked as
-   not evaluated after the first stop.
-4. Compare two candidates when deciding which case deserves deeper replay
-   instrumentation.
-5. Use **Analyze selected proposal** for a deterministic, proposal-specific
-   explanation tied to the sealed record hash.
-6. If the proposal says **Exact proposal replay retained and verified**, open
-   it to replace the planning canvas with the re-executed, hash-matched
-   proposal trajectory. Otherwise the UI keeps the not-retained boundary.
-7. Export the privacy-reduced HTML report when the decision must travel outside
-   the running application.
+- **Health:** execution and integrity checks; completion does not prove
+  planner safety.
+- **Coverage:** three versioned test plans, their gates and explicit gaps.
+- **Triage:** measured blocked, stopped, or pending engineering decisions with
+  diagnostic and resolution paths.
 
-The **Model & runtime** view is read-only evidence by design. It separates the
-real-WOMD holdout metrics from deployment probes and shows stopped gates beside
-successful measurements. The scaled model's FP32 path is measured; its FP16
-path is a no-go because maximum drift exceeded the frozen limit. A prior
-model's T4 numbers are never relabeled as measurements of the scaled model.
+The inventory contains 100 search cells plus ten fault-dropout and ten handoff
+cases. These reuse ten recorded scenarios; they are not 120 independent
+scenes. The schema has SLI/objective fields, but no rolling time-window
+availability or preregistered deadline was measured. Regenerate the report with
+`planmargin-build-test-operations` after completing a new authorized campaign.
 
-### Metric translations
+## Sensor lab — separate perception research
 
-The UI keeps raw values available for audit but leads with their meaning:
+**Camera** plays 199 real FRONT frames with frame-specific native tracked
+boxes. **3DGS** opens three pinned Apple SHARP source-frame reconstructions
+(frames 20, 60, and 99); drag to orbit and scroll to zoom. **LiDAR** opens the
+same-frame point field. Spatial assets do not pretend to be videos, so
+playback is disabled for them.
 
-| UI label                 | Raw quantity                                    | Direction                                              |
-| ------------------------ | ----------------------------------------------- | ------------------------------------------------------ |
-| Safety result            | `criticality`                                   | higher means closer to contact                         |
-| Change size              | `minimality`                                    | higher means a smaller edit from the recorded scenario |
-| Recorded precedent       | empirical support probability                   | passes at the frozen 0.05 threshold                    |
-| Normalized edit distance | Euclidean distance in the frozen mutation space | zero is the unchanged scenario                         |
+These are real reconstructed assets, not image-generated illustrations.
+They are separate single-image reconstructions, not a trained, fused dynamic
+multi-view scene. The WOD Perception segment and WOMD planning experiment are
+different records; no sensor-to-planning registration is claimed.
 
-## Evidence assistant
+## Models — inspect promotion decisions
 
-**Ask analysis** opens bounded questions backed by deterministic local tools.
-The default path is offline. The optional Gemini adapter receives only
-allowlisted public aggregates after the user explicitly confirms provider use;
-restricted scenario records are never sent.
+Prediction holdout metrics and NVIDIA runtime measurements are kept separate.
+The scaled model's FP32 path was measured; FP16 did not pass the frozen
+maximum-drift gate. Prior model timings are not relabeled as scaled-model
+results. Active-risk and neighbor-context studies also preserve their no-go
+decisions. These models are not silently promoted into the tested planner.
 
-The panel lists every supported question. Free text is routed only when it
-clearly matches one of those evidence topics; an unrelated or unsupported path
-request is rejected instead of being silently mapped to a different answer.
+## Ask PlanMargin
 
-To use Gemini inside the workbench, create a key for a Google AI Studio project
-that has no billing account attached, then launch with:
+The assistant opens alongside the current page without navigating away.
+Greetings and help use a clearly labeled local guide. Evidence questions use:
+
+1. Deterministic topic routing in the browser.
+2. Retrieval of verified aggregate facts by the backend.
+3. Optional Gemini synthesis from an allowlisted qualitative evidence packet.
+4. Structured-response and citation validation; exact facts remain available
+   under **Show verified facts**.
+
+The raw question and private scene records are not sent to Gemini. This is a
+bounded evidence explainer: it has ten supported topics, no chat memory, no
+autonomous tool selection, and no ability to run experiments. Unmatched
+questions receive an honest limitation rather than an invented answer.
+Use **Analyze selected proposal** for private, proposal-specific questions.
+
+To enable the optional Gemini provider, use your own free-tier project with
+billing disabled and load its key securely in the launcher environment:
 
 ```bash
 uv sync --frozen --extra assistant
-export GEMINI_API_KEY="..."
 uv run --frozen --extra assistant planmargin-workbench \
   --assistant-provider gemini \
   --confirm-gemini-free-tier
 ```
 
-The assistant header must read **Gemini analysis** and show
-`gemini-3.1-flash-lite · public aggregate only`. If Gemini times out or rejects
-the request, the same verified facts are explained by the deterministic local
-provider and the panel labels that fallback. The answer always displays the
-deterministic fact values below the prose, so a vague hosted summary cannot
-hide the measured counts. PlanMargin never enables billing or sends a second
-hosted request automatically.
+The header identifies Gemini synthesis when configured. A response can fall
+back to the deterministic explainer; the panel labels this. The provider may
+attempt up to three structured generations if generation or validation fails.
+The flag records your free-tier confirmation; it cannot independently enforce
+Google's project billing settings. The default offline provider costs nothing.
 
-## Troubleshooting
+## Recovery
 
-- Run `uv run --frozen planmargin-doctor` for a capability-by-capability status
-  report.
-- If the browser shows no evidence, relaunch with
-  `uv run --frozen planmargin-workbench`; do not reuse a token from an earlier
-  process.
-- If the native toolchain is unavailable on macOS, review the doctor output.
-  Accepting the Xcode license is a user action; PlanMargin will not attempt it.
-- If Camera works but 3DGS or LiDAR does not, rerun the resumable sensor
-  bootstrap and then the doctor. Existing complete artifacts are reused.
+- If the API stops or the local session expires, the connection indicator and
+  banner now report the failure. Relaunch the workbench, then use its new URL.
+- Focus changes recheck a connected backend. Fetch failures do not silently
+  leave the badge green or discard the last selected record.
+- Refresh preserves the browser session, not all UI state. Navigation routes
+  are retained; private evidence is always reverified.
+- If a capability fails, run `uv run --frozen planmargin-doctor`. It reports
+  exactly which inputs or derived artifacts need attention.
+- Accepting an Xcode or dataset license remains a user action.
+- Do not run `npm ci` while the same workspace's development server is running:
+  stop it first, install dependencies, and relaunch.
 
-No step requires paid compute or a hosted database.
+Nothing in these steps publishes the app or its data.

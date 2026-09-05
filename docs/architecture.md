@@ -7,6 +7,11 @@ boundary. Later tracks add separately gated prediction, active-mining,
 interaction, deployment, test-health, and fault-protection responsibilities
 without changing that frozen scientific result.
 
+The interactive runner adds a separate exploratory path: an engineer submits
+a bounded change, an isolated worker executes it, and the browser inspects its
+exact verified result. These jobs never alter the completed campaign.
+See [running experiments](running-experiments.md) for the smaller installation.
+
 ## System flow
 
 ```mermaid
@@ -93,6 +98,22 @@ flowchart TB
 | Automation                | uv, npm, GitHub Actions              | Reproduce data-free lint, tests, native builds, dependency audit, typechecking, and frontend production builds.                                                              |
 
 ## Experiment execution
+
+### Interactive local jobs
+
+`ExperimentJobs` supervises one process per workspace using a filesystem lease,
+atomic state, an idempotent submission ID, a wall-time limit, and explicit
+terminal states. `experiment_worker` loads the selected authorized record,
+reuses the existing method-neutral validation and controller code, and retains
+eight original/changed repeated rollouts for accepted changes.
+
+The authenticated API exposes progress, cancellation, a hash-verified result,
+and the exact replay. Angular keeps job history and new-run navigation separate
+from the frozen campaign. The optional empirical-support model can be prepared
+independently; without it, simulation works but realism qualification cannot
+pass. There is no arbitrary command or custom planner execution through the API.
+
+### Frozen research campaign
 
 1. The selection stage identifies ten training scenarios and extracts a bounded
    empirical-support model from authorized WOMD training shards.
@@ -195,10 +216,10 @@ dependencies:
   deterministic partitioned Parquet under DirectRunner; implemented with
   durable source checkpoints, keyed grouping, explicit partitions, and DuckDB
   reconciliation.
-- **FastAPI:** implemented as a localhost-only, read-only boundary over ignored
+- **FastAPI:** historical evidence is a localhost-only, read-only boundary over ignored
   sealed records and verified DuckDB/Parquet evidence; the Angular client uses
   its fixed authenticated projections without persistence or export.
-- **Evidence assistant:** implemented with eight allowlisted aggregate-query
+- **Evidence assistant:** implemented with ten allowlisted aggregate-query
   tools, a deterministic offline default, sealed citations, and an optional
   public-only Gemini structured-output adapter; never metric generation,
   finding certification, or vehicle control.

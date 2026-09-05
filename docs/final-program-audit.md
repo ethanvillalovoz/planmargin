@@ -1,6 +1,6 @@
 # Release-readiness audit
 
-**Audit date:** August 25, 2026
+**Audit date:** September 4, 2026
 
 **Release:** v3.1.0
 
@@ -42,7 +42,7 @@ gates and remain documented negative results with no deployed model.
 6. Trace the first failed qualification gate and compare tested/reference
    planner outcomes.
 7. Export a privacy-reduced, SHA-256-digested HTML investigation report.
-8. Ask eight bounded evidence questions through deterministic local tools or
+8. Ask ten bounded evidence questions through deterministic local tools or
    the optional Gemini explanation adapter.
 9. Inspect measured Tesla T4 latency, throughput, FP32/FP16 drift, environment
    versions, and engine hashes without accessing licensed WOMD records.
@@ -98,16 +98,16 @@ point field, or reconstruction when licensed evidence is absent.
 | Residual FP16 candidate    | Pending GPU | Apple-MPS numerical proxy passed; TensorRT has not been measured and promotion remains blocked      |
 | Shielded RL follow-up      | Stopped     | deterministic synthetic study missed its frozen 1% collision gate at 2.686%                         |
 | Public distribution        | Shipped     | code and aggregate result only; licensed per-record artifacts remain local                          |
-| Test-health operations     | Shipped     | seven executable SLOs, degraded-state alert fixtures, schema-validated aggregate console            |
+| Test-health operations     | Shipped     | 120 real-data test cells, seven SLOs, versioned plans, deterministic diagnostics, sealed report v2  |
 | Command-dropout protection | Shipped     | 60 real-WOMD rollouts; 10/10 protected scenes and 80/80 frozen gates                                |
 | Assistance handoff V&V     | Shipped     | 60 real-WOMD rollouts; 10/10 exact handoffs and 90/90 frozen gates                                  |
 
 ## Verification performed on this revision
 
 - Ruff: all checks passed.
-- Python: 296 tests passed. Upstream warnings are identified in the CI log and
+- Python: 298 tests passed. Upstream warnings are identified in the CI log and
   do not suppress failures.
-- Angular/Vitest: 61 tests passed across launch authentication, local evidence,
+- Angular/Vitest: 66 tests passed across launch authentication, local evidence,
   parsers, stores, navigation, reports, edge-aware trajectory labels, and
   workbench behavior.
 - Browser sign-off covers desktop and 390 px mobile evidence surfaces, planning
@@ -120,7 +120,7 @@ point field, or reconstruction when licensed evidence is absent.
   recovery, responsive overflow, and WCAG A/AA axe checks.
 - TypeScript: application and test projects passed strict type checking.
 - Frontend formatting and optimized production build: passed; the direct app
-  payload is 377.24 kB raw, while Spark and Three.js viewers remain lazy.
+  payload is 410.26 kB raw, while Spark and Three.js viewers remain lazy.
 - Dependency audit: `npm audit --audit-level=moderate` reported zero known
   vulnerabilities.
 - Python dependency audit: `pip-audit==2.10.1` reported no unreviewed

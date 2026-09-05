@@ -51,6 +51,9 @@ describe('InvestigationReportService', () => {
     expect(report).toContain('Seen in recorded behavior');
     expect(report).toContain('derived from the measured minimum signed separation');
     expect(report).toContain('3,200 proposals');
+    expect(report).toContain('Behavior Test Studio');
+    expect(report).toContain('Sealed evidence report');
+    expect(report).toContain('Generated locally from verified PlanMargin evidence.');
     expect(report).toMatch(/[a-f0-9]{64}/);
   });
 

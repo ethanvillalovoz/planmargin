@@ -29,6 +29,7 @@ def test_per_scenario_womd_reports_are_not_committed() -> None:
         REPOSITORY_ROOT / "artifacts" / "beam-features",
         REPOSITORY_ROOT / "artifacts" / "experiment-v2",
         REPOSITORY_ROOT / "artifacts" / "experiment-v4",
+        REPOSITORY_ROOT / "artifacts" / "local-experiments",
     )
 
     tracked = subprocess.run(

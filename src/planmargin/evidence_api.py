@@ -25,6 +25,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from planmargin import analytics
 from planmargin import evidence_assistant
+from planmargin import experiment_jobs
 from planmargin import interaction_metrics
 from planmargin import matched_campaign
 from planmargin import matched_coordinator
@@ -42,12 +43,14 @@ DEFAULT_ROLLOUTS = Path("artifacts/stage-0/rollout-records.json")
 DEFAULT_GAUSSIAN = Path("artifacts/gaussian-field/feasibility")
 DEFAULT_SENSOR_SCENE = Path("artifacts/sensor-scene/waymo-front")
 DEFAULT_PROPOSAL_REPLAYS = Path("artifacts/proposal-replays/natural-development-v1")
-DEFAULT_TEST_OPERATIONS = Path("web/debugger/public/data/test-operations-v1.json")
+DEFAULT_TEST_OPERATIONS = Path("web/debugger/public/data/test-operations-v2.json")
 DEFAULT_ORIGINS = ("http://127.0.0.1:4200", "http://localhost:4200")
 SESSION_COOKIE_NAME = "planmargin_local_session"
 MAX_JSON_BYTES = 128 * 1024 * 1024
 GAUSSIAN_LINKAGE_GATE = 0.90
 ASSISTANT_QUESTIONS = {
+    "test_health": "Are the release-critical simulation tests healthy?",
+    "behavior_coverage": "Which off-nominal behaviors are covered?",
     "campaign_overview": "What happened in the development campaign?",
     "method_comparison": "How did Bayesian compare with random search?",
     "hypothesis_decisions": "What happened to H1, H2, and H3?",
@@ -68,6 +71,7 @@ class EvidenceModel(BaseModel):
 class HealthEvidence(EvidenceModel):
     status: Literal["ready"]
     evidence_mode: Literal["real_local_redacted"]
+    campaign_ready: bool = True
 
 
 class CampaignEvidence(EvidenceModel):
@@ -88,8 +92,12 @@ class CampaignEvidence(EvidenceModel):
 class TestOperationSloEvidence(EvidenceModel):
     id: str
     name: str
+    indicator: str
     target: str
     observed: str
+    objective: float
+    observed_value: float
+    error_budget_remaining_percent: float
     status: Literal["pass", "fail"]
     owner: str
 
@@ -112,16 +120,18 @@ class TestOperationIssueEvidence(EvidenceModel):
     failed_gates: list[str]
     next_action: str
     source: str
+    diagnostic: dict[str, Any]
 
 
 class TestOperationsEvidence(EvidenceModel):
-    schema_version: Literal["1.0.0"]
+    schema_version: Literal["2.0.0"]
     record_type: Literal["planmargin.test_operations_report"]
     evidence_mode: Literal["published_aggregate"]
     claim_boundary: str
     campaign: dict[str, Any]
     slo_summary: dict[str, Any]
     slos: list[TestOperationSloEvidence]
+    test_inventory: dict[str, Any]
     pipeline_stages: list[TestOperationStageEvidence]
     coverage: dict[str, Any]
     issues: list[TestOperationIssueEvidence]
@@ -1248,6 +1258,19 @@ class EvidenceRepository:
             )
             hypothesis_id = "proposal-linked-counterfactual"
             hypothesis_label = f"Exact retained proposal {identity['proposal_number']}"
+        return self.project_run(
+            collection, run_id, scenario_label, hypothesis_id, hypothesis_label
+        )
+
+    def project_run(
+        self,
+        collection: dict[str, Any],
+        run_id: str,
+        scenario_label: str,
+        hypothesis_id: str,
+        hypothesis_label: str,
+    ) -> dict[str, Any]:
+        """Project an already validated collection without exposing source identifiers."""
         records = {
             (record["variant"], record["controller_role"]): record
             for record in collection["records"]
@@ -1693,12 +1716,14 @@ def create_app(
     assistant_provider: Literal["offline", "gemini"] = "offline",
     confirm_gemini_free_tier: bool = False,
     gemini_model: str = evidence_assistant.DEFAULT_MODEL,
+    planning_only: bool = False,
 ) -> FastAPI:
     """Create an authenticated app without performing import-time I/O."""
     if len(token) < 16:
         raise ValueError("Local API token must contain at least 16 characters")
     paths = EvidencePaths.from_root(root)
     repository = EvidenceRepository(paths)
+    jobs = experiment_jobs.ExperimentJobs(root)
     if assistant_provider == "gemini":
         explainer: evidence_assistant.ExplanationProvider = (
             evidence_assistant.GeminiProvider(
@@ -1715,13 +1740,24 @@ def create_app(
         )
     else:
         explainer = evidence_assistant.OfflineProvider()
-        assistant_tools = evidence_assistant.LocalEvidenceTools(repository)
-        assistant_source = "real_local_redacted"
+        assistant_tools = (
+            evidence_assistant.PublicEvidenceTools()
+            if planning_only
+            else evidence_assistant.LocalEvidenceTools(repository)
+        )
+        assistant_source = (
+            "public_aggregate" if planning_only else "real_local_redacted"
+        )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        repository.open()
-        yield
+        if not planning_only:
+            repository.open()
+        jobs.open()
+        try:
+            yield
+        finally:
+            jobs.close()
 
     app = FastAPI(
         title="PlanMargin local evidence API",
@@ -1732,6 +1768,7 @@ def create_app(
         lifespan=lifespan,
     )
     app.state.repository = repository
+    app.state.experiments = jobs
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["127.0.0.1", "localhost", "testserver"],
@@ -1741,7 +1778,7 @@ def create_app(
         allow_origins=list(origins),
         allow_credentials=True,
         allow_methods=["GET", "POST"],
-        allow_headers=["X-PlanMargin-Token"],
+        allow_headers=["X-PlanMargin-Token", "Content-Type"],
     )
 
     @app.middleware("http")
@@ -1775,8 +1812,38 @@ def create_app(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="A valid local evidence token is required",
             )
+        if planning_only and request.url.path.split("/")[3] in {
+            "campaign",
+            "test-operations",
+            "methods",
+            "hypotheses",
+            "cells",
+            "investigation",
+            "runs",
+        }:
+            raise HTTPException(
+                status_code=503,
+                detail="The recorded campaign is not loaded in planning-only mode. Local experiments remain available.",
+            )
 
     auth = Depends(authorize)
+
+    def authorize_write(
+        request: Request, supplied: str | None = Security(token_header)
+    ) -> None:
+        authorize(request, supplied)
+        origin = request.headers.get("origin")
+        if origin not in origins and not (origin is None and valid_token(supplied)):
+            raise HTTPException(
+                status_code=403,
+                detail="Experiment writes require a trusted local origin",
+            )
+
+    from planmargin.experiment_api import experiment_router
+
+    app.include_router(
+        experiment_router(jobs, repository.project_run, authorize, authorize_write)
+    )
 
     @app.post("/api/v1/session", status_code=status.HTTP_204_NO_CONTENT)
     def create_session(
@@ -1811,8 +1878,12 @@ def create_app(
         return response
 
     @app.get("/api/v1/health", dependencies=[auth], response_model=HealthEvidence)
-    def health() -> dict[str, str]:
-        return {"status": "ready", "evidence_mode": "real_local_redacted"}
+    def health() -> dict[str, Any]:
+        return {
+            "status": "ready",
+            "evidence_mode": "real_local_redacted",
+            "campaign_ready": not planning_only,
+        }
 
     @app.get("/api/v1/campaign", dependencies=[auth], response_model=CampaignEvidence)
     def campaign() -> dict[str, Any]:

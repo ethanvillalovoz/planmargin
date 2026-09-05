@@ -1,4 +1,6 @@
 export type AssistantQueryId =
+  | 'test_health'
+  | 'behavior_coverage'
   | 'campaign_overview'
   | 'method_comparison'
   | 'hypothesis_decisions'

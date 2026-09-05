@@ -20,16 +20,42 @@ import { InvestigationProposal, LocalProposal, ProposalAnalysis } from '../local
 import { SimulatorStore } from '../simulator.store';
 import { SimulatorWorkspace } from './simulator-workspace';
 import { OperationsWorkspace } from './operations-workspace';
+import { ScenarioAssistant } from './scenario-assistant';
+import { ExperimentWorkspace } from './experiment-workspace';
+import { DebuggerRun } from '../debugger.types';
 
-type ProductView = 'operations' | 'investigate' | 'replay' | 'sensor';
+type ProductView = 'operations' | 'investigate' | 'replay' | 'sensor' | 'experiments';
 type EvidenceView = 'campaign' | 'deployment';
 type ProposalSort = 'criticality' | 'minimality' | 'support' | 'sequence';
 type ProposalFilter = 'all' | 'eligible' | 'support-rejected' | 'pipeline-rejected';
 type InvestigationRank = 'closest' | 'minimal' | 'support';
 
+function initialProductView(): ProductView {
+  const requested = new URLSearchParams(window.location.search).get('view');
+  if (requested === 'evidence') return 'investigate';
+  if (requested === 'experiments') return 'experiments';
+  if (requested === 'replay' || requested === 'sensors') {
+    return requested === 'sensors' ? 'sensor' : requested;
+  }
+  if (requested === 'health' || requested === 'operations') return 'operations';
+  return 'investigate';
+}
+
+function initialEvidenceView(): EvidenceView {
+  return new URLSearchParams(window.location.search).get('panel') === 'runtime'
+    ? 'deployment'
+    : 'campaign';
+}
+
 @Component({
   selector: 'app-product-shell',
-  imports: [NgIcon, OperationsWorkspace, SimulatorWorkspace],
+  imports: [
+    NgIcon,
+    OperationsWorkspace,
+    SimulatorWorkspace,
+    ScenarioAssistant,
+    ExperimentWorkspace,
+  ],
   providers: [
     provideIcons({
       phosphorDownloadSimple,
@@ -42,30 +68,43 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
   template: `
     <div class="product-shell" [class.sensor-active]="view() === 'sensor' || view() === 'replay'">
       <header class="product-header">
-        <button class="brand" type="button" (click)="setView('operations')">
+        <button class="brand" type="button" (click)="openInvestigation()">
           <ng-icon name="phosphorStack" size="23" aria-hidden="true" />
-          <strong>PlanMargin</strong>
+          <span class="brand-lockup">
+            <strong>PlanMargin</strong>
+            <small>Planner stress testing</small>
+          </span>
         </button>
         <nav aria-label="Product sections">
+          <button
+            type="button"
+            [class.active]="
+              (view() === 'investigate' && evidenceView() === 'campaign') ||
+              view() === 'experiments'
+            "
+            (click)="openInvestigation()"
+          >
+            Investigate
+          </button>
+          <button type="button" [class.active]="view() === 'replay'" (click)="setView('replay')">
+            Replay
+          </button>
           <button
             type="button"
             [class.active]="view() === 'operations'"
             (click)="setView('operations')"
           >
-            Operations
-          </button>
-          <button type="button" [class.active]="view() === 'replay'" (click)="setView('replay')">
-            Scenario lab
+            Test health
           </button>
           <button type="button" [class.active]="view() === 'sensor'" (click)="setView('sensor')">
-            Sensors
+            Sensor lab
           </button>
           <button
             type="button"
-            [class.active]="view() === 'investigate'"
-            (click)="setView('investigate')"
+            [class.active]="view() === 'investigate' && evidenceView() === 'deployment'"
+            (click)="openModels()"
           >
-            Research
+            Models
           </button>
         </nav>
         <div class="header-actions">
@@ -76,7 +115,14 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
             [disabled]="!local.connected()"
             (click)="toggleAssistant()"
           >
-            <ng-icon name="phosphorSparkle" size="15" />Ask analysis
+            <ng-icon name="phosphorSparkle" size="15" />{{
+              view() === 'experiments' ||
+              (view() === 'replay' &&
+                debuggerStore.hasRun() &&
+                debuggerStore.run().runId.startsWith('experiment_'))
+                ? 'Ask campaign guide'
+                : 'Ask PlanMargin'
+            }}
           </button>
           @if (publicHosted) {
             <a class="connection" [href]="repositoryUrl"><i></i>Clone for local workspace</a>
@@ -91,57 +137,73 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
               <i></i
               >{{
                 local.connected()
-                  ? 'Local records verified'
+                  ? 'Local workspace connected'
                   : local.state() === 'connecting'
                     ? 'Verifying local records…'
-                    : 'Open local workspace'
+                    : local.state() === 'error'
+                      ? 'Reconnect workspace'
+                      : 'Open local workspace'
               }}
             </button>
           }
         </div>
       </header>
 
-      @if (view() === 'operations') {
-        <app-operations-workspace (openScenarioLab)="setView('replay')" />
+      @if (local.error()) {
+        <div class="connection-error" role="alert">
+          <span>{{ local.error() }}</span>
+          <button type="button" (click)="connectRequested.emit()">Reconnect</button>
+        </div>
+      }
+      @if (view() === 'experiments') {
+        <app-experiment-workspace
+          (campaignRequested)="openInvestigation()"
+          (connectRequested)="connectRequested.emit()"
+          (replayRequested)="openExperimentReplay($event)"
+        />
+      } @else if (view() === 'operations') {
+        <app-operations-workspace
+          (openScenarioLab)="openInvestigation()"
+          (openExperiments)="setView('experiments')"
+        />
       } @else if (view() === 'investigate') {
         <main class="investigation-page">
           <header class="evidence-commandbar">
             <div class="evidence-context">
-              <span>Evidence workspace</span>
-              <strong>{{
+              <span>{{
                 evidenceView() === 'campaign'
-                  ? local.connected()
-                    ? 'Counterfactual investigation'
-                    : 'Published campaign evidence'
-                  : 'Model qualification'
-              }}</strong>
-              <small>{{
-                evidenceView() === 'campaign'
-                  ? local.connected()
-                    ? 'Rank, inspect, compare, replay, and export sealed proposals.'
-                    : 'Inspect reproducible aggregates before opening licensed local records.'
-                  : 'Trace prediction quality through runtime and promotion gates.'
-              }}</small>
+                  ? 'Counterfactual investigation'
+                  : 'Supporting research'
+              }}</span>
+              <h1>
+                {{ evidenceView() === 'campaign' ? 'Lead-vehicle braking' : 'Models & runtime' }}
+              </h1>
+              <p>
+                {{
+                  evidenceView() === 'campaign'
+                    ? 'Change when the lead vehicle brakes. Compare the tested planner with a conservative reference.'
+                    : 'Prediction and deployment studies. These models are evaluated separately from the planning campaign.'
+                }}
+              </p>
             </div>
-            <nav class="evidence-sections" aria-label="Evidence sections">
-              <button
-                type="button"
-                [class.active]="evidenceView() === 'campaign'"
-                (click)="evidenceView.set('campaign')"
-              >
-                Campaign review
+            @if (evidenceView() === 'campaign') {
+              <button class="new-experiment-action" type="button" (click)="setView('experiments')">
+                New experiment
               </button>
-              <button
-                type="button"
-                [class.active]="evidenceView() === 'deployment'"
-                (click)="evidenceView.set('deployment')"
-              >
-                Model & runtime
-              </button>
-            </nav>
-            <div class="page-status" [class.connected]="local.connected()">
-              <i></i>{{ local.connected() ? 'Sealed records verified' : 'Local records required' }}
-            </div>
+              <div class="campaign-outcome" aria-label="Campaign result">
+                <strong
+                  >{{
+                    local.campaign().methods.random.qualifyingFindings +
+                      local.campaign().methods.bayesian.qualifyingFindings
+                  }}
+                  qualifying regressions</strong
+                >
+                <span
+                  >{{ local.campaign().proposals.toLocaleString() }} tested changes · 10 recorded
+                  scenarios</span
+                >
+              </div>
+            }
           </header>
 
           @if (evidenceView() === 'deployment') {
@@ -325,7 +387,7 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
                 </article>
               </div>
             </section>
-          } @else if (!local.connected()) {
+          } @else if (!local.connected() || !local.campaignAvailable()) {
             <section class="public-workbench">
               <header class="public-result">
                 <div>
@@ -430,1920 +492,594 @@ type InvestigationRank = 'closest' | 'minimal' | 'support';
               </footer>
             </section>
           } @else {
-            @if (local.investigation(); as campaign) {
-              <section class="campaign-index" aria-labelledby="campaign-index-title">
-                <header>
-                  <div>
-                    <p>Verified campaign · {{ local.cells().length }} cells</p>
-                    <h2 id="campaign-index-title">Priority review queue</h2>
-                  </div>
-                  <div class="rank-tabs" aria-label="Campaign ranking">
-                    <button
-                      type="button"
-                      [class.active]="rank() === 'closest'"
-                      (click)="rank.set('closest')"
-                    >
-                      Closest to failure
-                    </button>
-                    <button
-                      type="button"
-                      [class.active]="rank() === 'minimal'"
-                      (click)="rank.set('minimal')"
-                    >
-                      Smallest change
-                    </button>
-                    <button
-                      type="button"
-                      [class.active]="rank() === 'support'"
-                      (click)="rank.set('support')"
-                    >
-                      Strongest precedent
-                    </button>
-                  </div>
-                </header>
-                <div class="campaign-funnel" aria-label="Campaign-wide gate funnel">
-                  <div>
-                    <strong>{{ campaign.funnel.proposed }}</strong
-                    ><span>proposed</span>
-                  </div>
-                  <div>
-                    <strong>{{ campaign.funnel.scenarioValid }}</strong
-                    ><span>scenario valid</span>
-                  </div>
-                  <div>
-                    <strong>{{ campaign.funnel.pipelineValid }}</strong
-                    ><span>deterministic</span>
-                  </div>
-                  <div>
-                    <strong>{{ campaign.funnel.supportValid }}</strong
-                    ><span>supported</span>
-                  </div>
-                  <div>
-                    <strong>{{ campaign.funnel.referencePasses }}</strong
-                    ><span>reference pass</span>
-                  </div>
-                  <div>
-                    <strong>{{ campaign.funnel.testedFails }}</strong
-                    ><span>tested fail</span>
-                  </div>
-                  <div class="terminal">
-                    <strong>{{ campaign.funnel.qualifyingFindings }}</strong
-                    ><span>findings</span>
-                  </div>
-                </div>
-                <div class="campaign-table" role="table" aria-label="Campaign-ranked proposals">
-                  <div class="campaign-row campaign-head" role="row">
-                    <span role="columnheader">Rank</span><span role="columnheader">Case</span
-                    ><span role="columnheader">Change</span
-                    ><span role="columnheader">Safety result</span
-                    ><span role="columnheader">Recorded precedent</span
-                    ><span role="columnheader">Why it stopped</span
-                    ><span role="columnheader">Actions</span>
-                  </div>
-                  @for (
-                    proposal of campaignRanking();
-                    track proposal.cellId + proposal.proposalNumber;
-                    let index = $index
-                  ) {
-                    <div class="campaign-row" role="row">
-                      <span role="cell">{{ index + 1 }}</span>
-                      <span
-                        role="cell"
-                        class="method"
-                        [class.bayesian]="proposal.method === 'bayesian'"
-                      >
-                        {{ proposal.method }} · S{{ proposal.selectionOrder }} · {{ proposal.seed }}
-                      </span>
-                      <span role="cell">{{ mutationNarrative(proposal) }}</span>
-                      <span role="cell">{{ proximityLabel(proposal.criticality) }}</span>
-                      <span role="cell">{{
-                        supportLabel(proposal.empiricalSupportProbability, proposal.supportPasses)
-                      }}</span>
-                      <span role="cell">{{ formatGate(proposal.decisiveGate) }}</span>
-                      <span role="cell" class="row-actions">
-                        <button type="button" (click)="openCampaignProposal(proposal)">
-                          Inspect
-                        </button>
-                        <button type="button" (click)="toggleCompare(proposal)">
-                          {{ isCompared(proposal) ? 'Remove' : 'Compare' }}
-                        </button>
-                      </span>
-                    </div>
-                  }
-                </div>
-                @if (comparison().length > 0) {
-                  <section class="comparison-dock" aria-label="Proposal comparison">
-                    <header>
-                      <strong>Comparison · {{ comparison().length }}/2</strong
-                      ><button type="button" (click)="comparison.set([])">Clear</button>
-                    </header>
+            <div class="investigation-layout" [class.browsing-cells]="browseCells()">
+              @if (local.investigation(); as campaign) {
+                <section class="campaign-index" aria-labelledby="campaign-index-title">
+                  <header>
                     <div>
-                      @for (
-                        proposal of comparison();
-                        track proposal.cellId + proposal.proposalNumber
-                      ) {
-                        <article>
-                          <span
-                            >{{ proposal.method }} · S{{ proposal.selectionOrder }} · seed
-                            {{ proposal.seed }}</span
-                          >
-                          <h3>Proposal {{ proposal.proposalNumber }}</h3>
-                          <dl>
-                            <div>
-                              <dt>Safety result</dt>
-                              <dd>{{ proximityLabel(proposal.criticality) }}</dd>
-                            </div>
-                            <div>
-                              <dt>Change size</dt>
-                              <dd>{{ changeSizeLabel(proposal.minimality) }}</dd>
-                            </div>
-                            <div>
-                              <dt>Recorded precedent</dt>
-                              <dd>
-                                {{
-                                  supportLabel(
-                                    proposal.empiricalSupportProbability,
-                                    proposal.supportPasses
-                                  )
-                                }}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Why it stopped</dt>
-                              <dd>{{ formatGate(proposal.decisiveGate) }}</dd>
-                            </div>
-                          </dl>
-                          <button type="button" (click)="openCampaignProposal(proposal)">
-                            Open evidence
-                          </button>
-                        </article>
-                      }
+                      <p>
+                        {{
+                          browseCells()
+                            ? 'Explore every search run'
+                            : 'Start with the smallest margins'
+                        }}
+                      </p>
+                      <h2 id="campaign-index-title">Scenario changes</h2>
                     </div>
-                  </section>
-                }
-              </section>
-            }
-            <section class="investigation-workspace">
-              <aside class="cell-rail" aria-labelledby="cell-matrix-title">
-                <div class="rail-heading">
-                  <h2 id="cell-matrix-title">100 matched cells</h2>
-                  <span>scenario × seed × method</span>
-                </div>
-                <div class="cell-legend">
-                  <span><i class="random"></i>Random</span
-                  ><span><i class="bayesian"></i>Bayesian</span>
-                </div>
-                <div class="cell-grid">
-                  @for (cell of local.cells(); track cell.cellId) {
-                    <button
-                      type="button"
-                      [class.random]="cell.method === 'random'"
-                      [class.bayesian]="cell.method === 'bayesian'"
-                      [class.active]="local.selectedCellId() === cell.cellId"
-                      [style.--validity]="cell.validRatePercent + '%'"
-                      [attr.aria-label]="
-                        cell.method +
-                        ' scenario ' +
-                        cell.selectionOrder +
-                        ' seed ' +
-                        cell.seed +
-                        ', ' +
-                        cell.validRatePercent.toFixed(1) +
-                        ' percent eligible'
-                      "
-                      (click)="selectCell(cell.cellId)"
-                    ></button>
-                  }
-                </div>
-                @if (local.selectedCell(); as cell) {
-                  <dl class="cell-summary">
-                    <div>
-                      <dt>Selected</dt>
-                      <dd>{{ cell.method }} · S{{ cell.selectionOrder }} · seed {{ cell.seed }}</dd>
-                    </div>
-                    <div>
-                      <dt>Pipeline valid</dt>
-                      <dd>{{ cell.pipelineValidCount }} / 32</dd>
-                    </div>
-                    <div>
-                      <dt>Support + pipeline</dt>
-                      <dd>{{ cell.supportAndPipelineValidCount }} / 32</dd>
-                    </div>
-                    <div>
-                      <dt>Past realism gates</dt>
-                      <dd>{{ cell.supportAndPipelineValidCount }} / {{ cell.proposalCount }}</dd>
-                    </div>
-                  </dl>
-                }
-              </aside>
-
-              <section class="proposal-region">
-                <div class="proposal-toolbar">
-                  <div>
-                    <h2>Proposal evidence</h2>
-                    <p>Rank the selected cell without changing its sealed sequence.</p>
-                  </div>
-                  <div class="toolbar-filters">
-                    <label
-                      >Show
-                      <select [value]="filter()" (change)="changeFilter($event)">
-                        <option value="all">All proposals</option>
-                        <option value="eligible">All feasibility gates</option>
-                        <option value="support-rejected">Support rejected</option>
-                        <option value="pipeline-rejected">Pipeline rejected</option>
-                      </select>
-                    </label>
-                    <label
-                      >Rank by
-                      <select [value]="sort()" (change)="changeSort($event)">
-                        <option value="criticality">Closest safety margin</option>
-                        <option value="minimality">Smallest mutation</option>
-                        <option value="support">Highest support</option>
-                        <option value="sequence">Original sequence</option>
-                      </select>
-                    </label>
-                  </div>
-                </div>
-
-                <div class="gate-funnel" aria-label="Selected cell gate funnel">
-                  @for (gate of funnel(); track gate.label) {
-                    <div>
-                      <strong>{{ gate.count }}</strong
-                      ><span>{{ gate.label }}</span
-                      ><i [style.width.%]="(gate.count / 32) * 100"></i>
-                    </div>
-                  }
-                </div>
-
-                <div class="proposal-layout">
-                  <div class="proposal-list" aria-label="Ranked proposal list">
-                    @if (local.loadingProposals()) {
-                      <p>Verifying 32 proposal seals…</p>
-                    }
-                    @for (proposal of rankedProposals(); track proposal.proposalNumber) {
+                    <div class="rank-tabs" aria-label="Campaign ranking">
                       <button
                         type="button"
-                        [class.active]="local.selectedProposalNumber() === proposal.proposalNumber"
-                        (click)="selectProposal(proposal.proposalNumber)"
+                        [class.active]="rank() === 'closest'"
+                        (click)="rank.set('closest')"
                       >
-                        <span>#{{ proposal.proposalNumber.toString().padStart(2, '0') }}</span>
-                        <div>
-                          <strong>{{ proposalTitle(proposal) }}</strong
-                          ><small>{{ gateReason(proposal) }}</small>
-                        </div>
-                        <b>{{ rankValue(proposal) }}</b>
+                        Closest to failure
                       </button>
-                    }
+                      <button
+                        type="button"
+                        [class.active]="rank() === 'minimal'"
+                        (click)="rank.set('minimal')"
+                      >
+                        Smallest change
+                      </button>
+                      <button
+                        type="button"
+                        [class.active]="rank() === 'support'"
+                        (click)="rank.set('support')"
+                      >
+                        Strongest precedent
+                      </button>
+                    </div>
+                  </header>
+                  <div class="queue-controls">
+                    <p>
+                      {{
+                        rank() === 'closest'
+                          ? 'Closest approaches first. A small gap alone does not qualify as a planner failure.'
+                          : rank() === 'minimal'
+                            ? 'Smallest edits first, under the same realism and reproducibility gates.'
+                            : 'Changes with the strongest support in recorded driving behavior.'
+                      }}
+                    </p>
+                    <button
+                      type="button"
+                      [attr.aria-expanded]="browseCells()"
+                      (click)="browseCells.set(!browseCells())"
+                    >
+                      {{ browseCells() ? 'Back to priority queue' : 'Browse all 100 search runs' }}
+                    </button>
                   </div>
-
-                  @if (local.selectedProposal(); as proposal) {
-                    <article class="proposal-detail">
+                  @if (!browseCells()) {
+                    <div class="campaign-table" role="table" aria-label="Campaign-ranked proposals">
+                      <div class="campaign-row campaign-head" role="row">
+                        <span role="columnheader">Scenario / change</span>
+                        <span role="columnheader">Minimum gap</span>
+                        <span role="columnheader">Review</span>
+                      </div>
+                      @for (
+                        proposal of campaignRanking();
+                        track proposal.cellId + proposal.proposalNumber;
+                        let index = $index
+                      ) {
+                        <div
+                          class="campaign-row"
+                          role="row"
+                          [class.selected]="isSelected(proposal)"
+                        >
+                          <span role="cell" class="case-summary">
+                            <strong
+                              >Scenario {{ proposal.selectionOrder }}
+                              <small
+                                >{{ proposal.method }} · #{{ proposal.proposalNumber }}</small
+                              ></strong
+                            >
+                            <span>{{ mutationNarrative(proposal) }}</span>
+                            <small>{{ formatGate(proposal.decisiveGate) }}</small>
+                          </span>
+                          <span role="cell" class="gap-value"
+                            >{{ clearanceValue(proposal.criticality)
+                            }}<small>{{
+                              proposal.trajectoryAvailable ? 'Replay available' : 'Metrics only'
+                            }}</small></span
+                          >
+                          <span role="cell" class="row-actions">
+                            <button
+                              type="button"
+                              [attr.aria-label]="
+                                'Inspect ' +
+                                proposal.method +
+                                ' scenario ' +
+                                proposal.selectionOrder +
+                                ' seed ' +
+                                proposal.seed +
+                                ' proposal ' +
+                                proposal.proposalNumber
+                              "
+                              (click)="openCampaignProposal(proposal)"
+                            >
+                              {{ isSelected(proposal) ? 'Selected' : 'Inspect' }}
+                            </button>
+                            <button
+                              type="button"
+                              [attr.aria-pressed]="isCompared(proposal)"
+                              (click)="toggleCompare(proposal)"
+                            >
+                              {{ isCompared(proposal) ? 'Remove' : 'Compare' }}
+                            </button>
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  }
+                  @if (comparison().length > 0) {
+                    <section class="comparison-dock" aria-label="Proposal comparison">
                       <header>
-                        <div>
-                          <p>Proposal {{ proposal.proposalNumber }}</p>
-                          <h2>{{ gateReason(proposal) }}</h2>
-                        </div>
-                        <span [class.finding]="proposal.policySpecificAvoidableFailure">{{
-                          proposal.attemptStatus.replaceAll('_', ' ')
-                        }}</span>
+                        <strong>Comparison · {{ comparison().length }}/2</strong
+                        ><button type="button" (click)="comparison.set([])">Clear</button>
                       </header>
-                      <div class="parameter-strip">
-                        <div>
-                          <span>Braking onset shift</span
-                          ><strong>{{ signedSeconds(proposal.brakingOnsetOffsetSeconds) }}</strong>
-                        </div>
-                        <div>
-                          <span>Lead speed scale</span
-                          ><strong>{{ proposal.speedMultiplier.toFixed(4) }}</strong>
-                        </div>
-                        <div>
-                          <span>Safety result</span
-                          ><strong>{{ proximityLabel(proposal.criticality) }}</strong>
-                        </div>
-                        <div>
-                          <span>Change size</span
-                          ><strong>{{ changeSizeLabel(proposal.minimality) }}</strong>
-                        </div>
-                      </div>
-                      <div class="controller-comparison" aria-label="Planner outcomes">
-                        <div>
-                          <span>Tested planner</span>
-                          <strong [class.failure]="proposal.testedMutatedFailure === true">{{
-                            proposal.testedMutatedFailure === true
-                              ? 'Failed'
-                              : proposal.testedMutatedFailure === false
-                                ? 'Succeeded'
-                                : 'Not evaluated'
-                          }}</strong>
-                        </div>
-                        <div>
-                          <span>Reference planner</span>
-                          <strong [class.success]="proposal.referenceMutatedSuccess === true">{{
-                            proposal.referenceMutatedSuccess === true
-                              ? 'Succeeded'
-                              : proposal.referenceMutatedSuccess === false
-                                ? 'Failed'
-                                : 'Not evaluated'
-                          }}</strong>
-                        </div>
-                        <div>
-                          <span>Finding contract</span>
-                          <strong>{{
-                            proposal.policySpecificAvoidableFailure === true
-                              ? 'Qualified'
-                              : 'Not qualified'
-                          }}</strong>
-                        </div>
-                      </div>
-                      <ol class="gate-ladder">
-                        @for (gate of proposalGates(proposal); track gate.label) {
-                          <li [class.pass]="gate.pass" [class.stop]="gate.stop">
-                            <i>{{ gate.pass ? '✓' : gate.stop ? '×' : '—' }}</i>
-                            <div>
-                              <strong>{{ gate.label }}</strong
-                              ><span>{{ gate.detail }}</span>
-                            </div>
-                          </li>
+                      <div>
+                        @for (
+                          proposal of comparison();
+                          track proposal.cellId + proposal.proposalNumber
+                        ) {
+                          <article>
+                            <span
+                              >{{ proposal.method }} · S{{ proposal.selectionOrder }} · seed
+                              {{ proposal.seed }}</span
+                            >
+                            <h3>Proposal {{ proposal.proposalNumber }}</h3>
+                            <dl>
+                              <div>
+                                <dt>Safety result</dt>
+                                <dd>{{ proximityLabel(proposal.criticality) }}</dd>
+                              </div>
+                              <div>
+                                <dt>Change size</dt>
+                                <dd>{{ changeSizeLabel(proposal.minimality) }}</dd>
+                              </div>
+                              <div>
+                                <dt>Recorded precedent</dt>
+                                <dd>
+                                  {{
+                                    supportLabel(
+                                      proposal.empiricalSupportProbability,
+                                      proposal.supportPasses
+                                    )
+                                  }}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Why it stopped</dt>
+                                <dd>{{ formatGate(proposal.decisiveGate) }}</dd>
+                              </div>
+                            </dl>
+                            <button type="button" (click)="openCampaignProposal(proposal)">
+                              Open evidence
+                            </button>
+                          </article>
                         }
-                      </ol>
-                      <div class="replay-boundary">
-                        @if (proposal.trajectoryAvailable && proposal.replayRunId) {
-                          <strong>Exact proposal replay retained and verified.</strong>
-                          <p>
-                            This proposal was re-executed from its authorized WOMD source. Fresh
-                            tested and reference trajectories match the sealed v1 trajectory hashes.
-                          </p>
+                      </div>
+                    </section>
+                  }
+                </section>
+              }
+              <section class="investigation-workspace">
+                @if (browseCells()) {
+                  <aside class="cell-rail" aria-labelledby="cell-matrix-title">
+                    <div class="rail-heading">
+                      <h2 id="cell-matrix-title">100 matched cells</h2>
+                      <span>scenario × seed × method</span>
+                    </div>
+                    <label class="run-picker"
+                      >Search run
+                      <select [value]="local.selectedCellId()" (change)="changeCell($event)">
+                        @for (cell of local.cells(); track cell.cellId) {
+                          <option [value]="cell.cellId">
+                            Scenario {{ cell.selectionOrder }} · {{ cell.method }} · seed
+                            {{ cell.seed }}
+                          </option>
+                        }
+                      </select>
+                    </label>
+                    <details class="run-matrix">
+                      <summary>Show run matrix</summary>
+                      <div class="cell-legend">
+                        <span><i class="random"></i>Random</span
+                        ><span><i class="bayesian"></i>Bayesian</span>
+                      </div>
+                      <div class="cell-grid">
+                        @for (cell of local.cells(); track cell.cellId) {
                           <button
                             type="button"
-                            (click)="openProposalReplay(proposal.replayRunId)"
-                            [disabled]="replayLoading()"
+                            [class.random]="cell.method === 'random'"
+                            [class.bayesian]="cell.method === 'bayesian'"
+                            [class.active]="local.selectedCellId() === cell.cellId"
+                            [style.--validity]="cell.validRatePercent + '%'"
+                            [attr.aria-label]="
+                              cell.method +
+                              ' scenario ' +
+                              cell.selectionOrder +
+                              ' seed ' +
+                              cell.seed +
+                              ', ' +
+                              cell.validRatePercent.toFixed(1) +
+                              ' percent eligible'
+                            "
+                            [attr.title]="
+                              cell.method +
+                              ' · scenario ' +
+                              cell.selectionOrder +
+                              ' · seed ' +
+                              cell.seed
+                            "
+                            (click)="selectCell(cell.cellId)"
                           >
-                            <ng-icon name="phosphorPlay" size="15" />{{
-                              replayLoading()
-                                ? 'Loading exact replay…'
-                                : 'Open exact proposal replay'
+                            {{ cell.selectionOrder }}·{{ cell.seed }}
+                          </button>
+                        }
+                      </div>
+                    </details>
+                    @if (local.selectedCell(); as cell) {
+                      <dl class="cell-summary">
+                        <div>
+                          <dt>Selected</dt>
+                          <dd>
+                            {{ cell.method }} · S{{ cell.selectionOrder }} · seed {{ cell.seed }}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Pipeline valid</dt>
+                          <dd>{{ cell.pipelineValidCount }} / 32</dd>
+                        </div>
+                        <div>
+                          <dt>Support + pipeline</dt>
+                          <dd>{{ cell.supportAndPipelineValidCount }} / 32</dd>
+                        </div>
+                        <div>
+                          <dt>Past realism gates</dt>
+                          <dd>
+                            {{ cell.supportAndPipelineValidCount }} / {{ cell.proposalCount }}
+                          </dd>
+                        </div>
+                      </dl>
+                    }
+                  </aside>
+                }
+                <section class="proposal-region">
+                  @if (browseCells()) {
+                    <div class="proposal-toolbar">
+                      <div>
+                        <h2>Proposal evidence</h2>
+                        <p>Rank the selected cell without changing its sealed sequence.</p>
+                      </div>
+                      <div class="toolbar-filters">
+                        <label
+                          >Show
+                          <select [value]="filter()" (change)="changeFilter($event)">
+                            <option value="all">All proposals</option>
+                            <option value="eligible">All feasibility gates</option>
+                            <option value="support-rejected">Support rejected</option>
+                            <option value="pipeline-rejected">Pipeline rejected</option>
+                          </select>
+                        </label>
+                        <label
+                          >Rank by
+                          <select [value]="sort()" (change)="changeSort($event)">
+                            <option value="criticality">Closest safety margin</option>
+                            <option value="minimality">Smallest mutation</option>
+                            <option value="support">Highest support</option>
+                            <option value="sequence">Original sequence</option>
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="gate-funnel" aria-label="Selected cell gate funnel">
+                      @for (gate of funnel(); track gate.label) {
+                        <div>
+                          <strong>{{ gate.count }}</strong
+                          ><span>{{ gate.label }}</span
+                          ><i [style.width.%]="(gate.count / 32) * 100"></i>
+                        </div>
+                      }
+                    </div>
+                  }
+                  <div class="proposal-layout" [class.with-list]="browseCells()">
+                    @if (browseCells()) {
+                      <div class="proposal-list" aria-label="Ranked proposal list">
+                        @if (local.loadingProposals()) {
+                          <p>Verifying 32 proposal seals…</p>
+                        }
+                        @for (proposal of rankedProposals(); track proposal.proposalNumber) {
+                          <button
+                            type="button"
+                            [class.active]="
+                              local.selectedProposalNumber() === proposal.proposalNumber
+                            "
+                            (click)="selectProposal(proposal.proposalNumber)"
+                          >
+                            <span>#{{ proposal.proposalNumber.toString().padStart(2, '0') }}</span>
+                            <div>
+                              <strong>{{ proposalTitle(proposal) }}</strong
+                              ><small>{{ gateReason(proposal) }}</small>
+                            </div>
+                            <b>{{ rankValue(proposal) }}</b>
+                          </button>
+                        }
+                      </div>
+                    }
+                    @if (local.loadingProposals()) {
+                      <p class="loading-state" role="status">
+                        Reading the selected scenario change…
+                      </p>
+                    } @else if (local.selectedProposal(); as proposal) {
+                      <article class="proposal-detail">
+                        <header>
+                          <div>
+                            <p>
+                              Scenario {{ local.selectedCell()?.selectionOrder }} ·
+                              {{ local.selectedCell()?.method }} · seed
+                              {{ local.selectedCell()?.seed }} · proposal
+                              {{ proposal.proposalNumber }}
+                            </p>
+                            <h2>{{ gateReason(proposal) }}</h2>
+                          </div>
+                          <button
+                            type="button"
+                            class="detail-help"
+                            [attr.aria-expanded]="showGateDetails()"
+                            (click)="showGateDetails.set(!showGateDetails())"
+                          >
+                            {{ showGateDetails() ? 'Hide gate details' : 'Explain decision' }}
+                          </button>
+                        </header>
+                        <p class="decision-explanation">{{ decisionExplanation(proposal) }}</p>
+                        <div class="parameter-strip">
+                          <div>
+                            <span>Braking onset shift</span
+                            ><strong>{{
+                              signedSeconds(proposal.brakingOnsetOffsetSeconds)
+                            }}</strong>
+                          </div>
+                          <div>
+                            <span>Lead speed scale</span
+                            ><strong
+                              >{{ (proposal.speedMultiplier * 100).toFixed(1) }}% of recorded
+                              speed</strong
+                            >
+                          </div>
+                          <div>
+                            <span>Safety result</span
+                            ><strong>{{ proximityLabel(proposal.criticality) }}</strong>
+                          </div>
+                          <div>
+                            <span>Change size</span
+                            ><strong>{{ changeSizeLabel(proposal.minimality) }}</strong>
+                          </div>
+                        </div>
+                        <div class="controller-comparison" aria-label="Planner outcomes">
+                          <div>
+                            <span>Tested planner</span>
+                            <strong [class.failure]="proposal.testedMutatedFailure === true">{{
+                              proposal.testedMutatedFailure === true
+                                ? 'Failed'
+                                : proposal.testedMutatedFailure === false
+                                  ? 'Succeeded'
+                                  : 'Not evaluated'
+                            }}</strong>
+                          </div>
+                          <div>
+                            <span>Reference planner</span>
+                            <strong [class.success]="proposal.referenceMutatedSuccess === true">{{
+                              proposal.referenceMutatedSuccess === true
+                                ? 'Succeeded'
+                                : proposal.referenceMutatedSuccess === false
+                                  ? 'Failed'
+                                  : 'Not evaluated'
+                            }}</strong>
+                          </div>
+                          <div>
+                            <span>Finding contract</span>
+                            <strong>{{
+                              proposal.policySpecificAvoidableFailure === true
+                                ? 'Qualified'
+                                : 'Not qualified'
+                            }}</strong>
+                          </div>
+                        </div>
+                        @if (showGateDetails()) {
+                          <ol class="gate-ladder">
+                            @for (gate of proposalGates(proposal); track gate.label) {
+                              <li [class.pass]="gate.pass" [class.stop]="gate.stop">
+                                <i>{{ gate.pass ? '✓' : gate.stop ? '×' : '—' }}</i>
+                                <div>
+                                  <strong>{{ gate.label }}</strong
+                                  ><span>{{ gate.detail }}</span>
+                                </div>
+                              </li>
+                            }
+                          </ol>
+                        }
+                        <div class="replay-boundary">
+                          @if (proposal.trajectoryAvailable && proposal.replayRunId) {
+                            <strong>Exact proposal replay retained and verified.</strong>
+                            <p>
+                              Replay this exact change and inspect the moment of closest approach.
+                            </p>
+                            <button
+                              type="button"
+                              (click)="openProposalReplay(proposal.replayRunId)"
+                              [disabled]="replayLoading()"
+                            >
+                              <ng-icon name="phosphorPlay" size="15" />{{
+                                replayLoading()
+                                  ? 'Loading exact replay…'
+                                  : 'Open exact proposal replay'
+                              }}
+                            </button>
+                          } @else {
+                            <strong>Proposal trajectory is not retained.</strong>
+                            <p>
+                              This change has verified outcomes and metrics. Its full trajectory was
+                              not saved. Choose a row marked “Replay available” to inspect a saved
+                              path.
+                            </p>
+                          }
+                          @if (replayError()) {
+                            <span class="replay-error" role="alert">{{ replayError() }}</span>
+                          }
+                        </div>
+                        <div class="detail-actions">
+                          <button
+                            type="button"
+                            (click)="groundAnalysis()"
+                            [disabled]="analysisLoading()"
+                          >
+                            <ng-icon name="phosphorSparkle" size="15" />{{
+                              analysisLoading()
+                                ? 'Reading sealed record…'
+                                : 'Analyze selected proposal'
                             }}
                           </button>
-                        } @else {
-                          <strong>Proposal trajectory is not retained.</strong>
-                          <p>
-                            The frozen campaign kept trajectory hashes, outcomes, objectives, and
-                            cost. It did not keep every full path. The available Stage-0 replay is
-                            separate evidence and is labeled as such.
-                          </p>
-                          <button type="button" (click)="openReplay()">
-                            <ng-icon name="phosphorPlay" size="15" />Open separate Stage-0 replay
+                          <button type="button" (click)="exportReport()">
+                            <ng-icon name="phosphorDownloadSimple" size="15" />Export investigation
                           </button>
+                        </div>
+                        @if (analysis(); as answer) {
+                          <section class="grounded-analysis" aria-live="polite">
+                            <strong>Proposal-specific evidence analysis</strong>
+                            <p>{{ answer.explanation }}</p>
+                            <dl>
+                              @for (fact of answer.facts; track fact.label) {
+                                <div>
+                                  <dt>{{ fact.label }}</dt>
+                                  <dd>{{ fact.value }}</dd>
+                                </div>
+                              }
+                            </dl>
+                            <div>
+                              <code>sealed record · {{ answer.recordSha256.slice(0, 16) }}</code>
+                            </div>
+                          </section>
+                        } @else if (analysisError()) {
+                          <p class="analysis-error" role="alert">{{ analysisError() }}</p>
                         }
-                        @if (replayError()) {
-                          <span class="replay-error" role="alert">{{ replayError() }}</span>
-                        }
-                      </div>
-                      <div class="detail-actions">
-                        <button
-                          type="button"
-                          (click)="groundAnalysis()"
-                          [disabled]="analysisLoading()"
-                        >
-                          <ng-icon name="phosphorSparkle" size="15" />{{
-                            analysisLoading()
-                              ? 'Reading sealed record…'
-                              : 'Analyze selected proposal'
-                          }}
-                        </button>
-                        <button type="button" (click)="exportReport()">
-                          <ng-icon name="phosphorDownloadSimple" size="15" />Export signed HTML
-                        </button>
-                      </div>
-                      @if (analysis(); as answer) {
-                        <section class="grounded-analysis" aria-live="polite">
-                          <strong>Proposal-specific evidence analysis</strong>
-                          <p>{{ answer.explanation }}</p>
-                          <dl>
-                            @for (fact of answer.facts; track fact.label) {
-                              <div>
-                                <dt>{{ fact.label }}</dt>
-                                <dd>{{ fact.value }}</dd>
-                              </div>
-                            }
-                          </dl>
-                          <div>
-                            <code>sealed record · {{ answer.recordSha256.slice(0, 16) }}</code>
-                          </div>
-                        </section>
-                      } @else if (analysisError()) {
-                        <p class="analysis-error" role="alert">{{ analysisError() }}</p>
-                      }
-                    </article>
-                  }
-                </div>
+                      </article>
+                    }
+                  </div>
+                </section>
               </section>
-            </section>
+            </div>
           }
         </main>
       } @else if (!local.connected()) {
         <main class="locked-workspace">
-          <div>
-            <span>{{
-              view() === 'sensor' ? 'Recorded sensor lab' : 'Planning replay workbench'
-            }}</span>
-            <h1>
-              {{
-                view() === 'sensor'
-                  ? 'Inspect real camera, LiDAR, and 3DGS locally.'
-                  : 'Replay sealed planner evidence locally.'
-              }}
-            </h1>
-            <p>
-              This surface requires the licensed records on the engineer's machine. The public
-              campaign analysis remains available without them.
-            </p>
+          <aside class="locked-rail">
+            <header><span>Workspace</span><b>OFFLINE</b></header>
+            <button class="selected" type="button">
+              {{ view() === 'sensor' ? 'Perception scene' : 'Planning replay' }}
+            </button>
+            <section>
+              <span>Available after connection</span>
+              <p>Camera frames</p>
+              <p>LiDAR point cloud</p>
+              <p>3DGS reconstruction</p>
+              <p>Exact trajectories</p>
+            </section>
+          </aside>
+          <section class="locked-canvas">
             <div>
+              <span>LOCAL EVIDENCE REQUIRED</span>
+              <h1>
+                {{
+                  view() === 'sensor' ? 'No perception scene loaded' : 'No retained replay loaded'
+                }}
+              </h1>
+              <p>
+                PlanMargin never substitutes generated or synthetic media for licensed Waymo Open
+                Dataset records.
+              </p>
               @if (publicHosted) {
                 <a class="primary" [href]="repositoryUrl">Clone for local workspace</a>
               } @else {
                 <button class="primary" type="button" (click)="connectRequested.emit()">
-                  Open local workspace
+                  Connect sealed records
                 </button>
               }
-              <button type="button" (click)="setView('investigate')">Review public evidence</button>
             </div>
-          </div>
-          <dl>
-            <div>
-              <dt>Public proposals</dt>
-              <dd>{{ local.campaign().proposals.toLocaleString() }}</dd>
-            </div>
-            <div>
-              <dt>Physical rollouts</dt>
-              <dd>{{ local.campaign().physicalRollouts.toLocaleString() }}</dd>
-            </div>
-            <div>
-              <dt>Synthetic substitutes</dt>
-              <dd>None</dd>
-            </div>
-          </dl>
+          </section>
+          <aside class="locked-inspector">
+            <header><span>Data boundary</span><b>READ ONLY</b></header>
+            <dl>
+              <div>
+                <dt>Campaign proposals</dt>
+                <dd>{{ local.campaign().proposals.toLocaleString() }}</dd>
+              </div>
+              <div>
+                <dt>Physical rollouts</dt>
+                <dd>{{ local.campaign().physicalRollouts.toLocaleString() }}</dd>
+              </div>
+              <div>
+                <dt>Local sensor record</dt>
+                <dd>Not connected</dd>
+              </div>
+              <div>
+                <dt>Synthetic substitutes</dt>
+                <dd>None</dd>
+              </div>
+            </dl>
+            <button type="button" (click)="setView('investigate')">
+              Inspect aggregate evidence
+            </button>
+          </aside>
+        </main>
+      } @else if (view() === 'sensor' && !local.campaignAvailable()) {
+        <main class="sensor-setup">
+          <span>Optional workspace</span>
+          <h1>Sensor lab is not loaded in planning-only mode</h1>
+          <p>
+            Your experiment runner is connected. Camera, LiDAR, and 3DGS use a separate licensed
+            Perception segment and are not required for planning experiments.
+          </p>
+          <p>
+            To add those capabilities, stop the launcher, prepare the full workspace, and relaunch
+            without <code>--planning-only</code>.
+          </p>
+          <a
+            href="https://github.com/ethanvillalovoz/planmargin/blob/main/docs/reproducing-the-workspace.md"
+          >
+            Read the full-workspace setup guide
+          </a>
+          <button type="button" (click)="setView('experiments')">Return to experiments</button>
+        </main>
+      } @else if (view() === 'replay' && !debuggerStore.hasRun()) {
+        <main class="loading-state" role="status">
+          {{
+            local.campaignAvailable()
+              ? 'Loading verified planning evidence…'
+              : 'Run a local experiment to create an exact replay.'
+          }}
+          <button type="button" (click)="setView('experiments')">Open experiments</button>
         </main>
       } @else {
         <app-simulator-workspace
           class="embedded-simulator"
           [embedded]="true"
+          (modeChanged)="onWorkspaceMode($event)"
           (connectRequested)="connectRequested.emit()"
-          (evidenceRequested)="setView('investigate')"
+          (evidenceRequested)="returnFromReplay()"
         />
+      }
+      @if (simulator.assistantOpen()) {
+        <app-scenario-assistant class="global-assistant" (planningRequested)="setView('replay')" />
       }
     </div>
   `,
-  styles: `
-    :host {
-      display: block;
-      min-height: 100dvh;
-      background: var(--app-bg);
-      color: var(--primary);
-    }
-    button,
-    select {
-      font-family: inherit;
-    }
-    .product-shell {
-      min-height: 100dvh;
-    }
-    .product-header {
-      position: sticky;
-      z-index: 80;
-      top: 0;
-      display: grid;
-      grid-template-columns: 220px minmax(0, 1fr) 220px;
-      align-items: center;
-      min-height: 64px;
-      padding: 0 1.4rem;
-      border-bottom: 1px solid var(--divider);
-      background: rgb(7 16 24 / 94%);
-      backdrop-filter: blur(16px);
-    }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 0.5rem;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      width: max-content;
-      padding: 0;
-      border: 0;
-      background: transparent;
-      color: var(--primary);
-    }
-    .brand ng-icon {
-      color: var(--reference);
-    }
-    .brand strong {
-      font-size: 0.92rem;
-      letter-spacing: -0.025em;
-    }
-    .product-header nav {
-      display: flex;
-      align-self: stretch;
-      justify-content: center;
-      gap: 1.7rem;
-    }
-    .product-header nav button {
-      position: relative;
-      border: 0;
-      background: transparent;
-      color: var(--secondary);
-      font-size: 0.69rem;
-      font-weight: 650;
-    }
-    .product-header nav button.active {
-      color: var(--primary);
-    }
-    .product-header nav button.active:after {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      height: 2px;
-      background: var(--reference);
-      content: '';
-    }
-    .connection,
-    .assistant-launch {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.45rem;
-      min-height: 34px;
-      padding: 0 0.75rem;
-      border: 1px solid var(--divider);
-      border-radius: 4px;
-      background: var(--surface-subtle);
-      color: var(--secondary);
-      font-size: 0.63rem;
-      text-decoration: none;
-    }
-    .assistant-launch {
-      color: var(--primary);
-      white-space: nowrap;
-    }
-    .assistant-launch ng-icon {
-      color: var(--reference);
-    }
-    .assistant-launch:hover,
-    .assistant-launch.active {
-      border-color: var(--reference);
-      background: rgb(53 197 211 / 10%);
-    }
-    .assistant-launch:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-    }
-    .connection i,
-    .page-status i {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--tested);
-    }
-    .connection.connected {
-      color: #9be4b8;
-    }
-    .connection.connected i,
-    .page-status.connected i {
-      background: var(--success);
-    }
-    .connection.connecting i {
-      background: #f0a33b;
-      animation: connection-pulse 1s ease-in-out infinite alternate;
-    }
-    @keyframes connection-pulse {
-      to {
-        opacity: 0.35;
-      }
-    }
-    .proposal-detail header p {
-      margin: 0 0 0.75rem;
-      color: var(--reference);
-      font-size: 0.61rem;
-      font-weight: 750;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-    .primary,
-    .detail-actions button,
-    .replay-boundary button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.45rem;
-      min-height: 42px;
-      padding: 0 1rem;
-      border: 1px solid var(--divider-strong);
-      border-radius: 5px;
-      background: transparent;
-      color: var(--primary);
-      font-size: 0.69rem;
-      font-weight: 650;
-    }
-    .primary {
-      border-color: var(--tested);
-      background: var(--tested);
-      color: #071218;
-    }
-    .investigation-page {
-      min-height: calc(100dvh - 64px);
-      padding: 0;
-    }
-    .evidence-commandbar {
-      position: sticky;
-      z-index: 60;
-      top: 64px;
-      display: grid;
-      grid-template-columns: minmax(260px, 1fr) auto minmax(190px, 1fr);
-      align-items: center;
-      gap: 1rem;
-      min-height: 72px;
-      padding: 0.65rem 1.5rem;
-      border-bottom: 1px solid var(--divider);
-      background: rgb(8 18 26 / 96%);
-      backdrop-filter: blur(16px);
-    }
-    .evidence-context {
-      display: grid;
-      min-width: 0;
-    }
-    .evidence-context span {
-      color: var(--reference);
-      font-size: 0.53rem;
-      font-weight: 750;
-      letter-spacing: 0.11em;
-      text-transform: uppercase;
-    }
-    .evidence-context strong {
-      font-size: 0.83rem;
-      font-weight: 650;
-    }
-    .evidence-context small {
-      overflow: hidden;
-      color: var(--secondary);
-      font-size: 0.56rem;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .evidence-sections {
-      display: flex;
-      gap: 0.35rem;
-      padding: 3px;
-      border: 1px solid var(--divider);
-      border-radius: 5px;
-      background: var(--rail);
-    }
-    .evidence-sections button {
-      min-height: 30px;
-      padding: 0 0.8rem;
-      border: 1px solid transparent;
-      border-radius: 4px;
-      background: transparent;
-      color: var(--secondary);
-      font-size: 0.62rem;
-      font-weight: 650;
-    }
-    .evidence-sections button.active {
-      border-color: transparent;
-      background: #17313b;
-      color: var(--primary);
-    }
-    .deployment-workbench {
-      margin: 1rem 1.5rem 1.5rem;
-      border: 1px solid var(--divider);
-      background: var(--panel);
-    }
-    .deployment-workbench > header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1.1rem 1.3rem;
-      border-bottom: 1px solid var(--divider);
-    }
-    .deployment-workbench > header p,
-    .deployment-notes span {
-      margin: 0 0 0.28rem;
-      color: var(--reference);
-      font-size: 0.55rem;
-      font-weight: 750;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    .deployment-workbench > header h2 {
-      margin: 0;
-      font-size: 1rem;
-      font-weight: 600;
-    }
-    .qualification-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.45rem;
-      color: #7be5a6;
-      font-size: 0.58rem;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-    .qualification-status i {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentcolor;
-      box-shadow: 0 0 10px currentcolor;
-    }
-    .deployment-workbench .model-evidence {
-      margin: 0;
-      border: 0;
-      border-bottom: 1px solid var(--divider);
-    }
-    .deployment-notes {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .deployment-notes article {
-      padding: 1.2rem 1.3rem;
-      border-right: 1px solid var(--divider);
-    }
-    .deployment-notes article:last-child {
-      border-right: 0;
-    }
-    .deployment-notes article:nth-child(n + 4) {
-      border-top: 1px solid var(--divider);
-    }
-    .deployment-notes article.stopped-gate {
-      background: rgb(240 163 59 / 4%);
-    }
-    .deployment-notes article.stopped-gate span {
-      color: #f0a33b;
-    }
-    .deployment-notes strong {
-      display: block;
-      font-size: 0.72rem;
-      line-height: 1.45;
-    }
-    .deployment-notes p {
-      margin: 0.55rem 0 0;
-      color: var(--secondary);
-      font-size: 0.6rem;
-      line-height: 1.6;
-    }
-    .page-status {
-      display: flex;
-      align-items: center;
-      justify-self: end;
-      gap: 0.45rem;
-      color: var(--secondary);
-      font-size: 0.62rem;
-    }
-    .public-workbench {
-      margin: 1rem 1.5rem 1.5rem;
-      border: 1px solid var(--divider);
-      background: var(--surface);
-    }
-    .public-kpis {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      border-bottom: 1px solid var(--divider);
-    }
-    .public-kpis div {
-      display: grid;
-      gap: 0.28rem;
-      padding: 1.2rem 1.5rem;
-      border-right: 1px solid var(--divider);
-    }
-    .public-kpis div:last-child {
-      border-right: 0;
-    }
-    .public-kpis strong {
-      font-size: 1.3rem;
-      font-weight: 560;
-      letter-spacing: -0.035em;
-    }
-    .public-kpis span,
-    .method-card small {
-      color: var(--secondary);
-      font-size: 0.58rem;
-    }
-    .public-analysis {
-      display: grid;
-      grid-template-columns: minmax(0, 1.5fr) minmax(310px, 0.8fr);
-    }
-    .method-card,
-    .decision-card {
-      padding: 1.5rem;
-    }
-    .method-card {
-      border-right: 1px solid var(--divider);
-    }
-    .method-card > header,
-    .decision-card > header {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 1.2rem;
-    }
-    .method-card header span,
-    .decision-card header span {
-      color: var(--reference);
-      font-size: 0.56rem;
-      font-weight: 750;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    .method-card h3,
-    .decision-card h3 {
-      margin: 0.3rem 0 0;
-      font-size: 1rem;
-      font-weight: 600;
-    }
-    .method-row {
-      display: grid;
-      grid-template-columns: 145px minmax(100px, 1fr) 62px;
-      align-items: center;
-      gap: 0.8rem;
-      min-height: 56px;
-      border-top: 1px solid var(--divider);
-    }
-    .method-row > div:first-child {
-      display: grid;
-      gap: 0.18rem;
-    }
-    .method-row strong,
-    .method-row b {
-      font-size: 0.68rem;
-    }
-    .method-row span {
-      color: var(--secondary);
-      font-size: 0.55rem;
-    }
-    .method-row b {
-      text-align: right;
-    }
-    .method-row .bar {
-      height: 8px;
-      overflow: hidden;
-      border-radius: 1px;
-      background: #14232d;
-    }
-    .method-row .bar i {
-      display: block;
-      height: 100%;
-      background: #7b8c96;
-    }
-    .method-row.bayesian .bar i {
-      background: var(--reference);
-    }
-    .method-finding {
-      margin: 0.9rem 0 0;
-      padding: 0.8rem;
-      border-left: 2px solid var(--reference);
-      background: rgb(53 197 211 / 6%);
-      color: var(--secondary);
-      font-size: 0.63rem;
-      line-height: 1.55;
-    }
-    .method-finding strong {
-      color: var(--primary);
-    }
-    .decision-card dl {
-      margin: 0;
-      border: 1px solid var(--divider);
-    }
-    .decision-card dl div {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 48px;
-      padding: 0 0.8rem;
-      border-bottom: 1px solid var(--divider);
-    }
-    .decision-card dl div:last-child {
-      border-bottom: 0;
-    }
-    .decision-card dt,
-    .decision-card dd {
-      font-size: 0.62rem;
-    }
-    .decision-card dd {
-      margin: 0;
-      padding: 0.22rem 0.45rem;
-      border-radius: 3px;
-    }
-    .decision-card dd.neutral {
-      background: #202a31;
-      color: #aab6bd;
-    }
-    .decision-card dd.supported {
-      background: rgb(86 217 138 / 12%);
-      color: #7be5a6;
-    }
-    .model-evidence {
-      padding: 1.5rem;
-      border-top: 1px solid var(--divider);
-      background: linear-gradient(100deg, rgb(53 197 211 / 5%), transparent 55%);
-    }
-    .model-evidence > header {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    .model-evidence header span {
-      color: var(--reference);
-      font-size: 0.56rem;
-      font-weight: 750;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    .model-evidence h3 {
-      margin: 0.3rem 0 0;
-      font-size: 1rem;
-      font-weight: 600;
-    }
-    .model-evidence header b {
-      color: #7be5a6;
-      font-size: 0.58rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .model-metrics {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      border: 1px solid var(--divider);
-    }
-    .model-metrics div {
-      display: grid;
-      gap: 0.28rem;
-      padding: 1rem;
-      border-right: 1px solid var(--divider);
-    }
-    .model-metrics div:last-child {
-      border-right: 0;
-    }
-    .model-metrics span,
-    .model-metrics small,
-    .model-evidence > p {
-      color: var(--secondary);
-      font-size: 0.56rem;
-    }
-    .model-metrics strong {
-      font-size: 1.05rem;
-      font-weight: 600;
-    }
-    .model-evidence > p {
-      margin: 0.8rem 0 0;
-    }
-    .deployment-divider {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      margin: 1.35rem 0 0.65rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--divider);
-    }
-    .deployment-divider span {
-      color: var(--reference);
-      font-size: 0.56rem;
-      font-weight: 750;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    .deployment-divider b {
-      color: #7be5a6;
-      font-size: 0.58rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .locked-workspace {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 300px;
-      align-items: center;
-      min-height: calc(100dvh - 64px);
-      gap: 4rem;
-      padding: clamp(2rem, 8vw, 8rem);
-      background:
-        linear-gradient(120deg, rgb(7 16 24 / 96%), rgb(7 16 24 / 82%)),
-        radial-gradient(circle at 75% 40%, rgb(53 197 211 / 16%), transparent 36%);
-    }
-    .locked-workspace > div > span {
-      color: var(--reference);
-      font-size: 0.6rem;
-      font-weight: 750;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    .locked-workspace h1 {
-      max-width: 760px;
-      margin: 0.7rem 0;
-      font-size: clamp(2rem, 5vw, 4.4rem);
-      font-weight: 520;
-      line-height: 0.98;
-      letter-spacing: -0.055em;
-    }
-    .locked-workspace p {
-      max-width: 620px;
-      color: var(--secondary);
-      font-size: 0.72rem;
-      line-height: 1.7;
-    }
-    .locked-workspace > div > div {
-      display: flex;
-      gap: 0.6rem;
-      margin-top: 1.4rem;
-    }
-    .locked-workspace > div > div > button:not(.primary) {
-      min-height: 42px;
-      padding: 0 1rem;
-      border: 1px solid var(--divider-strong);
-      border-radius: 5px;
-      background: transparent;
-      color: var(--primary);
-      font-size: 0.69rem;
-    }
-    .locked-workspace > dl {
-      margin: 0;
-      border: 1px solid var(--divider);
-      background: rgb(9 20 29 / 80%);
-    }
-    .locked-workspace > dl div {
-      display: flex;
-      justify-content: space-between;
-      padding: 1rem;
-      border-bottom: 1px solid var(--divider);
-    }
-    .locked-workspace > dl div:last-child {
-      border-bottom: 0;
-    }
-    .locked-workspace dt,
-    .locked-workspace dd {
-      font-size: 0.65rem;
-    }
-    .locked-workspace dt {
-      color: var(--secondary);
-    }
-    .locked-workspace dd {
-      margin: 0;
-      font-weight: 650;
-    }
-    .public-result {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 2rem;
-      padding: clamp(1.5rem, 4vw, 3rem);
-      border-bottom: 1px solid var(--divider);
-    }
-    .public-result span,
-    .campaign-index > header p {
-      color: var(--reference);
-      font-size: 0.58rem;
-      font-weight: 750;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    .public-result h2 {
-      margin: 0.5rem 0;
-      font-size: clamp(1.3rem, 2.5vw, 2rem);
-      font-weight: 560;
-      letter-spacing: -0.035em;
-    }
-    .public-result p,
-    .public-boundary p {
-      max-width: 700px;
-      margin: 0;
-      color: var(--secondary);
-      font-size: 0.7rem;
-      line-height: 1.6;
-    }
-    .public-boundary {
-      display: grid;
-      grid-template-columns: 170px 1fr;
-      gap: 1rem;
-      padding: 1rem 1.4rem;
-      border: 1px solid var(--divider);
-      border-width: 1px 0 0;
-      background: #0c1820;
-      font-size: 0.65rem;
-    }
-    .campaign-index {
-      margin: 1rem 1.5rem 0;
-      border: 1px solid var(--divider);
-      border-bottom: 0;
-      background: var(--surface);
-    }
-    .campaign-index > header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      min-height: 54px;
-      padding: 0.65rem 0.9rem;
-      border-bottom: 1px solid var(--divider);
-    }
-    .campaign-index > header p {
-      margin: 0 0 0.3rem;
-    }
-    .campaign-index > header h2 {
-      margin: 0;
-      font-size: 1rem;
-    }
-    .rank-tabs {
-      display: flex;
-      border: 1px solid var(--divider);
-    }
-    .rank-tabs button {
-      min-height: 32px;
-      padding: 0 0.75rem;
-      border: 0;
-      border-right: 1px solid var(--divider);
-      background: transparent;
-      color: var(--secondary);
-      font-size: 0.58rem;
-    }
-    .rank-tabs button:last-child {
-      border-right: 0;
-    }
-    .rank-tabs button.active {
-      background: var(--reference);
-      color: #031014;
-    }
-    .campaign-funnel {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-      border-bottom: 1px solid var(--divider);
-    }
-    .campaign-funnel div {
-      display: grid;
-      gap: 0.15rem;
-      padding: 0.55rem 0.75rem;
-      border-right: 1px solid var(--divider);
-    }
-    .campaign-funnel div:last-child {
-      border-right: 0;
-    }
-    .campaign-funnel strong {
-      font-size: 0.82rem;
-    }
-    .campaign-funnel span {
-      color: var(--tertiary);
-      font-size: 0.52rem;
-      text-transform: uppercase;
-    }
-    .campaign-funnel .terminal strong {
-      color: var(--tested);
-    }
-    .campaign-table {
-      max-height: 214px;
-      overflow: auto;
-    }
-    .campaign-row {
-      display: grid;
-      grid-template-columns:
-        42px 150px minmax(180px, 1.25fr) minmax(132px, 0.9fr)
-        minmax(148px, 1fr) minmax(170px, 1.1fr) 130px;
-      align-items: center;
-      min-width: 920px;
-      min-height: 39px;
-      padding: 0.4rem 0.8rem;
-      border-bottom: 1px solid var(--divider);
-      color: #bac7cd;
-      font-size: 0.58rem;
-    }
-    .campaign-row:last-child {
-      border-bottom: 0;
-    }
-    .campaign-head {
-      position: sticky;
-      z-index: 2;
-      top: 0;
-      background: #101c24;
-      color: var(--tertiary);
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-    .campaign-row .method {
-      color: #aab5bb;
-      text-transform: capitalize;
-    }
-    .campaign-row .method.bayesian {
-      color: var(--reference);
-    }
-    .row-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.35rem;
-    }
-    .row-actions button,
-    .comparison-dock button {
-      min-height: 27px;
-      padding: 0 0.5rem;
-      border: 1px solid var(--divider-strong);
-      background: transparent;
-      color: var(--primary);
-      font-size: 0.54rem;
-    }
-    .comparison-dock {
-      border-top: 1px solid var(--divider);
-      background: #0b161e;
-    }
-    .comparison-dock > header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.6rem 1rem;
-      border-bottom: 1px solid var(--divider);
-      font-size: 0.62rem;
-    }
-    .comparison-dock > div {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .comparison-dock article {
-      padding: 1rem;
-      border-right: 1px solid var(--divider);
-    }
-    .comparison-dock article:last-child {
-      border-right: 0;
-    }
-    .comparison-dock article > span {
-      color: var(--reference);
-      font-size: 0.55rem;
-      text-transform: capitalize;
-    }
-    .comparison-dock h3 {
-      margin: 0.25rem 0 0.75rem;
-      font-size: 0.8rem;
-    }
-    .comparison-dock dl {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      margin: 0 0 0.75rem;
-    }
-    .comparison-dock dl div {
-      display: grid;
-      gap: 0.2rem;
-    }
-    .comparison-dock dt {
-      color: var(--tertiary);
-      font-size: 0.5rem;
-    }
-    .comparison-dock dd {
-      margin: 0;
-      font-size: 0.6rem;
-    }
-    .investigation-workspace {
-      display: grid;
-      grid-template-columns: 250px minmax(0, 1fr);
-      min-height: 660px;
-      margin: 0 1.5rem 1.5rem;
-      border: 1px solid var(--divider);
-      background: var(--surface);
-    }
-    .cell-rail {
-      padding: 1rem;
-      border-right: 1px solid var(--divider);
-      background: var(--rail);
-    }
-    .rail-heading h2,
-    .proposal-toolbar h2 {
-      margin: 0;
-      font-size: 0.74rem;
-    }
-    .rail-heading span,
-    .proposal-toolbar p {
-      color: var(--tertiary);
-      font-size: 0.59rem;
-    }
-    .cell-legend {
-      display: flex;
-      gap: 1rem;
-      margin: 1rem 0 0.75rem;
-      color: var(--secondary);
-      font-size: 0.57rem;
-    }
-    .cell-legend span {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-    .cell-legend i {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-    }
-    .cell-legend i.random {
-      background: #748690;
-    }
-    .cell-legend i.bayesian {
-      background: var(--reference);
-    }
-    .cell-grid {
-      display: grid;
-      grid-template-columns: repeat(10, 1fr);
-      gap: 5px;
-    }
-    .cell-grid button {
-      position: relative;
-      aspect-ratio: 1;
-      border: 1px solid var(--divider);
-      border-radius: 2px;
-      background: linear-gradient(to top, currentColor var(--validity), #14222b var(--validity));
-      color: #6d7e87;
-    }
-    .cell-grid button.bayesian {
-      color: #278b96;
-    }
-    .cell-grid button:hover,
-    .cell-grid button.active {
-      z-index: 1;
-      outline: 2px solid var(--primary);
-      outline-offset: 1px;
-    }
-    .cell-summary {
-      margin: 1.1rem 0 0;
-    }
-    .cell-summary div {
-      display: flex;
-      justify-content: space-between;
-      gap: 0.5rem;
-      padding: 0.48rem 0;
-      border-bottom: 1px solid var(--divider-soft);
-      font-size: 0.59rem;
-    }
-    .cell-summary dt {
-      color: var(--tertiary);
-    }
-    .cell-summary dd {
-      margin: 0;
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-    .proposal-region {
-      min-width: 0;
-    }
-    .proposal-toolbar {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1rem 1.2rem;
-      border-bottom: 1px solid var(--divider);
-    }
-    .proposal-toolbar p {
-      margin: 0.25rem 0 0;
-    }
-    .toolbar-filters {
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-    }
-    .proposal-toolbar label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--secondary);
-      font-size: 0.59rem;
-    }
-    .proposal-toolbar select {
-      min-height: 32px;
-      padding: 0 0.5rem;
-      border: 1px solid var(--divider);
-      border-radius: 3px;
-      background: #09141c;
-      color: var(--primary);
-      font-size: 0.62rem;
-    }
-    .gate-funnel {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      border-bottom: 1px solid var(--divider);
-    }
-    .gate-funnel div {
-      position: relative;
-      display: grid;
-      gap: 0.2rem;
-      padding: 0.8rem 1rem;
-      border-right: 1px solid var(--divider-soft);
-      overflow: hidden;
-    }
-    .gate-funnel strong {
-      font-size: 0.9rem;
-      font-variant-numeric: tabular-nums;
-    }
-    .gate-funnel span {
-      color: var(--secondary);
-      font-size: 0.55rem;
-    }
-    .gate-funnel i {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      height: 2px;
-      background: var(--reference);
-    }
-    .proposal-layout {
-      display: grid;
-      grid-template-columns: 285px minmax(0, 1fr);
-      min-height: 535px;
-    }
-    .proposal-list {
-      max-height: 590px;
-      overflow: auto;
-      border-right: 1px solid var(--divider);
-    }
-    .proposal-list > p {
-      padding: 1rem;
-      color: var(--secondary);
-      font-size: 0.65rem;
-    }
-    .proposal-list button {
-      display: grid;
-      grid-template-columns: 30px minmax(0, 1fr) 52px;
-      align-items: center;
-      width: 100%;
-      min-height: 56px;
-      gap: 0.55rem;
-      padding: 0 0.8rem;
-      border: 0;
-      border-bottom: 1px solid var(--divider-soft);
-      background: transparent;
-      color: var(--primary);
-      text-align: left;
-    }
-    .proposal-list button:hover {
-      background: #0f1e27;
-    }
-    .proposal-list button.active {
-      background: #102831;
-      box-shadow: inset 2px 0 var(--reference);
-    }
-    .proposal-list button > span {
-      color: var(--tertiary);
-      font-size: 0.58rem;
-    }
-    .proposal-list button div {
-      min-width: 0;
-    }
-    .proposal-list strong,
-    .proposal-list small {
-      display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .proposal-list strong {
-      font-size: 0.64rem;
-    }
-    .proposal-list small {
-      margin-top: 0.2rem;
-      color: var(--tertiary);
-      font-size: 0.55rem;
-    }
-    .proposal-list b {
-      text-align: right;
-      color: var(--secondary);
-      font-size: 0.58rem;
-      font-weight: 550;
-      font-variant-numeric: tabular-nums;
-    }
-    .proposal-detail {
-      min-width: 0;
-      padding: 1.2rem 1.4rem;
-    }
-    .proposal-detail > header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--divider);
-    }
-    .proposal-detail header p {
-      margin-bottom: 0.35rem;
-    }
-    .proposal-detail header h2 {
-      margin: 0;
-      font-size: 1.15rem;
-      font-weight: 560;
-      letter-spacing: -0.025em;
-    }
-    .proposal-detail header > span {
-      padding: 0.35rem 0.5rem;
-      border: 1px solid var(--divider);
-      border-radius: 3px;
-      color: var(--secondary);
-      font-size: 0.55rem;
-      text-transform: uppercase;
-    }
-    .parameter-strip {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      border-bottom: 1px solid var(--divider);
-    }
-    .parameter-strip div {
-      display: grid;
-      gap: 0.25rem;
-      padding: 0.8rem 0;
-    }
-    .parameter-strip span {
-      color: var(--tertiary);
-      font-size: 0.55rem;
-    }
-    .parameter-strip strong {
-      font-size: 0.7rem;
-      font-variant-numeric: tabular-nums;
-    }
-    .controller-comparison {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      border-bottom: 1px solid var(--divider);
-    }
-    .controller-comparison div {
-      display: grid;
-      gap: 0.25rem;
-      padding: 0.75rem 0;
-    }
-    .controller-comparison span {
-      color: var(--tertiary);
-      font-size: 0.55rem;
-    }
-    .controller-comparison strong {
-      font-size: 0.67rem;
-    }
-    .controller-comparison strong.success {
-      color: var(--success);
-    }
-    .controller-comparison strong.failure {
-      color: var(--failure);
-    }
-    .gate-ladder {
-      display: grid;
-      gap: 0;
-      margin: 1rem 0;
-      padding: 0;
-      list-style: none;
-    }
-    .gate-ladder li {
-      display: grid;
-      grid-template-columns: 28px 1fr;
-      align-items: center;
-      gap: 0.5rem;
-      min-height: 45px;
-      border-bottom: 1px solid var(--divider-soft);
-      opacity: 0.45;
-    }
-    .gate-ladder li.pass,
-    .gate-ladder li.stop {
-      opacity: 1;
-    }
-    .gate-ladder li > i {
-      display: grid;
-      width: 20px;
-      height: 20px;
-      place-items: center;
-      border: 1px solid var(--divider);
-      border-radius: 50%;
-      color: var(--tertiary);
-      font-size: 0.65rem;
-      font-style: normal;
-    }
-    .gate-ladder li.pass > i {
-      border-color: var(--success);
-      color: var(--success);
-    }
-    .gate-ladder li.stop > i {
-      border-color: var(--tested);
-      color: var(--tested);
-    }
-    .gate-ladder strong,
-    .gate-ladder span {
-      display: block;
-    }
-    .gate-ladder strong {
-      font-size: 0.64rem;
-    }
-    .gate-ladder span {
-      margin-top: 0.12rem;
-      color: var(--tertiary);
-      font-size: 0.55rem;
-    }
-    .replay-boundary {
-      padding: 0.85rem 1rem;
-      border-left: 2px solid #bd8b36;
-      background: #161c20;
-    }
-    .replay-boundary strong {
-      font-size: 0.66rem;
-    }
-    .replay-boundary p {
-      margin: 0.3rem 0 0.7rem;
-      color: var(--secondary);
-      font-size: 0.59rem;
-      line-height: 1.5;
-    }
-    .replay-boundary button {
-      min-height: 34px;
-      padding: 0 0.7rem;
-    }
-    .replay-error {
-      display: block;
-      margin-top: 0.6rem;
-      color: #ff9b8c;
-      font-size: 0.61rem;
-    }
-    .detail-actions {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.8rem;
-    }
-    .detail-actions button {
-      min-height: 36px;
-    }
-    .detail-actions button:disabled {
-      opacity: 0.5;
-    }
-    .grounded-analysis {
-      margin-top: 0.8rem;
-      padding: 1rem;
-      border: 1px solid var(--divider);
-      background: #0c1820;
-    }
-    .grounded-analysis p {
-      margin: 0;
-      color: #b3c0c6;
-      font-size: 0.63rem;
-      line-height: 1.55;
-    }
-    .grounded-analysis p + p {
-      margin-top: 0.55rem;
-    }
-    .grounded-analysis > strong {
-      font-size: 0.64rem;
-    }
-    .grounded-analysis dl {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.45rem;
-      margin: 0.75rem 0 0;
-    }
-    .grounded-analysis dl div {
-      display: grid;
-      gap: 0.15rem;
-      margin: 0;
-    }
-    .grounded-analysis dt {
-      color: var(--tertiary);
-      font-size: 0.5rem;
-      text-transform: uppercase;
-    }
-    .grounded-analysis dd {
-      margin: 0;
-      color: var(--primary);
-      font-size: 0.59rem;
-    }
-    .grounded-analysis div {
-      display: grid;
-      gap: 0.25rem;
-      margin-top: 0.75rem;
-    }
-    .grounded-analysis code {
-      color: var(--reference);
-      font-size: 0.52rem;
-    }
-    .analysis-error {
-      margin: 0.8rem 0 0;
-      color: #ff9b8c;
-      font-size: 0.61rem;
-    }
-    .embedded-simulator {
-      display: block;
-      height: calc(100dvh - 64px);
-    }
-    @media (max-width: 900px) {
-      .product-header {
-        grid-template-columns: auto 1fr auto;
-      }
-      .connection {
-        font-size: 0;
-        width: 38px;
-        padding: 0;
-      }
-      .connection i {
-        width: 7px;
-        height: 7px;
-      }
-      .assistant-launch {
-        width: 38px;
-        padding: 0;
-        font-size: 0;
-      }
-      .evidence-commandbar {
-        grid-template-columns: minmax(220px, 1fr) auto;
-      }
-      .evidence-commandbar .page-status {
-        display: none;
-      }
-      .investigation-workspace {
-        grid-template-columns: 1fr;
-      }
-      .campaign-index > header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .campaign-funnel {
-        grid-template-columns: repeat(4, 1fr);
-      }
-      .cell-rail {
-        border-right: 0;
-        border-bottom: 1px solid var(--divider);
-      }
-      .cell-grid {
-        grid-template-columns: repeat(20, 1fr);
-      }
-      .proposal-layout {
-        grid-template-columns: 240px minmax(0, 1fr);
-      }
-      .public-kpis {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .public-kpis div:nth-child(2) {
-        border-right: 0;
-      }
-      .public-kpis div:nth-child(-n + 2) {
-        border-bottom: 1px solid var(--divider);
-      }
-      .public-analysis,
-      .locked-workspace {
-        grid-template-columns: 1fr;
-      }
-      .deployment-notes {
-        grid-template-columns: 1fr;
-      }
-      .deployment-notes article {
-        border-right: 0;
-        border-bottom: 1px solid var(--divider);
-      }
-      .deployment-notes article:last-child {
-        border-bottom: 0;
-      }
-      .model-metrics {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .model-metrics div:nth-child(2) {
-        border-right: 0;
-      }
-      .model-metrics div:nth-child(-n + 2) {
-        border-bottom: 1px solid var(--divider);
-      }
-      .method-card {
-        border-right: 0;
-        border-bottom: 1px solid var(--divider);
-      }
-    }
-    @media (max-width: 680px) {
-      .product-header {
-        grid-template-columns: 1fr auto;
-        grid-template-rows: 58px 54px;
-        min-height: 112px;
-        padding: 0 0.8rem;
-      }
-      .product-header nav {
-        position: static;
-        grid-row: 2;
-        grid-column: 1 / -1;
-        height: 54px;
-        border-top: 1px solid var(--divider);
-        background: #071018;
-      }
-      .product-header nav button {
-        flex: 1;
-      }
-      .header-actions {
-        grid-row: 1;
-        grid-column: 2;
-      }
-      .investigation-page {
-        padding: 0 0 4.5rem;
-      }
-      .deployment-workbench {
-        margin-right: 0.75rem;
-        margin-left: 0.75rem;
-      }
-      .deployment-workbench > header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .evidence-commandbar {
-        top: 112px;
-        grid-template-columns: 1fr;
-        gap: 0.55rem;
-        min-height: 110px;
-        padding: 0.65rem 0.75rem;
-      }
-      .evidence-context small {
-        white-space: normal;
-      }
-      .evidence-sections {
-        width: 100%;
-      }
-      .evidence-sections button {
-        flex: 1;
-      }
-      .public-result {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .comparison-dock > div {
-        grid-template-columns: 1fr;
-      }
-      .comparison-dock article {
-        border-right: 0;
-        border-bottom: 1px solid var(--divider);
-      }
-      .public-boundary {
-        grid-template-columns: 1fr;
-      }
-      .model-evidence > header {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .public-boundary div:first-child {
-        border-right: 0;
-        border-bottom: 1px solid var(--divider);
-      }
-      .method-row {
-        grid-template-columns: 120px minmax(80px, 1fr) 55px;
-      }
-      .locked-workspace {
-        min-height: calc(100dvh - 112px);
-        gap: 2rem;
-        padding: 2rem 1rem;
-      }
-      .rank-tabs {
-        width: 100%;
-        overflow-x: auto;
-      }
-      .rank-tabs button {
-        flex: 1 0 auto;
-      }
-      .campaign-funnel {
-        grid-template-columns: 1fr 1fr;
-      }
-      .campaign-index,
-      .investigation-workspace {
-        margin-right: 0.75rem;
-        margin-left: 0.75rem;
-      }
-      .cell-grid {
-        grid-template-columns: repeat(10, 1fr);
-      }
-      .gate-funnel {
-        grid-template-columns: repeat(5, minmax(70px, 1fr));
-        overflow: auto;
-      }
-      .proposal-layout {
-        grid-template-columns: 1fr;
-      }
-      .proposal-list {
-        max-height: 250px;
-        border-right: 0;
-        border-bottom: 1px solid var(--divider);
-      }
-      .parameter-strip {
-        grid-template-columns: 1fr 1fr;
-      }
-      .controller-comparison {
-        grid-template-columns: 1fr;
-      }
-      .toolbar-filters {
-        align-items: stretch;
-        flex-direction: column;
-      }
-      .detail-actions {
-        align-items: stretch;
-        flex-direction: column;
-      }
-      .embedded-simulator {
-        height: calc(100dvh - 112px);
-      }
-    }
-  `,
+  styleUrl: './product-shell.css',
 })
 export class ProductShell {
   protected readonly local = inject(LocalEvidenceService);
   protected readonly simulator = inject(SimulatorStore);
-  private readonly debuggerStore = inject(DebuggerStore);
+  protected readonly debuggerStore = inject(DebuggerStore);
   private readonly reports = inject(InvestigationReportService);
   readonly connectRequested = output<void>();
   protected readonly repositoryUrl = 'https://github.com/ethanvillalovoz/planmargin';
@@ -2351,8 +1087,12 @@ export class ProductShell {
     window.location.protocol === 'https:' &&
     window.location.hostname !== 'localhost' &&
     window.location.hostname !== '127.0.0.1';
-  protected readonly view = signal<ProductView>('operations');
-  protected readonly evidenceView = signal<EvidenceView>('campaign');
+  protected readonly view = signal<ProductView>(initialProductView());
+  constructor() {
+    if (this.view() === 'replay') this.simulator.selectMode('planning');
+    if (this.view() === 'sensor') this.simulator.selectMode('camera');
+  }
+  protected readonly evidenceView = signal<EvidenceView>(initialEvidenceView());
   protected readonly sort = signal<ProposalSort>('criticality');
   protected readonly filter = signal<ProposalFilter>('all');
   protected readonly rank = signal<InvestigationRank>('closest');
@@ -2362,6 +1102,44 @@ export class ProductShell {
   protected readonly analysisError = signal<string | undefined>(undefined);
   protected readonly replayLoading = signal(false);
   protected readonly replayError = signal<string | undefined>(undefined);
+  protected readonly browseCells = signal(false);
+  protected readonly showGateDetails = signal(false);
+  private analysisGeneration = 0;
+
+  protected isSelected(proposal: InvestigationProposal): boolean {
+    return (
+      this.local.selectedCellId() === proposal.cellId &&
+      this.local.selectedProposalNumber() === proposal.proposalNumber
+    );
+  }
+  protected clearanceValue(value: number): string {
+    return value > 0 ? Math.max(1 / value - 1, 0).toFixed(2) + ' m' : '—';
+  }
+  protected decisionExplanation(proposal: LocalProposal): string {
+    if (proposal.policySpecificAvoidableFailure)
+      return 'The edit passes the realism gates. The tested planner fails while the conservative reference succeeds under the same change.';
+    if (!proposal.pipelinePasses)
+      return 'This change did not pass simulation validity. Its result cannot establish a planner regression.';
+    if (proposal.supportPasses !== true)
+      return proposal.supportPasses === null
+        ? 'Recorded-behavior support was not evaluated. This case cannot qualify without that realism check.'
+        : 'The change falls outside the recorded behavior used by the realism gate. It is excluded from qualifying findings.';
+    if (!proposal.referencePasses)
+      return proposal.referenceMutatedSuccess === false
+        ? 'The conservative reference failed. This case does not isolate an avoidable failure of the tested planner.'
+        : 'The reference outcome is not established. This case cannot isolate an avoidable failure of the tested planner.';
+    if (proposal.testedMutatedFailure !== false)
+      return 'The complete planner-specific finding contract is not satisfied. Inspect the individual gates before drawing a conclusion.';
+    return 'Both planners completed this change successfully. The minimum gap helps prioritize inspection, but this case is not a qualifying regression.';
+  }
+  protected openInvestigation(): void {
+    this.evidenceView.set('campaign');
+    this.setView('investigate');
+  }
+  protected openModels(): void {
+    this.evidenceView.set('deployment');
+    this.setView('investigate');
+  }
 
   protected readonly rankedProposals = computed(() => {
     const proposals = this.local.proposals().filter((proposal) => {
@@ -2422,6 +1200,39 @@ export class ProductShell {
     if (view === 'replay') this.simulator.selectMode('planning');
     if (view === 'sensor') this.simulator.selectMode('camera');
     this.view.set(view);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    const url = new URL(window.location.href);
+    url.searchParams.set(
+      'view',
+      view === 'operations'
+        ? 'health'
+        : view === 'investigate'
+          ? 'evidence'
+          : view === 'experiments'
+            ? 'experiments'
+            : view === 'sensor'
+              ? 'sensors'
+              : 'replay',
+    );
+    if (view === 'investigate' && this.evidenceView() === 'deployment')
+      url.searchParams.set('panel', 'runtime');
+    else url.searchParams.delete('panel');
+    if (view !== 'replay') url.searchParams.delete('experiment');
+    window.history.replaceState(null, '', url.pathname + url.search);
+  }
+  protected openExperimentReplay(run: DebuggerRun): void {
+    this.debuggerStore.loadRun(run);
+    this.setView('replay');
+    const url = new URL(window.location.href);
+    url.searchParams.set('experiment', run.runId.replace('experiment_', ''));
+    window.history.replaceState(null, '', url.pathname + url.search);
+  }
+  protected returnFromReplay(): void {
+    this.setView(
+      this.debuggerStore.hasRun() && this.debuggerStore.run().runId.startsWith('experiment_')
+        ? 'experiments'
+        : 'investigate',
+    );
   }
   protected publicValidRateDelta(): number {
     return (
@@ -2429,16 +1240,31 @@ export class ProductShell {
       this.local.campaign().methods.random.validRatePercent
     );
   }
+  protected onWorkspaceMode(mode: string): void {
+    this.view.set(mode === 'planning' ? 'replay' : 'sensor');
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', mode === 'planning' ? 'replay' : 'sensors');
+    url.searchParams.delete('panel');
+    window.history.replaceState(null, '', url.pathname + url.search);
+  }
   protected toggleAssistant(): void {
-    const opening = this.view() !== 'replay' || !this.simulator.assistantOpen();
-    this.setView('replay');
-    this.simulator.assistantOpen.set(opening);
+    this.simulator.assistantOpen.update((value) => !value);
   }
   protected async openCampaignProposal(proposal: InvestigationProposal): Promise<void> {
     this.analysis.set(undefined);
     this.analysisError.set(undefined);
-    await this.local.selectInvestigationProposal(proposal.cellId, proposal.proposalNumber);
-    document.querySelector('.investigation-workspace')?.scrollIntoView({ behavior: 'smooth' });
+    this.analysisGeneration++;
+    this.showGateDetails.set(false);
+    this.analysisLoading.set(false);
+    try {
+      await this.local.selectInvestigationProposal(proposal.cellId, proposal.proposalNumber);
+      if (window.innerWidth < 900)
+        document
+          .querySelector('.proposal-region')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch {
+      /* The connection banner exposes retry and the service error. */
+    }
   }
   protected toggleCompare(proposal: InvestigationProposal): void {
     const current = [...this.comparison()];
@@ -2501,15 +1327,26 @@ export class ProductShell {
   protected async selectCell(cellId: string): Promise<void> {
     this.analysis.set(undefined);
     this.analysisError.set(undefined);
-    await this.local.selectCell(cellId);
+    this.analysisGeneration++;
+    this.analysisLoading.set(false);
+    try {
+      await this.local.selectCell(cellId);
+    } catch {
+      /* Service exposes the recoverable error. */
+    }
   }
   protected selectProposal(proposalNumber: number): void {
+    this.analysisGeneration++;
+    this.analysisLoading.set(false);
     this.analysis.set(undefined);
     this.analysisError.set(undefined);
     this.local.selectProposal(proposalNumber);
   }
   protected changeSort(event: Event): void {
     this.sort.set((event.target as HTMLSelectElement).value as ProposalSort);
+  }
+  protected changeCell(event: Event): void {
+    void this.selectCell((event.target as HTMLSelectElement).value);
   }
   protected changeFilter(event: Event): void {
     this.filter.set((event.target as HTMLSelectElement).value as ProposalFilter);
@@ -2598,7 +1435,7 @@ export class ProductShell {
     // Entering a planning replay is an explicit request to inspect its evidence.
     // Re-open the panel even when the responsive layout collapsed it on startup.
     this.simulator.controlsOpen.set(true);
-    this.view.set('replay');
+    this.setView('replay');
   }
   protected async openProposalReplay(runId: string): Promise<void> {
     this.replayLoading.set(true);
@@ -2613,6 +1450,7 @@ export class ProductShell {
     }
   }
   protected async groundAnalysis(): Promise<void> {
+    const generation = ++this.analysisGeneration;
     this.analysisLoading.set(true);
     this.analysisError.set(undefined);
     try {
@@ -2621,17 +1459,28 @@ export class ProductShell {
       if (cellId === undefined || proposalNumber === undefined) {
         throw new Error('Select a proposal before running analysis');
       }
-      this.analysis.set(await this.local.proposalAnalysis(cellId, proposalNumber));
+      const answer = await this.local.proposalAnalysis(cellId, proposalNumber);
+      if (
+        generation === this.analysisGeneration &&
+        cellId === this.local.selectedCellId() &&
+        proposalNumber === this.local.selectedProposalNumber()
+      )
+        this.analysis.set(answer);
     } catch (error: unknown) {
-      this.analysisError.set(error instanceof Error ? error.message : 'Analysis failed');
+      if (generation === this.analysisGeneration)
+        this.analysisError.set(error instanceof Error ? error.message : 'Analysis failed');
     } finally {
-      this.analysisLoading.set(false);
+      if (generation === this.analysisGeneration) this.analysisLoading.set(false);
     }
   }
   protected async exportReport(): Promise<void> {
     const cell = this.local.selectedCell();
     const proposal = this.local.selectedProposal();
-    if (cell && proposal)
-      await this.reports.download({ campaign: this.local.campaign(), cell, proposal });
+    try {
+      if (cell && proposal)
+        await this.reports.download({ campaign: this.local.campaign(), cell, proposal });
+    } catch (error: unknown) {
+      this.analysisError.set(error instanceof Error ? error.message : 'Export failed');
+    }
   }
 }

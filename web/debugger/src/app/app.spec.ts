@@ -123,4 +123,26 @@ describe('launch session bootstrap', () => {
     expect((app as unknown as { showLocalEvidence: () => boolean }).showLocalEvidence()).toBe(true);
     TestBed.resetTestingModule();
   });
+
+  it('consumes a new launcher link in an already-open tab without requiring reload', async () => {
+    const restoreBrowserSession = vi.fn().mockResolvedValue(undefined);
+    const connect = vi.fn().mockResolvedValue({ initialRun: undefined });
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: LocalEvidenceService, useValue: { connect, restoreBrowserSession } },
+        { provide: DebuggerStore, useValue: { loadRun: vi.fn() } },
+      ],
+    });
+    window.history.replaceState(null, '', '/?view=experiments');
+    TestBed.runInInjectionContext(() => new App());
+    await vi.waitFor(() => expect(restoreBrowserSession).toHaveBeenCalledOnce());
+    window.history.replaceState(null, '', '/?view=experiments#token=new-local-token-123');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await vi.waitFor(() => expect(connect).toHaveBeenCalledWith('new-local-token-123'));
+    expect(window.location.hash).toBe('');
+    expect(window.location.search).toBe('?view=experiments');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(connect).toHaveBeenCalledOnce();
+    TestBed.resetTestingModule();
+  });
 });

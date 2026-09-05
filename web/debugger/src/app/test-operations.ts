@@ -1,4 +1,4 @@
-import reportJson from '../../public/data/test-operations-v1.json';
+import reportJson from '../../public/data/test-operations-v2.json';
 
 export type OperationStatus =
   'healthy' | 'degraded' | 'pass' | 'fail' | 'active' | 'blocked' | 'stopped' | 'pending_evidence';
@@ -6,8 +6,12 @@ export type OperationStatus =
 export interface TestOperationSlo {
   readonly id: string;
   readonly name: string;
+  readonly indicator: string;
   readonly target: string;
   readonly observed: string;
+  readonly objective: number;
+  readonly observed_value: number;
+  readonly error_budget_remaining_percent: number;
   readonly status: 'pass' | 'fail';
   readonly owner: string;
 }
@@ -37,10 +41,44 @@ export interface TestOperationIssue {
   readonly failed_gates: readonly string[];
   readonly next_action: string;
   readonly source: string;
+  readonly diagnostic: {
+    readonly detected_by: string;
+    readonly owner: string;
+    readonly impact: string;
+    readonly root_cause_path: readonly string[];
+    readonly resolution: string;
+    readonly prevention: string;
+  };
+}
+
+export interface TestSuiteHealth {
+  readonly id: string;
+  readonly name: string;
+  readonly plan_version: string;
+  readonly platform: string;
+  readonly owner: string;
+  readonly status: 'healthy' | 'degraded';
+  readonly scenario_count: number;
+  readonly test_cell_count: number;
+  readonly execution_count: number;
+  readonly execution_unit: string;
+  readonly gate_passes: number;
+  readonly gate_total: number;
+}
+
+export interface VersionedCoveragePlan {
+  readonly id: string;
+  readonly plan_version: string;
+  readonly scenario_family: string;
+  readonly scenario_count: number;
+  readonly test_cell_count: number;
+  readonly gate_passes: number;
+  readonly gate_total: number;
+  readonly status: 'qualified' | 'no_go';
 }
 
 export interface TestOperationsReport {
-  readonly schema_version: '1.0.0';
+  readonly schema_version: '2.0.0';
   readonly record_type: 'planmargin.test_operations_report';
   readonly evidence_mode: 'published_aggregate';
   readonly claim_boundary: string;
@@ -62,6 +100,14 @@ export interface TestOperationsReport {
     readonly total: number;
   };
   readonly slos: readonly TestOperationSlo[];
+  readonly test_inventory: {
+    readonly release_critical_cells: number;
+    readonly passing_release_critical_cells: number;
+    readonly tracked_suites: number;
+    readonly active_health_alerts: number;
+    readonly held_decisions: number;
+    readonly suites: readonly TestSuiteHealth[];
+  };
   readonly pipeline_stages: readonly TestOperationStage[];
   readonly coverage: {
     readonly plan_version: string;
@@ -103,6 +149,7 @@ export interface TestOperationsReport {
       readonly status: 'qualified';
     };
     readonly known_gaps: readonly CoverageGap[];
+    readonly versioned_plans: readonly VersionedCoveragePlan[];
   };
   readonly issues: readonly TestOperationIssue[];
   readonly report_sha256: string;
@@ -117,7 +164,7 @@ function record(value: unknown, label: string): Record<string, unknown> {
 
 export function parseTestOperations(value: unknown): TestOperationsReport {
   const candidate = record(value, 'test operations report');
-  if (candidate['schema_version'] !== '1.0.0') throw new Error('Unsupported operations schema');
+  if (candidate['schema_version'] !== '2.0.0') throw new Error('Unsupported operations schema');
   if (candidate['record_type'] !== 'planmargin.test_operations_report') {
     throw new Error('Unexpected operations record');
   }
@@ -125,7 +172,11 @@ export function parseTestOperations(value: unknown): TestOperationsReport {
   if (campaign['real_data_only'] !== true) {
     throw new Error('Operations report is not verified real-data evidence');
   }
-  if (!Array.isArray(candidate['slos']) || !Array.isArray(candidate['pipeline_stages'])) {
+  if (
+    !Array.isArray(candidate['slos']) ||
+    !Array.isArray(candidate['pipeline_stages']) ||
+    !Array.isArray(record(candidate['test_inventory'], 'test inventory')['suites'])
+  ) {
     throw new Error('Operations report is incomplete');
   }
   return value as TestOperationsReport;

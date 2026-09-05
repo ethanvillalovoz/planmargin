@@ -33,6 +33,7 @@ describe('local evidence response parsers', () => {
 
     expect(run.source).toBe('local-api');
     expect(run.synthetic).toBe(false);
+    expect(run.mutationTarget.counterfactual).toEqual(API_RUN.mutation_target.counterfactual);
     expect(run.hypotheses[0].metrics[0].longitudinalTtcSeconds).toBeNull();
     expect(run.conflictRegion).toEqual([]);
     expect(run.hypotheses[0].controllerOutcome.tested).toBe('fails');

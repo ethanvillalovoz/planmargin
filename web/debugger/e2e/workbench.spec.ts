@@ -163,27 +163,30 @@ test('public clone stays honest, usable, and accessible without licensed records
     if (message.type() === 'error') consoleErrors.push(message.text());
   });
   await page.goto('/');
-  await expect(page).toHaveTitle('PlanMargin simulation test operations');
+  await expect(page).toHaveTitle('PlanMargin · planner stress testing');
   await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeHidden();
   await expect(
-    page.getByRole('heading', { name: 'Campaign health and release evidence' }),
+    page.getByRole('heading', { name: 'Lead-vehicle braking', exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel('Campaign status summary')).toContainText('100/100');
-  await expect(page.getByLabel('Campaign status summary')).toContainText('7/7');
-  await expect(page.getByRole('heading', { name: 'Pipeline stages' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Service-level objectives' })).toBeVisible();
+  await expect(page.getByLabel('Campaign result')).toContainText('0 qualifying regressions');
+  await page.getByRole('button', { name: 'Test health', exact: true }).click();
+  await expect(page.getByLabel('Test suite registry')).toContainText('3 suites');
+  await expect(
+    page.getByRole('heading', { name: 'The saved test run passed its checks.' }),
+  ).toBeVisible();
+  await expect(page.getByText('Not live pipeline monitoring.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Coverage', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Behavior coverage' })).toBeVisible();
+  await expect(page.getByText('Versioned behavior coverage', { exact: true })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Protection and assistance protocols' }),
+    page.locator('.coverage-table').getByText('Command-dropout fallback', { exact: true }),
   ).toBeVisible();
-  await page.getByRole('button', { name: /^Issues/ }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Promotion and test-health queue' }),
-  ).toBeVisible();
+  await expect(page.getByText('Cross-simulator agreement')).toBeVisible();
+  await page.getByRole('button', { name: /^Triage/ }).click();
+  await expect(page.getByRole('button', { name: 'Pending', exact: true })).toBeVisible();
+  await expect(page.getByText('Measured decisions')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await page.getByRole('button', { name: 'Investigate', exact: true }).click();
   await expect(
     page.getByRole('heading', {
       name: '3,200 counterfactual proposals. Zero qualifying regressions.',
@@ -195,12 +198,20 @@ test('public clone stays honest, usable, and accessible without licensed records
   await expect(page.getByText('never substitute or synthetic cases')).toBeVisible();
   await expect(page.getByText('Licensed local only')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Scenario lab', exact: true }).click();
-  await expect(page.getByText('Replay sealed planner evidence locally.')).toBeVisible();
-  await page.getByRole('button', { name: 'Open local workspace', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Replay', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No retained replay loaded' })).toBeVisible();
+  const lockedWorkspaceAccessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze();
+  expect(lockedWorkspaceAccessibility.violations).toEqual([]);
+  await page.getByRole('button', { name: 'Connect sealed records', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Local evidence' })).toBeVisible();
+  const connectionAccessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze();
+  expect(connectionAccessibility.violations).toEqual([]);
   await page.getByRole('button', { name: 'Close local evidence' }).click();
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await page.getByRole('button', { name: 'Investigate', exact: true }).click();
 
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(accessibility.violations).toEqual([]);
@@ -219,8 +230,8 @@ test('public clone stays honest, usable, and accessible without licensed records
 test('retained proposal opens its exact planning replay', async ({ page }) => {
   await mockExactReplayApi(page);
   await page.goto('/');
-  await expect(page.getByText('Local records verified')).toBeVisible();
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await expect(page.getByText('Local workspace connected')).toBeVisible();
+  await page.getByRole('button', { name: 'Investigate', exact: true }).click();
   await expect(page.getByText('Exact proposal replay retained and verified.')).toBeVisible();
   await page.getByRole('button', { name: 'Open exact proposal replay' }).click();
   await expect(page.getByRole('button', { name: 'Collapse controls' })).toBeVisible();
@@ -235,7 +246,7 @@ test('mobile exact replay keeps controls bounded below the scene', async ({ page
   test.skip(testInfo.project.name !== 'mobile-chromium');
   await mockExactReplayApi(page);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await page.getByRole('button', { name: 'Investigate', exact: true }).click();
   await page.getByRole('button', { name: 'Open exact proposal replay' }).click();
 
   const planning = page.getByLabel('Planning evidence', { exact: true });
@@ -251,15 +262,15 @@ test('mobile exact replay keeps controls bounded below the scene', async ({ page
 test('local workspace supports an end-to-end evidence investigation', async ({ page }) => {
   await mockExactReplayApi(page);
   await page.goto('/');
-  await expect(page.getByText('Local records verified')).toBeVisible();
-  await page.getByRole('button', { name: 'Research', exact: true }).click();
+  await expect(page.getByText('Local workspace connected')).toBeVisible();
+  await page.getByRole('button', { name: 'Investigate', exact: true }).click();
 
   await expect(page.getByText('Counterfactual investigation')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Priority review queue' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Scenario changes' })).toBeVisible();
   await page.getByRole('button', { name: 'Strongest precedent' }).click();
   await page.getByRole('button', { name: 'Compare' }).click();
   await expect(page.getByText('Comparison · 1/2')).toBeVisible();
-  await page.getByRole('button', { name: 'Inspect' }).click();
+  await page.getByRole('button', { name: /^Inspect bayesian scenario/ }).click();
   await expect(page.getByRole('heading', { name: 'Tested planner still succeeds' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Analyze selected proposal' }).click();
@@ -267,7 +278,7 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
   await expect(page.getByText('sealed record · cccccccccccccccc')).toBeVisible();
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export signed HTML' }).click();
+  await page.getByRole('button', { name: 'Export investigation' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('planmargin-bayesian-1-0-p1.html');
   const downloadPath = await download.path();
@@ -282,8 +293,8 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
     .analyze();
   expect(investigationAccessibility.violations).toEqual([]);
 
-  await page.getByRole('button', { name: 'Model & runtime' }).click();
-  await expect(page.getByText('Model qualification')).toBeVisible();
+  await page.getByRole('button', { name: 'Models', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Models & runtime', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Real-WOMD prediction quality' })).toBeVisible();
   await expect(page.getByText('Scale-model deployment decision · no-go')).toBeVisible();
   const deploymentAccessibility = await new AxeBuilder({ page })
@@ -291,22 +302,71 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
     .analyze();
   expect(deploymentAccessibility.violations).toEqual([]);
 
-  await page.getByRole('button', { name: 'Ask analysis' }).click();
-  await expect(page.getByText('Gemini analysis')).toBeVisible();
+  await page.getByRole('button', { name: 'Ask PlanMargin' }).click();
+  await expect(page.getByText('PlanMargin assistant')).toBeVisible();
+  await page.getByPlaceholder('Ask about campaign evidence…').fill('hi');
+  await page.getByRole('button', { name: 'Ask evidence assistant' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Hi. I’m ready to inspect the run.' }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'How did Bayesian compare with random search?' }).click();
   await expect(
     page.getByText('Bayesian search produced more feasible proposals in this measured campaign.'),
   ).toBeVisible();
-  await expect(page.getByLabel('Verified facts used in this answer')).toContainText(
-    '25 percentage points',
-  );
+  await page.getByText('Show verified facts (1)', { exact: true }).click();
+  await expect(page.locator('.verified-facts')).toContainText('25 percentage points');
+  await expect(page.getByRole('heading', { name: 'Models & runtime', exact: true })).toBeVisible();
+  const assistantAccessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze();
+  expect(assistantAccessibility.violations).toEqual([]);
+  await page.getByRole('textbox', { name: 'Ask about campaign evidence…' }).press('Escape');
+  await expect(page.getByRole('button', { name: 'Ask PlanMargin', exact: true })).toBeFocused();
 
   await page.reload();
-  await expect(page.getByText('Local records verified')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Operations', exact: true })).toBeVisible();
+  await expect(page.getByText('Local workspace connected')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Investigate', exact: true })).toBeVisible();
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('an expired evidence session produces a recovery state rather than an empty inspector', async ({
+  page,
+}) => {
+  await mockExactReplayApi(page);
+  await page.goto('/');
+  await expect(page.getByText('Local workspace connected')).toBeVisible();
+  await page.route('**/api/v1/cells/cell_opaque/proposals', (route) =>
+    route.fulfill({ status: 401, body: '{}' }),
+  );
+  await page.getByRole('button', { name: /^Inspect bayesian scenario/ }).click();
+  await expect(
+    page.getByRole('button', { name: 'Reconnect workspace', exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('.connection-error')).toBeVisible();
+  await expect(
+    page.getByRole('heading', {
+      name: '3,200 counterfactual proposals. Zero qualifying regressions.',
+    }),
+  ).toBeVisible();
+});
+
+test('a replay route restores the planning mode after refresh', async ({ page }) => {
+  const runtimeErrors: string[] = [];
+  page.on('pageerror', (error) => runtimeErrors.push(error.message));
+  await mockExactReplayApi(page);
+  await page.goto('/?view=replay');
+  await expect(page.getByRole('tab', { name: 'Planning', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.reload();
+  await expect(page.getByRole('tab', { name: 'Planning', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  expect(runtimeErrors).toEqual([]);
 });

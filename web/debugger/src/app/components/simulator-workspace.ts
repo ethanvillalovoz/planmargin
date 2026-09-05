@@ -184,13 +184,25 @@ import { SensorViewport } from './sensor-viewport';
                   @if (debuggerStore.selectedHypothesis().id === 'proposal-linked-counterfactual') {
                     Exact campaign link verified: this fresh re-execution matches the selected
                     proposal's sealed trajectory hashes, outcomes, and interaction metrics.
+                  } @else if (
+                    debuggerStore.selectedHypothesis().id === 'interactive-counterfactual'
+                  ) {
+                    Exact trajectories from your new local experiment. This run is separate from the
+                    frozen campaign.
                   } @else {
                     This Stage-0 replay is separate from campaign proposals. Most proposal records
                     retain sealed hashes, outcomes, and metrics without their full paths.
                   }
                 </p>
                 <button type="button" class="review-records" (click)="evidenceRequested.emit()">
-                  Review candidate records
+                  {{
+                    debuggerStore.selectedHypothesis().id === 'interactive-counterfactual'
+                      ? 'Return to experiments'
+                      : 'Review candidate records'
+                  }}
+                </button>
+                <button type="button" class="review-records" (click)="jumpToMinimum()">
+                  Inspect minimum clearance
                 </button>
                 <label class="field-label">Recorded mutation</label>
                 <div class="select-control">
@@ -204,7 +216,8 @@ import { SensorViewport } from './sensor-viewport';
                   >
                 </div>
                 <p class="evidence-boundary">
-                  Tested, reference, and recorded trajectories below come from this sealed run.
+                  Tested and reference show the changed scenario. Original tested shows the same
+                  tested planner before the change.
                 </p>
                 <dl class="live-metrics" aria-label="Current planning metrics">
                   <div>
@@ -250,7 +263,7 @@ import { SensorViewport } from './sensor-viewport';
                 </div>
               } @else {
                 <p class="evidence-boundary">
-                  Source-frame spatial asset · frame {{ paddedFrame() }} of 3
+                  Source frame {{ paddedFrame() }} · three reconstructions available
                 </p>
               }
             }
@@ -274,6 +287,8 @@ import { SensorViewport } from './sensor-viewport';
               role="tab"
               [class.active]="simulator.sensorMode() === 'camera'"
               [attr.aria-selected]="simulator.sensorMode() === 'camera'"
+              [disabled]="!local.connected() || !local.campaignAvailable()"
+              [title]="local.campaignAvailable() ? 'Camera' : 'Requires the full sensor workspace'"
               (click)="selectMode('camera')"
             >
               Camera
@@ -283,7 +298,8 @@ import { SensorViewport } from './sensor-viewport';
               role="tab"
               [class.active]="simulator.sensorMode() === 'reconstruction'"
               [attr.aria-selected]="simulator.sensorMode() === 'reconstruction'"
-              [disabled]="!local.connected()"
+              [disabled]="!local.connected() || !local.campaignAvailable()"
+              [title]="local.campaignAvailable() ? '3DGS' : 'Requires the full sensor workspace'"
               (click)="selectMode('reconstruction')"
             >
               3DGS
@@ -293,7 +309,8 @@ import { SensorViewport } from './sensor-viewport';
               role="tab"
               [class.active]="simulator.sensorMode() === 'lidar'"
               [attr.aria-selected]="simulator.sensorMode() === 'lidar'"
-              [disabled]="!local.connected()"
+              [disabled]="!local.connected() || !local.campaignAvailable()"
+              [title]="local.campaignAvailable() ? 'LiDAR' : 'Requires the full sensor workspace'"
               (click)="selectMode('lidar')"
             >
               LiDAR
@@ -309,7 +326,7 @@ import { SensorViewport } from './sensor-viewport';
           </button>
         </div>
 
-        @if (simulator.assistantOpen()) {
+        @if (!embedded() && simulator.assistantOpen()) {
           <app-scenario-assistant class="assistant-panel" />
         }
       </main>
@@ -893,7 +910,7 @@ import { SensorViewport } from './sensor-viewport';
       z-index: 14;
       top: 5rem;
       right: 1rem;
-      width: 292px;
+      width: min(390px, calc(100% - 2rem));
       max-height: calc(100% - 6rem);
     }
     .timeline {
@@ -1054,7 +1071,7 @@ import { SensorViewport } from './sensor-viewport';
         display: none;
       }
       .assistant-panel {
-        width: 270px;
+        width: min(360px, calc(100% - 2rem));
       }
     }
     @media (max-width: 860px) {
@@ -1178,6 +1195,7 @@ export class SimulatorWorkspace {
   protected readonly debuggerStore = inject(DebuggerStore);
   readonly connectRequested = output<void>();
   readonly evidenceRequested = output<void>();
+  readonly modeChanged = output<SensorMode>();
   readonly embedded = input(false);
 
   constructor() {
@@ -1192,6 +1210,7 @@ export class SimulatorWorkspace {
   }
 
   protected selectMode(mode: SensorMode): void {
+    this.modeChanged.emit(mode);
     if (!this.local.connected()) {
       this.connectRequested.emit();
       return;
@@ -1247,7 +1266,9 @@ export class SimulatorWorkspace {
     if (outcome.tested === 'fails') {
       return 'The tested planner fails while the reference planner succeeds under the same recorded scenario change.';
     }
-    return 'This run is realistic and reproducible, but it is not a regression because the tested planner still succeeds.';
+    return this.debuggerStore.selectedHypothesis().supported
+      ? 'The tested planner succeeds under this change. Review the experiment finding gates before drawing a safety conclusion.'
+      : 'The tested planner succeeds. Empirical realism support has not passed, so this run cannot qualify a regression.';
   }
 
   protected mutationLabel(): string {
@@ -1270,6 +1291,15 @@ export class SimulatorWorkspace {
 
   protected seekFrame(event: Event): void {
     this.simulator.seekFrame(Number((event.target as HTMLInputElement).value));
+  }
+  protected jumpToMinimum(): void {
+    const metrics = this.debuggerStore.selectedHypothesis().metrics;
+    const index = metrics.reduce(
+      (best, item, current) =>
+        item.signedSeparationMeters < metrics[best].signedSeparationMeters ? current : best,
+      0,
+    );
+    this.simulator.showPlanningFrame(index);
   }
 
   protected cycleSpeed(): void {

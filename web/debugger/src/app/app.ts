@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { LocalEvidencePanel } from './components/local-evidence-panel';
 import { ProductShell } from './components/product-shell';
 import { DebuggerStore } from './debugger.store';
@@ -36,8 +36,19 @@ export class App {
   private readonly local = inject(LocalEvidenceService);
   private readonly debuggerStore = inject(DebuggerStore);
   private returnFocus: HTMLElement | undefined;
+  private sessionGeneration = 0;
 
   constructor() {
+    const onLaunchLink = () => {
+      if (new URLSearchParams(window.location.hash.slice(1)).get('token')) {
+        void this.connectFromAvailableSession();
+      }
+    };
+    window.addEventListener('hashchange', onLaunchLink);
+    inject(DestroyRef).onDestroy(() => {
+      this.sessionGeneration++;
+      window.removeEventListener('hashchange', onLaunchLink);
+    });
     void this.connectFromAvailableSession();
   }
 
@@ -53,18 +64,34 @@ export class App {
   }
 
   private async connectFromAvailableSession(): Promise<void> {
+    const generation = ++this.sessionGeneration;
     const token = consumeLaunchToken(window.location, window.history);
     const recover =
       token === undefined
         ? () => this.local.restoreBrowserSession()
         : () => this.local.connect(token);
     for (let attempt = 0; attempt < 2; attempt++) {
+      if (generation !== this.sessionGeneration) return;
       try {
         const evidence = await recover();
-        if (evidence === undefined) return;
-        this.debuggerStore.loadRun(evidence.initialRun);
+        if (generation !== this.sessionGeneration || evidence === undefined) return;
+        const experiment = new URLSearchParams(window.location.search).get('experiment');
+        if (experiment) {
+          try {
+            const run = await this.local.loadExperimentRun(experiment);
+            if (generation !== this.sessionGeneration) return;
+            this.debuggerStore.loadRun(run);
+          } catch {
+            if (generation !== this.sessionGeneration) return;
+            this.local.error.set(
+              'The requested experiment replay could not be verified. Return to experiments and inspect its status.',
+            );
+          }
+        } else if (evidence.initialRun) this.debuggerStore.loadRun(evidence.initialRun);
+        this.showLocalEvidence.set(false);
         return;
       } catch (error: unknown) {
+        if (generation !== this.sessionGeneration) return;
         if (!(error instanceof TypeError) || attempt === 1) {
           // A public clone is useful without the loopback API. Only surface the
           // connection panel automatically when an explicit launch token fails;

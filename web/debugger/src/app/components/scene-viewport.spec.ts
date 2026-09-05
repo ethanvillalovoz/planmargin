@@ -5,22 +5,11 @@ import { API_RUN } from '../local-evidence.test-fixtures';
 import { SceneViewport } from './scene-viewport';
 
 describe('SceneViewport', () => {
-  beforeEach(() => {
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        observe(): void {}
-        disconnect(): void {}
-      },
-    );
-  });
-
   afterEach(() => {
-    vi.unstubAllGlobals();
     TestBed.resetTestingModule();
   });
 
-  it('flips trajectory callouts inward near the right edge', () => {
+  it('advances actual trajectory markers and preserves a world-space ten-metre scale', () => {
     const fixture = TestBed.createComponent(SceneViewport);
     const store = TestBed.inject(DebuggerStore);
     const longTrajectory = [
@@ -41,25 +30,33 @@ describe('SceneViewport', () => {
         },
       }),
     );
+    store.seek(0);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const firstMarkerX = element.querySelector('rect.tested')?.getAttribute('x');
     store.seek(1);
     fixture.detectChanges();
-
     const scene = (
       fixture.componentInstance as unknown as {
         fallbackScene(): {
           trajectories: readonly {
             current: { x: number };
-            callout: { x: number };
-            labelAnchor: string;
           }[];
+          leadTrajectory: string;
+          leadCurrent: { x: number };
         };
       }
     ).fallbackScene();
 
     expect(scene.trajectories).toHaveLength(3);
-    for (const trajectory of scene.trajectories) {
-      expect(trajectory.callout.x).toBeLessThan(trajectory.current.x);
-      expect(trajectory.labelAnchor).toBe('end');
-    }
+    expect(scene.leadTrajectory).toContain('10');
+    expect(scene.leadCurrent.x).toBeGreaterThan(0);
+    expect(scene.trajectories.every((trajectory) => trajectory.current.x === 100)).toBe(true);
+    expect(element.querySelector('rect.tested')?.getAttribute('x')).not.toBe(firstMarkerX);
+    expect(element.querySelector('polyline.tested')?.getAttribute('points')).toBe('0,0 100,0');
+    const scale = element.querySelector('.metric-scale line');
+    expect(Number(scale?.getAttribute('x2')) - Number(scale?.getAttribute('x1'))).toBe(10);
+    expect(element.querySelector('canvas')).toBeNull();
+    expect(element.textContent).toContain('Markers are schematic');
   });
 });

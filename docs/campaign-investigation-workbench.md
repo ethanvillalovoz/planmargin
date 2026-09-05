@@ -7,27 +7,28 @@ PlanMargin's interface answers one engineering question:
 > Why did this candidate fail to become a qualifying, policy-specific,
 > avoidable planner failure—and what can the campaign actually claim?
 
-The application opens on the retained planning replay, not an experiment
-summary. The **Evidence** task verifies and ranks all 3,200 proposal records
-after local authentication. Aggregate research conclusions remain in the
-documentation rather than occupying a product navigation section.
+The authenticated application opens on **Investigate**, with the smallest-margin
+change selected and its decision beside the ranked queue. Public clones show
+aggregate evidence until licensed local data is connected. **Test health**,
+**Sensor lab**, and **Models** are separate supporting surfaces, not additional
+panels crowding the primary investigation.
 
 ## Investigation flow
 
-1. **Workbench** opens the authentic retained Stage-0 planning replay.
-2. **Evidence** remains empty rather than inventing rows when licensed local
-   records are unavailable.
+1. **Investigate** opens the smallest-margin candidate and its evidence.
+2. Without local data it shows real aggregates, never invented scenario rows.
 3. Local authentication verifies all 3,200 sealed proposals and builds a
    review queue for closest-to-failure, smallest-change, and
    strongest-precedent rankings.
 4. Any two campaign-ranked proposals can be compared side by side, then opened
    in their exact method/scenario/seed cell.
-5. The 100-cell matrix loads and seal-verifies each cell's 32 proposal records.
+5. **Browse all 100 search runs** reveals the advanced cell matrix. It loads
+   and seal-verifies each cell's 32 proposal records.
 6. Raw criticality, minimality, and support measurements remain auditable, but
    the queue leads with safety result, change size, recorded precedent, and the
    reason the candidate stopped.
-7. The gate ladder identifies mutation, scenario, support, reference, and
-   tested-planner decisions without collapsing them into one score.
+7. **Explain decision** reveals the gate ladder on demand. Mutation, scenario,
+   support, reference, and tested-planner outcomes remain distinct.
 8. Proposal-specific deterministic analysis cites the selected sealed record
    hash and never sends private evidence to Gemini.
 9. When a separately versioned replay package exists, the proposal opens that
@@ -35,7 +36,7 @@ documentation rather than occupying a product navigation section.
    trajectory hashes, outcomes, interaction metrics, and collection seal.
 10. Report export produces self-contained HTML and a SHA-256 digest over the
     selected privacy-reduced evidence payload.
-11. **Sensors** keeps the WOD Perception camera, 3DGS, and LiDAR study
+11. **Sensor lab** keeps the WOD Perception camera, 3DGS, and LiDAR study
     available as a secondary, explicitly independent workspace.
 
 ## Replay boundary

@@ -26,6 +26,8 @@ SCHEMA = json.loads(
 @pytest.mark.parametrize(
     ("question", "query_id"),
     (
+        ("Are the release-critical tests healthy?", "test_health"),
+        ("Which off-nominal behaviors are covered?", "behavior_coverage"),
         ("What happened in the campaign overall?", "campaign_overview"),
         ("Was Bayesian better than random search?", "method_comparison"),
         ("What happened to H1, H2, and H3?", "hypothesis_decisions"),
@@ -102,6 +104,26 @@ def test_embedded_public_evidence_is_sealed_to_tracked_sources() -> None:
     assert integration["public_catalog_fingerprint"] == (
         evidence_assistant.public_catalog_fingerprint()
     )
+
+    operations = json.loads(
+        (ROOT / "web/debugger/public/data/test-operations-v2.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    health = evidence_assistant.PublicEvidenceTools().execute("test_health")
+    health_values = {fact.fact_id: fact.value for fact in health.facts}
+    assert health_values["operations.cells"] == operations["test_inventory"][
+        "passing_release_critical_cells"
+    ]
+    assert health_values["operations.slos"] == operations["slo_summary"]["passing"]
+    coverage = evidence_assistant.PublicEvidenceTools().execute("behavior_coverage")
+    coverage_values = {fact.fact_id: fact.value for fact in coverage.facts}
+    assert coverage_values["coverage.suites"] == operations["test_inventory"][
+        "tracked_suites"
+    ]
+    assert coverage_values["coverage.fault_protection"] == operations["coverage"][
+        "fault_protection"
+    ]["scene_gate_passes"]
 
 
 class _FakeInteractions:

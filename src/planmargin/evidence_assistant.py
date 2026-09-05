@@ -136,6 +136,7 @@ BEAM = "beam-integration"
 MODEL = "trajectory-model-v2"
 INFERENCE = "tensorrt-qualification-v2"
 WORKBENCH = "campaign-investigation-workbench"
+OPERATIONS = "test-operations-v2"
 
 PUBLIC_CITATIONS = {
     CAMPAIGN: Citation(
@@ -172,7 +173,13 @@ PUBLIC_CITATIONS = {
         WORKBENCH,
         "Campaign investigation workbench contract",
         "docs/campaign-investigation-workbench.md",
-        "7ad99d2f272293d85656ed566e783b614556506e049c274f03ea8144e572e41b",
+        "77c9aa5f15a684f4a8d8dd8d8fd869b7c90fa1c3dde6de4be080167f4b5149fd",
+    ),
+    OPERATIONS: Citation(
+        OPERATIONS,
+        "Versioned simulation test-operations report",
+        "web/debugger/public/data/test-operations-v2.json",
+        "95b1b9269ad682b630064f561c990e71bcc7e8552dd9887dbeae3b6f2ad0ff0d",
     ),
 }
 
@@ -611,6 +618,113 @@ class PublicEvidenceTools:
             ),
         )
 
+    def _query_test_health(self) -> ToolResult:
+        return ToolResult(
+            "test_health",
+            "Release-critical simulation test health",
+            self.source_mode,
+            (
+                _fact(
+                    "operations.cells",
+                    "All 120 release-critical test cells completed successfully.",
+                    120,
+                    "test cells",
+                    OPERATIONS,
+                ),
+                _fact(
+                    "operations.slos",
+                    "All 7 declared test-health SLOs passed.",
+                    7,
+                    "passing SLOs",
+                    OPERATIONS,
+                ),
+                _fact(
+                    "operations.alerts",
+                    "The sealed campaign has zero active execution-health alerts.",
+                    0,
+                    "active alerts",
+                    OPERATIONS,
+                ),
+                _fact(
+                    "operations.stages",
+                    "All 7 automated pipeline stages report healthy execution.",
+                    7,
+                    "healthy stages",
+                    OPERATIONS,
+                ),
+                _fact(
+                    "operations.decisions",
+                    "Three measured engineering decisions remain explicitly held without blocking campaign review.",
+                    3,
+                    "held decisions",
+                    OPERATIONS,
+                ),
+            ),
+            self._citations(OPERATIONS),
+            (
+                "These SLOs describe the bounded research pipeline, not fleet health.",
+                "Healthy execution does not imply a successful behavior finding.",
+                "The report is sealed aggregate evidence; private source records remain local.",
+            ),
+        )
+
+    def _query_behavior_coverage(self) -> ToolResult:
+        return ToolResult(
+            "behavior_coverage",
+            "Versioned off-nominal behavior coverage",
+            self.source_mode,
+            (
+                _fact(
+                    "coverage.suites",
+                    "The report tracks 3 independently versioned behavior-test suites.",
+                    3,
+                    "test suites",
+                    OPERATIONS,
+                ),
+                _fact(
+                    "coverage.lead_braking",
+                    "The lead-braking plan passed 807 of 807 declared gates across 100 test cells.",
+                    807,
+                    "passing gates",
+                    OPERATIONS,
+                ),
+                _fact(
+                    "coverage.fault_protection",
+                    "The sustained command-dropout plan passed 80 of 80 gates across 10 real-data scenarios.",
+                    80,
+                    "passing gates",
+                    OPERATIONS,
+                ),
+                _fact(
+                    "coverage.assistance_handoff",
+                    "The assistance-handoff recovery plan passed 90 of 90 gates across 10 real-data scenarios.",
+                    90,
+                    "passing gates",
+                    OPERATIONS,
+                ),
+                _fact(
+                    "coverage.known_gap",
+                    "Cross-simulator agreement remains an explicitly uncovered test dimension.",
+                    "not covered",
+                    None,
+                    OPERATIONS,
+                ),
+                _fact(
+                    "coverage.timing_gap",
+                    "Scheduled completion latency remains uncovered because no wall-clock deadline was preregistered.",
+                    "not covered",
+                    None,
+                    OPERATIONS,
+                ),
+            ),
+            self._citations(OPERATIONS),
+            (
+                "Coverage is limited to the declared public research test plans.",
+                "The same test contract has not been repeated in a second simulator.",
+                "This is not production or fleet-wide coverage evidence.",
+            ),
+        )
+
 
 class LocalEvidenceTools:
     """Execute the same closed aggregate queries over verified ignored artifacts."""
@@ -626,6 +740,8 @@ class LocalEvidenceTools:
             "model_performance",
             "inference_qualification",
             "workbench_provenance",
+            "test_health",
+            "behavior_coverage",
         }:
             return PublicEvidenceTools().execute(query_id)
         if query_id == "campaign_overview":
@@ -773,6 +889,8 @@ QUERY_LABELS = {
     "model_performance": "trajectory-model evidence",
     "inference_qualification": "NVIDIA inference evidence",
     "workbench_provenance": "replay and sensor provenance",
+    "test_health": "simulation test health",
+    "behavior_coverage": "versioned behavior coverage",
 }
 
 
@@ -787,6 +905,31 @@ def classify_question(question: str) -> str:
         raise ValueError("Question contains unsupported control characters")
 
     routes = (
+        (
+            "test_health",
+            (
+                "test health",
+                "pipeline health",
+                "release health",
+                "healthy",
+                "slo",
+                "alert",
+                "on time",
+            ),
+        ),
+        (
+            "behavior_coverage",
+            (
+                "behavior coverage",
+                "test coverage",
+                "fault protection",
+                "command dropout",
+                "remote assistance",
+                "assistance handoff",
+                "off-nominal",
+                "off nominal",
+            ),
+        ),
         (
             "inference_qualification",
             ("tensorrt", "fp16", "fp32", "inference", "latency", "throughput", "t4"),
@@ -949,6 +1092,31 @@ OFFLINE_DRAFTS = {
         ],
         limitation="Licensed scene-level artifacts remain local and exact replay coverage is intentionally selective.",
     ),
+    "test_health": ExplanationDraft(
+        summary="The release-critical simulation campaign completed with every declared execution-health objective passing.",
+        interpretation="Pipeline health and behavior outcome remain separate: the run is complete and reproducible even though measured engineering decisions are still held.",
+        cited_fact_ids=[
+            "operations.cells",
+            "operations.slos",
+            "operations.alerts",
+            "operations.stages",
+            "operations.decisions",
+        ],
+        limitation="These signals describe the bounded research pipeline and must not be presented as fleet-health evidence.",
+    ),
+    "behavior_coverage": ExplanationDraft(
+        summary="The report versions lead-braking, command-dropout fallback, and assistance-handoff recovery as separate reviewed test plans.",
+        interpretation="Each plan carries its own scenario population and gate result, while cross-simulator agreement remains visible as an uncovered dimension.",
+        cited_fact_ids=[
+            "coverage.suites",
+            "coverage.lead_braking",
+            "coverage.fault_protection",
+            "coverage.assistance_handoff",
+            "coverage.known_gap",
+            "coverage.timing_gap",
+        ],
+        limitation="The test matrix is bounded to declared research scenarios and has not been repeated in a second simulator.",
+    ),
 }
 
 
@@ -1039,6 +1207,17 @@ HOSTED_FACT_TEXT = {
     "workbench.reconstructions": "The Sensor Lab includes multiple real source-frame reconstructions.",
     "workbench.separate_records": "Planning replay and sensor views come from separate records.",
     "workbench.redistribution": "Licensed scene-level artifacts are not redistributed.",
+    "operations.cells": "Every release-critical campaign cell completed.",
+    "operations.slos": "Every declared test-health objective passed.",
+    "operations.alerts": "The sealed campaign has no active execution-health alert.",
+    "operations.stages": "Every automated pipeline stage reports healthy execution.",
+    "operations.decisions": "Measured engineering decisions remain explicitly held without blocking campaign review.",
+    "coverage.suites": "The report tracks independently versioned behavior-test suites.",
+    "coverage.lead_braking": "The lead-braking plan passed every declared gate.",
+    "coverage.fault_protection": "The command-dropout plan passed every declared gate over its real-data scenarios.",
+    "coverage.assistance_handoff": "The assistance-handoff recovery plan passed every declared gate over its real-data scenarios.",
+    "coverage.known_gap": "Cross-simulator agreement remains explicitly uncovered.",
+    "coverage.timing_gap": "Scheduled completion latency remains uncovered because no deadline was preregistered.",
 }
 
 

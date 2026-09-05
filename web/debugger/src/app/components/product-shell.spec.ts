@@ -6,6 +6,7 @@ import { ProductShell } from './product-shell';
 
 describe('ProductShell', () => {
   beforeEach(() => {
+    vi.stubGlobal('scrollTo', vi.fn());
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -21,40 +22,72 @@ describe('ProductShell', () => {
   });
 
   afterEach(() => {
+    window.history.replaceState(null, '', '/');
     vi.unstubAllGlobals();
     TestBed.resetTestingModule();
   });
 
-  it('opens on simulation test operations and keeps the local-workspace boundary explicit', () => {
+  it('opens a requested evidence surface for reproducible local inspection', () => {
+    window.history.replaceState(null, '', '/?view=evidence&panel=runtime');
+    const fixture = TestBed.createComponent(ProductShell);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Models & runtime');
+    expect(fixture.nativeElement.textContent).toContain('Models, deployment, and promotion gates');
+  });
+
+  it('waits for the initial replay instead of rendering an empty debugger store', () => {
+    window.history.replaceState(null, '', '/?view=replay');
+    const fixture = TestBed.createComponent(ProductShell);
+    TestBed.inject(LocalEvidenceService).state.set('connected');
+    expect(() => fixture.detectChanges()).not.toThrow();
+    expect(fixture.nativeElement.textContent).toContain('Loading verified planning evidence');
+    expect(fixture.nativeElement.querySelector('app-simulator-workspace')).toBeNull();
+  });
+
+  it('explains the optional sensor setup without a fictitious timeline in planning-only mode', () => {
+    window.history.replaceState(null, '', '/?view=sensors');
+    const fixture = TestBed.createComponent(ProductShell);
+    const local = TestBed.inject(LocalEvidenceService);
+    local.state.set('connected');
+    local.campaignAvailable.set(false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Sensor lab is not loaded in planning-only mode',
+    );
+    expect(fixture.nativeElement.querySelector('app-simulator-workspace')).toBeNull();
+    expect(fixture.nativeElement.querySelector('input[type=range]')).toBeNull();
+  });
+
+  it('opens on counterfactual investigation and keeps the local-workspace boundary explicit', () => {
     const fixture = TestBed.createComponent(ProductShell);
     fixture.detectChanges();
 
     let text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Operations');
-    expect(text).toContain('Campaign health and release evidence');
-    expect(text).toContain('Execution healthy100/100');
-    expect(text).toContain('Integrity checks passevidence pipeline100%807 of 807Pass');
-    expect(text).toContain('Promotion queue3');
-    expect(text).not.toContain('Replay sealed planner evidence locally');
+    expect(text).toContain('Campaign');
+    expect(text).toContain('Counterfactual investigation');
+    expect(text).toContain('0 qualifying regressions');
+    expect(text).not.toContain('120/120test cells');
+    expect(text).not.toContain('No retained replay loaded');
     const workbench = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Scenario lab'))!;
+    ).find((candidate) => candidate.textContent?.includes('Replay'))!;
     workbench.click();
     fixture.detectChanges();
     text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Replay sealed planner evidence locally');
-    expect(text).toContain('Public proposals3,200');
+    expect(text).toContain('No retained replay loaded');
+    expect(text).toContain('Campaign proposals3,200');
 
     const evidence = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Research'))!;
+    ).find((candidate) => candidate.textContent?.includes('Investigate'))!;
     evidence.click();
     fixture.detectChanges();
     const runtime = Array.from(
       fixture.nativeElement.querySelectorAll(
-        '.evidence-sections button',
+        '.product-header nav button',
       ) as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Model & runtime'))!;
+    ).find((candidate) => candidate.textContent?.includes('Models'))!;
     runtime.click();
     fixture.detectChanges();
     text = fixture.nativeElement.textContent as string;
@@ -77,11 +110,11 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Research'))!;
+    ).find((candidate) => candidate.textContent?.includes('Investigate'))!;
     button.click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Published campaign evidence');
+    expect(fixture.nativeElement.textContent).toContain('Published aggregate evidence');
     expect(fixture.nativeElement.textContent).toContain('Open local workspace');
   });
 
@@ -96,13 +129,13 @@ describe('ProductShell', () => {
         '.product-header nav button',
       ) as NodeListOf<HTMLButtonElement>,
     );
-    navigation.find((candidate) => candidate.textContent?.includes('Research'))!.click();
+    navigation.find((candidate) => candidate.textContent?.includes('Investigate'))!.click();
     fixture.detectChanges();
     const runtime = Array.from(
       fixture.nativeElement.querySelectorAll(
-        '.evidence-sections button',
+        '.product-header nav button',
       ) as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Model & runtime'))!;
+    ).find((candidate) => candidate.textContent?.includes('Models'))!;
     runtime.click();
     fixture.detectChanges();
 
@@ -121,16 +154,16 @@ describe('ProductShell', () => {
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
     );
 
-    buttons.find((candidate) => candidate.textContent?.includes('Sensors'))!.click();
+    buttons.find((candidate) => candidate.textContent?.includes('Sensor lab'))!.click();
     fixture.detectChanges();
     expect(simulator.sensorMode()).toBe('camera');
 
-    buttons.find((candidate) => candidate.textContent?.includes('Scenario lab'))!.click();
+    buttons.find((candidate) => candidate.textContent?.includes('Replay'))!.click();
     fixture.detectChanges();
     expect(simulator.sensorMode()).toBe('planning');
   });
 
-  it('exposes the evidence assistant from the primary product header', () => {
+  it('opens the assistant without navigating away or changing the sensor mode', () => {
     const fixture = TestBed.createComponent(ProductShell);
     const local = TestBed.inject(LocalEvidenceService);
     const simulator = TestBed.inject(SimulatorStore);
@@ -141,13 +174,16 @@ describe('ProductShell', () => {
       fixture.nativeElement.querySelectorAll(
         '.product-header button',
       ) as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Ask analysis'))!;
+    ).find((candidate) => candidate.textContent?.includes('Ask PlanMargin'))!;
     expect(button.disabled).toBe(false);
 
+    const locationBefore = window.location.href;
+    const modeBefore = simulator.sensorMode();
     button.click();
 
     expect(simulator.assistantOpen()).toBe(true);
-    expect(simulator.sensorMode()).toBe('planning');
+    expect(simulator.sensorMode()).toBe(modeBefore);
+    expect(window.location.href).toBe(locationBefore);
   });
 
   it('renders measured proposal gates after local evidence is connected', () => {
@@ -195,14 +231,20 @@ describe('ProductShell', () => {
     fixture.detectChanges();
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('nav button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.includes('Research'))!;
+    ).find((candidate) => candidate.textContent?.includes('Investigate'))!;
     button.click();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Tested planner still succeeds');
     expect(text).toContain('Reference planner');
-    expect(text).toContain('Reproducible replay');
+    expect(text).not.toContain('Reproducible replay');
+    const explain = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((item) => item.textContent?.includes('Explain decision'))!;
+    explain.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Reproducible replay');
     expect(text).toContain('Safety result');
     expect(text).toContain('Change size');
     expect(text).not.toContain('Criticality 0.400');
