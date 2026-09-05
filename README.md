@@ -180,7 +180,10 @@ npm run e2e
 Tests cover numerical parity, evidence contracts, auth, worker lifecycle,
 idempotency, cancellation, replay integrity, and desktop/mobile interactions.
 Browser contract tests use fixtures; the [case study](docs/case-study-close-clearance.md)
-documents the separately executed real-data path. Stop the development server
+documents the separately executed real-data path. The commit-scoped
+[completion record](docs/product-completion.md) lists the final workflow checks,
+independent-checkout reproduction, and explicit remaining boundaries.
+Stop the development server
 before `npm ci`; replacing dependencies underneath it can break the running app.
 
 | Directory | Responsibility |

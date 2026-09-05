@@ -4,6 +4,10 @@ import { expect, test } from '@playwright/test';
 test('all model studies remain usable offline with keyboard-accessible evidence and links', async ({
   page,
 }) => {
+  const trackingWarnings: string[] = [];
+  page.on('console', (message) => {
+    if (message.text().includes('NG0956')) trackingWarnings.push(message.text());
+  });
   await page.route('**/api/v1/**', (route) => route.abort('connectionrefused'));
   await page.goto('/?view=evidence&panel=runtime');
   const studyNav = page.getByRole('navigation', { name: 'Model study selection' });
@@ -54,4 +58,5 @@ test('all model studies remain usable offline with keyboard-accessible evidence 
   ).toBeVisible();
   await page.getByRole('button', { name: 'Test health', exact: true }).click();
   await expect(page.locator('.context-inspector')).toContainText('PM-TRT-011');
+  expect(trackingWarnings).toEqual([]);
 });

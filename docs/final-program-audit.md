@@ -48,7 +48,7 @@ gates and remain documented negative results with no deployed model.
    versions, and engine hashes without accessing licensed WOMD records.
 10. Inspect the scaled model's real-data ADE/FDE, active-mining no-go, interaction
     ablation no-go, and NVIDIA rerun status without conflating those tracks.
-11. Monitor seven independently owned release SLOs and inspect an actionable
+11. Review seven saved release SLOs and inspect an actionable
     alert contract for every degraded state.
 12. Inspect sustained command-dropout protection and timed assistance-handoff
     verification over real WOMD scenes.

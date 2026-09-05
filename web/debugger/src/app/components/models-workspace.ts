@@ -45,7 +45,7 @@ import { MODEL_STUDIES, sourceLink } from '../model-studies';
           <table aria-label="Study comparison">
             <thead>
               <tr>
-                @for (column of selected().columns; track column) {
+                @for (column of selected().columns; track $index) {
                   <th scope="col">{{ column }}</th>
                 }
               </tr>
