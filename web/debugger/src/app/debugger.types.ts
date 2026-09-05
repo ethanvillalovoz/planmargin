@@ -40,6 +40,9 @@ export interface DebuggerHypothesis {
   readonly controllerOutcome: ControllerOutcome;
   readonly trajectories: TrajectorySet;
   readonly metrics: readonly MetricSample[];
+  readonly vehicleFootprints?: Readonly<
+    Record<TrajectoryKind | 'lead', readonly (readonly Point2d[])[]>
+  >;
 }
 
 export interface DebuggerRun {

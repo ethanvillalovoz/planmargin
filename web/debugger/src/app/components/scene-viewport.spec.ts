@@ -9,6 +9,39 @@ describe('SceneViewport', () => {
     TestBed.resetTestingModule();
   });
 
+  it('renders source-sized polygons instead of schematic markers when geometry is present', () => {
+    const fixture = TestBed.createComponent(SceneViewport);
+    const store = TestBed.inject(DebuggerStore);
+    const corners = [
+      { x: 2, y: 1 },
+      { x: -2, y: 1 },
+      { x: -2, y: -1 },
+      { x: 2, y: -1 },
+    ];
+    const frames = [corners, corners.map((p) => ({ ...p, x: p.x + 1 }))];
+    store.loadRun(
+      parseLocalRun({
+        ...API_RUN,
+        hypothesis: {
+          ...API_RUN.hypothesis,
+          vehicle_footprints: { tested: frames, reference: frames, recorded: frames, lead: frames },
+        },
+      }),
+    );
+    store.seek(0);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('polygon.vehicle-footprint')).toHaveLength(4);
+    expect(element.querySelectorAll('rect')).toHaveLength(0);
+    expect(element.textContent).toContain('recorded dimensions and headings, to scale');
+    const first = element.querySelector('polygon.tested')?.getAttribute('points');
+    store.seek(1);
+    fixture.detectChanges();
+    expect(element.querySelector('polygon.tested')?.getAttribute('points')).not.toBe(first);
+    // The API_RUN trace runs along +x, so this also tests world-to-SVG y inversion.
+    expect(first).toBe('2,-1 -2,-1 -2,1 2,1');
+  });
+
   it('advances actual trajectory markers and preserves a world-space ten-metre scale', () => {
     const fixture = TestBed.createComponent(SceneViewport);
     const store = TestBed.inject(DebuggerStore);

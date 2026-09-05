@@ -288,6 +288,13 @@ class TrajectoryEvidence(EvidenceModel):
     recorded: list[PointEvidence]
 
 
+class VehicleFootprintsEvidence(EvidenceModel):
+    tested: list[list[PointEvidence]]
+    reference: list[list[PointEvidence]]
+    recorded: list[list[PointEvidence]]
+    lead: list[list[PointEvidence]]
+
+
 class ReplayHypothesisEvidence(EvidenceModel):
     id: str
     label: str
@@ -301,6 +308,7 @@ class ReplayHypothesisEvidence(EvidenceModel):
     controller_outcome: ControllerOutcomeEvidence
     trajectories: TrajectoryEvidence
     metrics: list[MetricEvidence]
+    vehicle_footprints: VehicleFootprintsEvidence | None = None
 
 
 class PrivacyEvidence(EvidenceModel):
@@ -1336,6 +1344,19 @@ class EvidenceRepository:
                     "recorded": self._points(original_tested["trajectory"]),
                 },
                 "metrics": metrics,
+                "vehicle_footprints": {
+                    **{
+                        role: self._vehicle_footprints(
+                            record["trajectory"], scene["actors"]["sdc"]
+                        )
+                        for role, record in (
+                            ("tested", counterfactual_tested),
+                            ("reference", counterfactual_reference),
+                            ("recorded", original_tested),
+                        )
+                    },
+                    "lead": self._vehicle_footprints(lead),
+                },
             },
             "privacy": {
                 "scenario_identifier_exposed": False,
@@ -1635,6 +1656,27 @@ class EvidenceRepository:
                 distance = math.hypot(x[index] - x[index - 1], y[index] - y[index - 1])
                 return round(distance / speed_mutation.TIME_INTERVAL_S, 6)
         raise ValueError("Mutation target has no adjacent valid states")
+
+    @staticmethod
+    def _vehicle_footprints(
+        track: dict[str, Any], shape: dict[str, Any] | None = None
+    ) -> list[list[dict[str, float]]]:
+        """Project the same oriented geometry used by the clearance metric."""
+        result = []
+        for index, valid in enumerate(track["valid"]):
+            if not valid:
+                raise ValueError("Vehicle footprints require an aligned valid trace")
+            corners = interaction_metrics.oriented_box_corners(
+                x_m=float(track["x_m"][index]),
+                y_m=float(track["y_m"][index]),
+                yaw_rad=float(track["yaw_rad"][index]),
+                length_m=float(
+                    shape["length_m"] if shape else track["length_m"][index]
+                ),
+                width_m=float(shape["width_m"] if shape else track["width_m"][index]),
+            )
+            result.append([{"x": float(x), "y": float(y)} for x, y in corners])
+        return result
 
     @staticmethod
     def _timeline_metrics(
