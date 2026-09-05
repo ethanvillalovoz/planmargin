@@ -1032,6 +1032,25 @@ function initialEvidenceView(): EvidenceView {
             </button>
           </aside>
         </main>
+      } @else if (view() === 'sensor' && !local.campaignAvailable()) {
+        <main class="sensor-setup">
+          <span>Optional workspace</span>
+          <h1>Sensor lab is not loaded in planning-only mode</h1>
+          <p>
+            Your experiment runner is connected. Camera, LiDAR, and 3DGS use a separate licensed
+            Perception segment and are not required for planning experiments.
+          </p>
+          <p>
+            To add those capabilities, stop the launcher, prepare the full workspace, and relaunch
+            without <code>--planning-only</code>.
+          </p>
+          <a
+            href="https://github.com/ethanvillalovoz/planmargin/blob/main/docs/reproducing-the-workspace.md"
+          >
+            Read the full-workspace setup guide
+          </a>
+          <button type="button" (click)="setView('experiments')">Return to experiments</button>
+        </main>
       } @else if (view() === 'replay' && !debuggerStore.hasRun()) {
         <main class="loading-state" role="status">
           {{

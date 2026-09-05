@@ -1147,3 +1147,36 @@ select {
   outline: 3px solid #1558ed;
   outline-offset: 3px;
 }
+.sensor-setup {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  width: min(42rem, calc(100% - 3rem));
+  margin: 3rem auto;
+  padding: 2rem;
+  box-sizing: border-box;
+  background: white;
+  border: 1px solid #dce5e1;
+  border-radius: 18px;
+  color: #17242d;
+}
+.sensor-setup h1,
+.sensor-setup p {
+  margin: 0;
+}
+.sensor-setup p {
+  line-height: 1.65;
+}
+.sensor-setup a {
+  color: #174ac6;
+}
+.sensor-setup button {
+  justify-self: start;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  background: #1758ec;
+  font-weight: 700;
+  cursor: pointer;
+}

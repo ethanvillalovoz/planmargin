@@ -287,6 +287,8 @@ import { SensorViewport } from './sensor-viewport';
               role="tab"
               [class.active]="simulator.sensorMode() === 'camera'"
               [attr.aria-selected]="simulator.sensorMode() === 'camera'"
+              [disabled]="!local.connected() || !local.campaignAvailable()"
+              [title]="local.campaignAvailable() ? 'Camera' : 'Requires the full sensor workspace'"
               (click)="selectMode('camera')"
             >
               Camera
@@ -296,7 +298,8 @@ import { SensorViewport } from './sensor-viewport';
               role="tab"
               [class.active]="simulator.sensorMode() === 'reconstruction'"
               [attr.aria-selected]="simulator.sensorMode() === 'reconstruction'"
-              [disabled]="!local.connected()"
+              [disabled]="!local.connected() || !local.campaignAvailable()"
+              [title]="local.campaignAvailable() ? '3DGS' : 'Requires the full sensor workspace'"
               (click)="selectMode('reconstruction')"
             >
               3DGS
@@ -306,7 +309,8 @@ import { SensorViewport } from './sensor-viewport';
               role="tab"
               [class.active]="simulator.sensorMode() === 'lidar'"
               [attr.aria-selected]="simulator.sensorMode() === 'lidar'"
-              [disabled]="!local.connected()"
+              [disabled]="!local.connected() || !local.campaignAvailable()"
+              [title]="local.campaignAvailable() ? 'LiDAR' : 'Requires the full sensor workspace'"
               (click)="selectMode('lidar')"
             >
               LiDAR

@@ -11,6 +11,7 @@ test('experiment config, progress, cancellation, completion, replay and reload',
   let calls = 0;
   let state: Record<string, any> | undefined;
   let createCount = 0;
+  const sessionTokens: string[] = [];
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/api/v1/**', async (route) => {
@@ -19,7 +20,10 @@ test('experiment config, progress, cancellation, completion, replay and reload',
     let value: unknown = {};
     let status = 200;
     if (req.method() === 'OPTIONS') value = {};
-    else if (path === '/health')
+    else if (path === '/session' && req.method() === 'POST') {
+      sessionTokens.push(req.headers()['x-planmargin-token']);
+      value = {};
+    } else if (path === '/health')
       value = { status: 'ready', campaign_ready: false, evidence_mode: 'real_local_redacted' };
     else if (path === '/experiments/readiness')
       value = {
@@ -84,13 +88,18 @@ test('experiment config, progress, cancellation, completion, replay and reload',
         'Access-Control-Allow-Origin': 'http://127.0.0.1:4200',
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, X-PlanMargin-Token',
       },
       body: JSON.stringify(value),
     });
   });
   await page.goto('/?view=experiments');
   await expect(page.getByRole('heading', { name: 'Test a scenario change' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Run experiment', exact: true })).toBeEnabled();
+  // A relaunch URL can be a same-document fragment navigation, not a page load.
+  await page.goto('/?view=experiments#token=relaunched-local-session-123');
+  await expect.poll(() => sessionTokens).toEqual(['relaunched-local-session-123']);
+  await expect(page).toHaveURL(/\?view=experiments$/);
   await expect(page.getByRole('button', { name: 'Run experiment', exact: true })).toBeEnabled();
   await page.getByRole('spinbutton', { name: 'Lead speed multiplier' }).fill('1.1');
   await page.getByRole('button', { name: 'Run experiment', exact: true }).click();
@@ -152,10 +161,16 @@ test('experiment config, progress, cancellation, completion, replay and reload',
   await expect(page.locator('polyline.tested')).toHaveCSS('fill', 'none');
   await expect(page.locator('polyline.lead')).toHaveCSS('fill', 'none');
   await expect(page.locator('app-scene-viewport canvas')).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: 'Camera', exact: true })).toBeDisabled();
   await page.reload();
   await expect(page.getByRole('button', { name: 'Return to experiments' })).toBeVisible();
   await page.getByRole('button', { name: 'Return to experiments' }).click();
   await expect(page.getByRole('heading', { name: 'Test a scenario change' })).toBeVisible();
+  await page.getByRole('button', { name: 'Sensor lab', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Sensor lab is not loaded in planning-only mode' }),
+  ).toBeVisible();
+  await expect(page.getByRole('slider', { name: 'Evidence timeline' })).toHaveCount(0);
   expect(calls).toBeGreaterThan(2);
   expect(createCount).toBe(2);
   expect(errors).toEqual([]);

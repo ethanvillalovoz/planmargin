@@ -45,6 +45,20 @@ describe('ProductShell', () => {
     expect(fixture.nativeElement.querySelector('app-simulator-workspace')).toBeNull();
   });
 
+  it('explains the optional sensor setup without a fictitious timeline in planning-only mode', () => {
+    window.history.replaceState(null, '', '/?view=sensors');
+    const fixture = TestBed.createComponent(ProductShell);
+    const local = TestBed.inject(LocalEvidenceService);
+    local.state.set('connected');
+    local.campaignAvailable.set(false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Sensor lab is not loaded in planning-only mode',
+    );
+    expect(fixture.nativeElement.querySelector('app-simulator-workspace')).toBeNull();
+    expect(fixture.nativeElement.querySelector('input[type=range]')).toBeNull();
+  });
+
   it('opens on counterfactual investigation and keeps the local-workspace boundary explicit', () => {
     const fixture = TestBed.createComponent(ProductShell);
     fixture.detectChanges();
