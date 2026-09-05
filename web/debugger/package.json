@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
     "e2e": "playwright test",
+    "verify:sensors": "node scripts/verify-live-sensors.mjs",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run typecheck && npm test && npm run build"

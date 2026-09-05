@@ -2,6 +2,21 @@ import { TestBed } from '@angular/core/testing';
 import { OperationsWorkspace } from './operations-workspace';
 
 describe('OperationsWorkspace', () => {
+  it('deep-links triage to the corresponding model evidence and restores the selected issue', () => {
+    window.history.replaceState(null, '', '/?view=health&section=triage&issue=PM-RANK-006');
+    const fixture = TestBed.createComponent(OperationsWorkspace);
+    let study = '';
+    fixture.componentInstance.openModelStudy.subscribe((id) => (study = id));
+    fixture.detectChanges();
+    const button = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((b) => b.textContent?.includes('Inspect model evidence'))!;
+    button.click();
+    expect(study).toBe('ranker');
+    expect(fixture.nativeElement.querySelector('.context-inspector').textContent).toContain(
+      'Learned ranker',
+    );
+  });
   afterEach(() => {
     window.history.replaceState(null, '', '/');
     TestBed.resetTestingModule();

@@ -25,7 +25,7 @@ from planmargin.experiment_jobs import (
     read_json,
     write_json,
 )
-from planmargin.experiment_worker import Progress
+from planmargin.experiment_worker import Progress, build_tested_controller
 
 TOKEN = "test-only-experiment-token-00000"
 ORIGIN = "http://127.0.0.1:4200"
@@ -112,12 +112,73 @@ def seal_result(manager, record, decision="not_qualified"):
         {"braking_onset_offset_s": -0.1},
         {"braking_onset_offset_s": 0.6},
         {"command": "arbitrary"},
+        {"tested_controller": {"command": "arbitrary"}},
+        {"tested_controller": {"desired_vel_mps": 41}},
+        {"tested_controller": {"desired_vel_mps": "20"}},
+        {"tested_controller": {"min_spacing_m": 0}},
+        {"tested_controller": {"safe_time_headway_s": float("nan")}},
+        {"tested_controller": {"safe_time_headway_s": float("inf")}},
+        {"tested_controller": {"safe_time_headway_s": True}},
+        {"tested_controller": {"safe_time_headway_s": 5.1}},
         {"request_id": "../../outside"},
     ],
 )
 def test_configuration_is_bounded(overrides):
     with pytest.raises(ValidationError):
         request(**overrides)
+
+
+def test_custom_controller_is_content_addressed_and_preserves_frozen_defaults():
+    from planmargin.controller_comparison import TESTED_CONTROLLER, REFERENCE_CONTROLLER
+
+    frozen_tested, frozen_reference = (
+        TESTED_CONTROLLER.report(),
+        REFERENCE_CONTROLLER.report(),
+    )
+    assert build_tested_controller(request()) is TESTED_CONTROLLER
+    assert "tested_controller" not in request().record()
+    config = request(
+        tested_controller={"desired_vel_mps": 24.0, "safe_time_headway_s": 2.5}
+    )
+    spec = build_tested_controller(config)
+    assert spec.desired_vel_mps == 24
+    assert spec.safe_time_headway_s == 2.5
+    assert spec.min_spacing_m == 2
+    assert spec.role == "tested"
+    assert spec.controller_id.startswith("planmargin-custom-idm-")
+    assert spec == build_tested_controller(config)
+    assert (
+        spec.controller_id
+        != build_tested_controller(
+            request(tested_controller={"desired_vel_mps": 25.0})
+        ).controller_id
+    )
+    assert TESTED_CONTROLLER.report() == frozen_tested
+    assert REFERENCE_CONTROLLER.report() == frozen_reference
+    assert config.record()["tested_controller"] == {
+        "desired_vel_mps": 24.0,
+        "min_spacing_m": 2.0,
+        "safe_time_headway_s": 2.5,
+    }
+    # Verify the actual Waymax policy receives the custom values.
+    policy = spec.build()
+    default_policy = TESTED_CONTROLLER.build()
+    assert type(policy) is type(default_policy)
+
+
+def test_custom_settings_are_sealed_and_part_of_submission_identity(workspace):
+    manager, _ = workspace
+    req = request(tested_controller={"min_spacing_m": 3.0})
+    record = manager.start(req)
+    assert (
+        read_json(manager.path(record["job_id"]) / "request.json")["config"]
+        == req.record()
+    )
+    assert record["config"]["tested_controller"]["min_spacing_m"] == 3
+    with pytest.raises(ValueError, match="another configuration"):
+        manager.start(
+            request(request_id=req.request_id, tested_controller={"min_spacing_m": 4.0})
+        )
 
 
 def test_idempotency_one_worker_and_secret_scope(workspace, monkeypatch):

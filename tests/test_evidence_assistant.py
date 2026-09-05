@@ -236,6 +236,29 @@ def test_gemini_defensively_clips_overlong_structured_prose() -> None:
     assert draft.limitation.endswith("…")
 
 
+def test_gemini_context_scopes_missing_evaluation_to_the_search_campaign() -> None:
+    client = _FakeClient(
+        {
+            "summary": "The campaign completed its recorded workload.",
+            "interpretation": "Neither method found a qualifying failure.",
+            "cited_fact_ids": ["campaign.findings", "campaign.held_out"],
+            "limitation": "The search comparison used development data only.",
+        }
+    )
+    provider = evidence_assistant.GeminiProvider(
+        api_key="test-key",
+        model=evidence_assistant.DEFAULT_MODEL,
+        confirmed_free_tier=True,
+        client_factory=lambda _: client,
+    )
+    provider.explain(evidence_assistant.PublicEvidenceTools().execute("campaign_overview"))
+    sent = json.loads(client.interactions.arguments["input"])
+    fact = next(item for item in sent["facts"] if item["fact_id"] == "campaign.held_out")
+    assert "evaluation-split search campaign" in fact["qualitative_statement"]
+    assert "No independent" not in fact["qualitative_statement"]
+    assert "says nothing about independent code reviews" in sent["instruction"]
+
+
 def test_gemini_rejects_private_sources_and_generated_metrics() -> None:
     public = evidence_assistant.PublicEvidenceTools().execute("campaign_overview")
     private = evidence_assistant.ToolResult(

@@ -160,8 +160,7 @@ nav button.active {
 i {
   display: inline-block;
 }
-.connection i,
-.qualification-status i {
+.connection i {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -194,8 +193,7 @@ i {
 }
 .evidence-context > span,
 .campaign-index header p,
-.proposal-detail header p,
-.deployment-workbench > header p {
+.proposal-detail header p {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -244,7 +242,6 @@ h1 {
 }
 .campaign-index,
 .investigation-workspace,
-.deployment-workbench,
 .public-evidence {
   border: 1px solid #dce5df;
   border-radius: 16px;
@@ -751,70 +748,35 @@ select {
   font-size: 10px;
   font-weight: 400;
 }
-.deployment-workbench,
 .public-evidence {
   padding: 26px;
 }
-.deployment-workbench > header,
-.public-evidence > header,
-.model-evidence > header {
+.public-evidence > header {
   display: flex;
   align-items: start;
   gap: 20px;
   justify-content: space-between;
 }
-.qualification-status,
-.model-evidence header b {
-  font-size: 11px;
-  color: #486751;
-}
-.model-evidence {
-  padding-top: 22px;
-}
-.model-evidence header span,
-.deployment-divider,
-.model-boundary {
-  font-size: 12px;
-  color: #63716b;
-}
-.model-metrics,
 .public-kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   padding: 22px 0;
 }
-.model-metrics > div,
 .public-kpis > div {
   border-left: 2px solid #d5e3da;
   padding-left: 15px;
 }
-.model-metrics span,
-.model-metrics small,
 .public-kpis span {
   display: block;
   font-size: 12px;
   color: #607168;
   line-height: 1.7;
 }
-.model-metrics strong,
 .public-kpis strong {
   display: block;
   font-size: 23px;
   margin: 7px 0;
-}
-.deployment-divider {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  border-top: 1px solid #e1e9e3;
-  padding-top: 20px;
-}
-.model-boundary {
-  line-height: 1.8;
-  background: #f5f7f5;
-  border-radius: 8px;
-  padding: 16px;
 }
 .public-analysis {
   display: grid;
@@ -1113,13 +1075,9 @@ select {
     max-height: 250px;
     border-bottom: 1px solid #e1e9e3;
   }
-  .proposal-toolbar,
-  .deployment-divider,
-  .deployment-workbench > header,
-  .model-evidence > header {
+  .proposal-toolbar {
     display: block;
   }
-  .model-metrics,
   .public-kpis {
     grid-template-columns: 1fr 1fr;
     gap: 15px;

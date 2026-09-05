@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 import { LocalEvidenceService } from '../local-evidence.service';
 import { SensorSceneSummary } from '../product-evidence.types';
 import { SensorViewport } from './sensor-viewport';
+import { SimulatorStore } from '../simulator.store';
 
 describe('SensorViewport', () => {
   let fixture: ComponentFixture<SensorViewport>;
@@ -73,4 +74,17 @@ describe('SensorViewport', () => {
     expect(sensorScene).toHaveBeenCalledTimes(1);
     expect(sensorAnnotations).toHaveBeenCalledTimes(1);
   });
+
+  it.each(['lidar', 'reconstruction'] as const)(
+    'gives the %s canvas container an accessible image role before the asset loads',
+    (mode) => {
+      sensorScene.mockReturnValue(new Promise(() => {}));
+      TestBed.inject(SimulatorStore).selectMode(mode);
+      fixture = TestBed.createComponent(SensorViewport);
+      fixture.detectChanges();
+      const viewport = fixture.nativeElement.querySelector('.splat-viewport') as HTMLElement;
+      expect(viewport.getAttribute('role')).toBe('img');
+      expect(viewport.getAttribute('aria-label')).toMatch(/Interactive/);
+    },
+  );
 });

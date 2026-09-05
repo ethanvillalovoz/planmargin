@@ -3,8 +3,34 @@ import { vi } from 'vitest';
 import { LocalEvidenceService } from '../local-evidence.service';
 import { SimulatorStore } from '../simulator.store';
 import { ProductShell } from './product-shell';
+import { DebuggerStore } from '../debugger.store';
+import { API_RUN } from '../local-evidence.test-fixtures';
+import { parseLocalRun } from '../local-evidence.parsers';
 
 describe('ProductShell', () => {
+  it('keeps an experiment replay selected while visiting models and returning', () => {
+    const fixture = TestBed.createComponent(ProductShell);
+    const runId = 'experiment_' + 'a'.repeat(32);
+    TestBed.inject(DebuggerStore).loadRun({ ...parseLocalRun(API_RUN), runId });
+    fixture.detectChanges();
+    const nav = () =>
+      Array.from(
+        fixture.nativeElement.querySelectorAll(
+          '.product-header nav button',
+        ) as NodeListOf<HTMLButtonElement>,
+      );
+    nav()
+      .find((button) => button.textContent?.trim() === 'Models')!
+      .click();
+    fixture.detectChanges();
+    expect(new URLSearchParams(location.search).get('experiment')).toBe('a'.repeat(32));
+    nav()
+      .find((button) => button.textContent?.trim() === 'Replay')!
+      .click();
+    fixture.detectChanges();
+    expect(TestBed.inject(DebuggerStore).run().runId).toBe(runId);
+    expect(new URLSearchParams(location.search).get('experiment')).toBe('a'.repeat(32));
+  });
   beforeEach(() => {
     vi.stubGlobal('scrollTo', vi.fn());
     vi.stubGlobal(
@@ -33,7 +59,7 @@ describe('ProductShell', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Models & runtime');
-    expect(fixture.nativeElement.textContent).toContain('Models, deployment, and promotion gates');
+    expect(fixture.nativeElement.textContent).toContain('Trajectory prediction');
   });
 
   it('waits for the initial replay instead of rendering an empty debugger store', () => {
@@ -91,17 +117,21 @@ describe('ProductShell', () => {
     runtime.click();
     fixture.detectChanges();
     text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Models, deployment, and promotion gates');
-    expect(text).toContain('Test ADE0.418 m');
-    expect(text).toContain('baseline 0.870 m');
-    expect(text).toContain('Scaled 1,024-scenario model · Tesla T4 · 500 measured');
-    expect(text).toContain('FP16 · batch 1 E2E0.393 ms');
-    expect(text).toContain('C++17 · batch 1 E2E0.153 ms');
-    expect(text).toContain('0.65 cm RMSE');
-    expect(text).toContain('Active-risk promotion gate · stopped');
-    expect(text).toContain('Neighbor-context ablation · stopped');
-    expect(text).toContain('Scale-model deployment decision · no-go');
-    expect(text).toContain('failed FP16 max-drift gate');
+    expect(text).toContain('Trajectory prediction');
+    expect(text).toContain('0.418 m');
+    expect(text).toContain('0.870 m');
+    expect(text).toContain('Open source report');
+    const runtimeStudy = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        'app-models-workspace nav button',
+      ) as NodeListOf<HTMLButtonElement>,
+    ).find((button) => button.textContent?.includes('TensorRT deployment'))!;
+    runtimeStudy.click();
+    fixture.detectChanges();
+    text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('0.393 ms');
+    expect(text).toContain('0.101 m maximum drift');
+    expect(text).toContain('Independent C++17 benchmark');
     expect(text).not.toContain('No qualifying planner failure was found');
   });
 
@@ -140,10 +170,10 @@ describe('ProductShell', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Models, deployment, and promotion gates');
-    expect(text).toContain('real data · no synthetic training');
-    expect(text).toContain('FP16 · batch 1 E2E0.393 ms');
-    expect(text).toContain('Quality and deployment probes are kept separate');
+    expect(text).toContain('Trajectory prediction');
+    expect(text).toContain('1,024 real WOMD scenarios');
+    expect(text).toContain('0.418 m');
+    expect(text).toContain('These models do not drive the planning replay');
   });
 
   it('maps task navigation to the correct planning and sensor workspaces', () => {

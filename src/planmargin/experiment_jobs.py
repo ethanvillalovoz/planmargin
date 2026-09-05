@@ -56,11 +56,26 @@ RECOVERY = {
 }
 
 
+class TestedControllerConfig(BaseModel):
+    """A bounded configuration extension, never an executable plugin."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
+    desired_vel_mps: float = Field(default=30.0, ge=1, le=40)
+    min_spacing_m: float = Field(default=2.0, ge=0.5, le=10)
+    safe_time_headway_s: float = Field(default=2.0, ge=0.5, le=5)
+
+
 class ExperimentConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
     selection_order: int = Field(ge=1, le=10)
     braking_onset_offset_s: float = Field(ge=0, le=0.5)
     speed_multiplier: float = Field(ge=0.75, le=1)
+    tested_controller: TestedControllerConfig | None = None
+
+    def record(self) -> dict[str, Any]:
+        # Keep existing default requests byte-compatible. An explicit custom
+        # configuration records every parameter, including supplied defaults.
+        return self.model_dump(exclude={"request_id"}, exclude_none=True)
 
     @field_validator("braking_onset_offset_s")
     @classmethod
@@ -188,7 +203,7 @@ class ExperimentJobs:
             "maximum_concurrent_jobs": 1,
             "maximum_retained_jobs": MAX_JOBS,
             "setup_command": "uv run --frozen planmargin-prepare-planning --accept-waymo-terms",
-            "boundary": "Local exploratory runs; never added to the frozen campaign. Two fixed Waymax IDM configurations.",
+            "boundary": "Local exploratory runs; never added to the frozen campaign. Configurable tested Waymax IDM; fixed conservative reference.",
         }
 
     def path(self, job_id: str) -> Path:
@@ -225,7 +240,7 @@ class ExperimentJobs:
     def start(self, request: ExperimentRequest) -> dict[str, Any]:
         with self._lock:
             records = self.list()
-            config = request.model_dump(exclude={"request_id"})
+            config = request.record()
             for existing in records:
                 if existing["request_id"] == request.request_id:
                     if existing["config"] != config:
@@ -426,12 +441,22 @@ def main() -> None:
     parser.add_argument("--selection-order", type=int, required=True)
     parser.add_argument("--onset", type=float, required=True)
     parser.add_argument("--speed", type=float, required=True)
+    parser.add_argument(
+        "--tested-controller-config",
+        type=Path,
+        help="Local JSON containing bounded IDM speed, spacing, and headway parameters",
+    )
     args = parser.parse_args()
     request = ExperimentRequest(
         selection_order=args.selection_order,
         braking_onset_offset_s=args.onset,
         speed_multiplier=args.speed,
         request_id=str(uuid.uuid4()),
+        tested_controller=TestedControllerConfig.model_validate(
+            read_json(args.tested_controller_config, limit=4096)
+        )
+        if args.tested_controller_config
+        else None,
     )
     jobs = ExperimentJobs(Path.cwd())
     jobs.open()

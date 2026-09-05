@@ -49,7 +49,12 @@ import { SimulatorStore } from '../simulator.store';
               />
             }
           } @else {
-            <div #splatViewport class="splat-viewport" [attr.aria-label]="splatLabel()"></div>
+            <div
+              #splatViewport
+              class="splat-viewport"
+              role="img"
+              [attr.aria-label]="splatLabel()"
+            ></div>
           }
           <canvas
             #overlay
@@ -94,10 +99,6 @@ import { SimulatorStore } from '../simulator.store';
           @if (simulator.sensorMode() !== 'camera' && splatReady()) {
             <div class="orbit-help">Spatial asset · drag to orbit · scroll to zoom</div>
             @if (simulator.sensorMode() === 'reconstruction') {
-              <div class="reconstruction-explainer">
-                <strong>{{ reconstructionViewLabel() }}</strong>
-                <span>{{ reconstructionViewDescription() }}</span>
-              </div>
               <div class="reconstruction-scenes" aria-label="Reconstructed source frame">
                 <button
                   type="button"
@@ -151,18 +152,24 @@ import { SimulatorStore } from '../simulator.store';
                   Right
                 </button>
               </div>
-              @if (reconstructionAsset() === 'reconstruction' && trajectory()) {
-                <div class="trajectory-evidence">
-                  <strong>Calibrated 3 s ego paths</strong>
-                  <span class="recorded"><i></i>Recorded WOD pose</span>
-                  <span class="predicted"><i></i>JAX prediction</span>
-                  <span class="baseline"><i></i>Constant velocity</span>
-                  <small>
-                    JAX {{ trajectory()!.metrics.jax_ade_m.toFixed(2) }} m ADE ·
-                    {{ trajectory()!.metrics.jax_fde_m.toFixed(2) }} m FDE
-                  </small>
+              <div class="spatial-details">
+                <div class="reconstruction-explainer">
+                  <strong>{{ reconstructionViewLabel() }}</strong>
+                  <span>{{ reconstructionViewDescription() }}</span>
                 </div>
-              }
+                @if (reconstructionAsset() === 'reconstruction' && trajectory()) {
+                  <div class="trajectory-evidence">
+                    <strong>Calibrated 3 s ego paths</strong>
+                    <span class="recorded"><i></i>Recorded WOD pose</span>
+                    <span class="predicted"><i></i>JAX prediction</span>
+                    <span class="baseline"><i></i>Constant velocity</span>
+                    <small>
+                      JAX {{ trajectory()!.metrics.jax_ade_m.toFixed(2) }} m ADE ·
+                      {{ trajectory()!.metrics.jax_fde_m.toFixed(2) }} m FDE
+                    </small>
+                  </div>
+                }
+              </div>
             } @else {
               <button type="button" class="reset-view" (click)="resetCamera()">Reset view</button>
             }
@@ -365,6 +372,9 @@ import { SimulatorStore } from '../simulator.store';
       background: rgb(4 12 18 / 82%);
       backdrop-filter: blur(10px);
     }
+    .spatial-details {
+      display: contents;
+    }
     .reconstruction-explainer strong {
       color: #e5edef;
       font-size: 0.65rem;
@@ -501,6 +511,42 @@ import { SimulatorStore } from '../simulator.store';
         bottom: 2.4rem;
       }
       .overlay-provenance {
+        display: none;
+      }
+    }
+    @media (max-width: 560px) {
+      .reset-view,
+      .reconstruction-scenes {
+        top: 6.5rem;
+      }
+      .reconstruction-views {
+        top: 9.2rem;
+      }
+      .reconstruction-scenes,
+      .reconstruction-views {
+        left: 0.65rem;
+        right: 0.65rem;
+        width: auto;
+      }
+      .spatial-details {
+        position: absolute;
+        z-index: 4;
+        right: 0.65rem;
+        bottom: 0.65rem;
+        left: 0.65rem;
+        display: grid;
+        gap: 0.45rem;
+        pointer-events: none;
+      }
+      .spatial-details .reconstruction-explainer,
+      .spatial-details .trajectory-evidence {
+        position: static;
+        max-width: none;
+      }
+      .trajectory-evidence {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .orbit-help {
         display: none;
       }
     }

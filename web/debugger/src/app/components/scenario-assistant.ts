@@ -490,11 +490,18 @@ export class ScenarioAssistant {
   );
 
   protected readonly providerLabel = computed(() => {
+    if (this.localReply()) return 'Local guide · no model request';
+    if (this.usedFallback()) return 'Local fallback · Gemini did not answer';
+    const responseProvider = this.answer()?.provider;
+    if (responseProvider?.id === 'gemini_public_aggregate')
+      return 'Gemini response · verified campaign aggregates';
+    if (responseProvider?.id === 'offline_deterministic')
+      return 'Local evidence tools · deterministic response';
     const status = this.status();
     if (status === undefined)
       return this.local.connected() ? 'Loading provider' : 'Local evidence required';
     return status.gemini_configured
-      ? `Gemini synthesis · verified aggregates · ${status.model ?? 'configured model'}`
+      ? `Gemini available · campaign aggregates only · ${status.model ?? 'configured model'}`
       : 'Verified local evidence · deterministic synthesis';
   });
   protected readonly suggestedQuestions = computed(() => this.questions().slice(0, 3));

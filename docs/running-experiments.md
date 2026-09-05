@@ -1,7 +1,7 @@
 # Run a new planning experiment
 
 The experiment runner changes a real recorded lead vehicle's braking timing
-and speed, executes two fixed Waymax IDM controller configurations, and saves
+and speed, executes tested and reference Waymax IDM controller configurations, and saves
 an exact replay. It is a local tool, not a hosted simulation service.
 
 You do **not** need Gemini, a sensor reconstruction, a GPU, or the complete
@@ -71,11 +71,57 @@ without starting a duplicate job because submission IDs are idempotent.
 
 ## What is being compared?
 
-The tested controller is the repository's default Waymax IDM configuration; the
-reference is its more conservative IDM configuration. They are not the Waymo
+The tested controller uses the repository's default Waymax IDM configuration
+unless you choose custom settings; the reference always uses its fixed
+conservative IDM configuration. They are not the Waymo
 Driver. Controller parameters are defined in `controller_comparison.py` and
 retained with each exact rollout collection. Supporting RL and neural-network
 research models are **not** silently promoted into this runner.
+
+## Try your own controller configuration
+
+In **New experiment**, choose **Custom IDM settings** under **Tested planner
+configuration**. Three parameters are supported:
+
+| Setting | Allowed range | Default | Responsibility |
+| --- | --- | --- | --- |
+| Desired speed | 1–40 m/s | 30 m/s | Free-road target speed |
+| Minimum spacing | 0.5–10 m | 2 m | Standstill gap term |
+| Safe time headway | 0.5–5 s | 2 s | Speed-dependent following-gap term |
+
+These are research input bounds, not recommendations for real driving. The
+remaining IDM parameters and the conservative reference are unchanged.
+This extension accepts numeric configuration, not executable code, model
+uploads, shell commands, or browser-supplied file paths.
+
+For a reproducible example, select scenario 8, +0.2 s onset, 0.879× speed,
+then use 24 m/s desired speed, 3 m spacing, and 2.5 s headway.
+The CLI equivalent, after stopping the workbench supervisor, is:
+
+```bash
+uv run --frozen planmargin-run-experiment \
+  --selection-order 8 --onset 0.2 --speed 0.879 \
+  --tested-controller-config examples/tested-idm.json
+```
+
+Copy [the example JSON](../examples/tested-idm.json) to a new file to vary
+your own settings. Omitted fields in a custom JSON object use the defaults
+above. Unknown fields, non-finite values, and out-of-range inputs are rejected.
+Omitting the flag preserves the original default-controller request format.
+
+The worker runs the selected tested policy on **both** the original and
+changed scene. Each result seals the expanded custom configuration, a
+content-addressed controller ID, full tested/reference specifications,
+implementation hashes, and all finding gates. The replay collection retains
+those specifications and repeated trajectory hashes. Default and custom jobs
+remain separate from the frozen campaign; a new experiment cannot rewrite its
+results or promotion decisions.
+
+The result panel identifies its saved run and warns when the current draft
+differs. **Use this configuration again** fills the form; only **Run experiment**
+executes it. Draft edits survive navigation within the running app, but not a
+full browser reload. Run-history selection and exact-replay identity are
+restored from the URL and reverified locally.
 
 The controls are bounded to ten selected scenarios, an onset shift of 0–0.5 s
 in 0.1 s steps, and a speed multiplier of 0.75–1.00. The lead vehicle follows

@@ -127,7 +127,13 @@ import { SensorViewport } from './sensor-viewport';
         </div>
       </header>
 
-      <main class="scene-stage">
+      <main
+        class="scene-stage"
+        [class.sensor-stage]="simulator.sensorMode() !== 'planning'"
+        [class.spatial-stage]="
+          simulator.sensorMode() === 'reconstruction' || simulator.sensorMode() === 'lidar'
+        "
+      >
         @if (embedded() && local.connected() && simulator.sensorMode() === 'planning') {
           <section class="case-banner" aria-live="polite">
             <i [class.regression]="isCandidateRegression()"></i>
@@ -147,7 +153,10 @@ import { SensorViewport } from './sensor-viewport';
           <div class="empty-stage" aria-hidden="true"></div>
         }
 
-        @if (local.connected()) {
+        @if (
+          local.connected() &&
+          (simulator.sensorMode() === 'planning' || simulator.sensorMode() === 'camera')
+        ) {
           <section
             class="scenario-controls"
             [class.collapsed]="!simulator.controlsOpen()"
@@ -261,10 +270,6 @@ import { SensorViewport } from './sensor-viewport';
                     ><ng-icon name="phosphorUserFocus" size="15" />
                   </button>
                 </div>
-              } @else {
-                <p class="evidence-boundary">
-                  Source frame {{ paddedFrame() }} · three reconstructions available
-                </p>
               }
             }
           </section>
@@ -665,6 +670,9 @@ import { SensorViewport } from './sensor-viewport';
     }
     .scenario-controls.collapsed {
       width: 190px;
+    }
+    .sensor-stage .scenario-controls {
+      top: 4rem;
     }
     .scenario-controls > header {
       display: flex;
@@ -1158,6 +1166,9 @@ import { SensorViewport } from './sensor-viewport';
       .view-controls {
         top: 5.4rem;
       }
+      .sensor-stage .view-controls {
+        top: 3.2rem;
+      }
       .scene-selector span {
         max-width: 130px;
       }
@@ -1169,6 +1180,9 @@ import { SensorViewport } from './sensor-viewport';
         max-height: min(248px, calc(100% - 10.45rem));
         overflow-y: auto;
         overscroll-behavior: contain;
+      }
+      .sensor-stage .scenario-controls {
+        top: auto;
       }
       .scenario-controls.collapsed {
         right: auto;
@@ -1182,7 +1196,7 @@ import { SensorViewport } from './sensor-viewport';
         top: 0;
         background: rgb(5 13 20 / 98%);
       }
-      .scenario-controls:not(.collapsed) + .view-controls {
+      .scene-stage:not(.spatial-stage) .scenario-controls:not(.collapsed) + .view-controls {
         opacity: 0;
         pointer-events: none;
       }

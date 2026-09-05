@@ -83,7 +83,8 @@ percentage of speed or time. A small gap or small edit alone is not a finding.
 - Tested, reference, and original-tested tracks compare outcomes for the
   **same ego vehicle**. Pink identifies the mutated lead vehicle. The third
   track is the tested controller's trajectory before the edit, not the logged
-  recording. Markers are schematic; clearance uses recorded vehicle geometry.
+  recording. New experiment replays use recorded vehicle dimensions and headings;
+  older imports without footprint geometry are explicitly labeled schematic.
 - **Inspect minimum clearance** seeks the frame with the smallest tested gap.
 - **Review candidate records** returns to Investigate and preserves the
   selected change.
@@ -92,8 +93,10 @@ percentage of speed or time. A small gap or small edit alone is not a finding.
 - A new experiment's replay URL includes its job ID. Refresh reverifies and
   restores that exact trajectory; it does not restore timeline position.
   **Return to experiments** preserves its selection in the live history.
-- A historical campaign proposal's selection is not persisted on refresh.
-  Reopen it from Investigate; Stage 0 remains separately identified.
+- Historical campaign selections and exact replay IDs remain in the URL across
+  page changes and refresh. Private records are reverified, not cached in
+  durable browser storage. A missing requested replay produces an error; it
+  is not silently replaced by Stage 0.
 
 The failure decision is made by the frozen gates—not by a single displayed
 separation or time-to-collision value.
@@ -107,7 +110,9 @@ continuously refreshing incident feed.
   planner safety.
 - **Coverage:** three versioned test plans, their gates and explicit gaps.
 - **Triage:** measured blocked, stopped, or pending engineering decisions with
-  diagnostic and resolution paths.
+  diagnostic and resolution paths. **Inspect model evidence** opens the
+  corresponding Models study. The selected issue/coverage suite remains in
+  the URL when you leave and return.
 
 The inventory contains 100 search cells plus ten fault-dropout and ten handoff
 cases. These reuse ten recorded scenarios; they are not 120 independent
@@ -129,6 +134,14 @@ multi-view scene. The WOD Perception segment and WOMD planning experiment are
 different records; no sensor-to-planning registration is claimed.
 
 ## Models — inspect promotion decisions
+
+Select a study on the left. Each record answers one research question, shows
+its measured comparison, and separates a successful measurement from a
+deployment promotion. Expand **Qualification gates** to inspect the criteria.
+**Open source report** opens the actual public report at a pinned source
+revision; **Reproduction guide** and artifact links lead to the code, notebook,
+or existing model-only release. Commands can be copied, but are never executed
+by clicking a model record. GPU-dependent studies identify that requirement.
 
 Prediction holdout metrics and NVIDIA runtime measurements are kept separate.
 The scaled model's FP32 path was measured; FP16 did not pass the frozen
@@ -163,7 +176,9 @@ uv run --frozen --extra assistant planmargin-workbench \
   --confirm-gemini-free-tier
 ```
 
-The header identifies Gemini synthesis when configured. A response can fall
+The header distinguishes provider availability from the provider that actually
+answered. A greeting says **Local guide · no model request**; a successful
+generation says **Gemini response · verified campaign aggregates**. A response can fall
 back to the deterministic explainer; the panel labels this. The provider may
 attempt up to three structured generations if generation or validation fails.
 The flag records your free-tier confirmation; it cannot independently enforce
@@ -184,3 +199,25 @@ Google's project billing settings. The default offline provider costs nothing.
   stop it first, install dependencies, and relaunch.
 
 Nothing in these steps publishes the app or its data.
+
+## Verify the local sensor layout
+
+After preparing and launching the **full** local sensor workspace, you can run
+the opt-in browser check from `web/debugger`:
+
+```bash
+read -r -s PLANMARGIN_LOCAL_TOKEN
+export PLANMARGIN_LOCAL_TOKEN
+npm run verify:sensors
+unset PLANMARGIN_LOCAL_TOKEN
+```
+
+At the silent prompt, paste the session token from the workbench's local URL
+(the value after `#token=`), then press Enter. This is **not** a Gemini API key.
+The check loads your real local camera, LiDAR, and 3DGS assets at desktop and
+phone widths, checks that overlays do not intersect, and exercises a novel
+viewpoint. It requires the Playwright Chromium installation used by `npm run
+e2e`; install it with `npx playwright install chromium` if missing. It does not
+download a dataset, create a model request, save screenshots, or publish data.
+This is separate from data-free CI and cannot run without the full authorized
+sensor workspace. Passing it is not a complete visual or accessibility audit.

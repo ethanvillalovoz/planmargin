@@ -118,14 +118,25 @@ test('experiment config, progress, cancellation, completion, replay and reload',
   await page.getByRole('spinbutton', { name: 'Lead speed multiplier' }).fill('0.9');
   await page.getByRole('button', { name: 'Run experiment', exact: true }).click();
   await expect(page.getByRole('button', { name: 'An experiment is running' })).toBeDisabled();
-  await expect(page.getByRole('status')).toContainText('Loading the selected WOMD scenario');
+  await expect(page.locator('.execution-status')).toContainText(
+    'Loading the selected WOMD scenario',
+  );
   await page.getByRole('button', { name: 'Cancel experiment' }).click();
   await expect(page.getByRole('region', { name: 'Experiment result' })).toContainText('Cancelled');
   await expect(page.getByRole('button', { name: 'Open this experiment replay' })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole('region', { name: 'Run history' })).toContainText('Cancelled');
+  await page.getByRole('combobox', { name: 'Tested planner configuration' }).selectOption('custom');
+  await page.getByRole('spinbutton', { name: 'Desired speed (m/s)', exact: true }).fill('24');
+  await page.getByRole('spinbutton', { name: 'Minimum spacing (m)', exact: true }).fill('3');
+  await page.getByRole('spinbutton', { name: 'Safe time headway (s)', exact: true }).fill('2.5');
   await page.getByRole('button', { name: 'Run experiment', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Cancel experiment' })).toBeVisible();
+  expect((state!['config'] as any).tested_controller).toEqual({
+    desired_vel_mps: 24,
+    min_spacing_m: 3,
+    safe_time_headway_s: 2.5,
+  });
   state = {
     ...state,
     status: 'succeeded',
@@ -168,6 +179,11 @@ test('experiment config, progress, cancellation, completion, replay and reload',
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Open this experiment replay' }).click();
   await expect(page).toHaveURL(new RegExp(`experiment=${jobId}`));
+  await expect(page.getByRole('button', { name: 'Return to experiments' })).toBeVisible();
+  await page.getByRole('button', { name: 'Models', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`experiment=${jobId}`));
+  await page.reload();
+  await page.getByRole('button', { name: 'Replay', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Return to experiments' })).toBeVisible();
   await expect(page.locator('polyline.tested')).toHaveCSS('fill', 'none');
   await expect(page.locator('polyline.lead')).toHaveCSS('fill', 'none');

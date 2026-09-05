@@ -87,7 +87,21 @@ export class App {
               'The requested experiment replay could not be verified. Return to experiments and inspect its status.',
             );
           }
-        } else if (evidence.initialRun) this.debuggerStore.loadRun(evidence.initialRun);
+        } else {
+          const runId = new URLSearchParams(window.location.search).get('run');
+          if (runId) {
+            try {
+              const run = await this.local.loadRun(runId);
+              if (generation !== this.sessionGeneration) return;
+              this.debuggerStore.loadRun(run);
+            } catch {
+              if (generation !== this.sessionGeneration) return;
+              this.local.error.set(
+                'The requested planning replay could not be verified. Select another retained replay from Investigate.',
+              );
+            }
+          } else if (evidence.initialRun) this.debuggerStore.loadRun(evidence.initialRun);
+        }
         this.showLocalEvidence.set(false);
         return;
       } catch (error: unknown) {
