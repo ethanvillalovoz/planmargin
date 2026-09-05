@@ -2,7 +2,7 @@
 
 **Audit date:** September 4, 2026
 
-**Release:** v3.1.0
+**Source package version:** 3.1.0 (not a claim that a new release was published)
 
 **Scope:** current source tree, retained local evidence, public distribution
 boundary, and task-first engineering workbench
@@ -52,6 +52,11 @@ gates and remain documented negative results with no deployed model.
     alert contract for every degraded state.
 12. Inspect sustained command-dropout protection and timed assistance-handoff
     verification over real WOMD scenes.
+13. Start and cancel a bounded local experiment from the UI or CLI; configure
+    the tested IDM policy, preserve the reference, inspect before/after outcomes,
+    and export a verified exact replay without changing the historical campaign.
+14. Browse six supporting model studies, expand their gates, and follow pinned
+    public source reports, model-only artifacts, and reproduction instructions.
 
 The product does not invent a scenario, trajectory, camera stream, box track,
 point field, or reconstruction when licensed evidence is absent.
@@ -79,7 +84,7 @@ point field, or reconstruction when licensed evidence is absent.
 
 | Responsibility             | Disposition | Verified implementation                                                                             |
 | -------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
-| WOMD and Waymax            | Shipped     | deterministic 80-step replay; 14,110 retained physical rollouts and 1,128,800 Waymax steps          |
+| WOMD and Waymax            | Shipped     | deterministic 80-step replay; 14,110 executed physical rollouts and 1,128,800 Waymax steps          |
 | Counterfactual search      | Shipped     | matched random and constrained BoTorch qLogNEHVI budgets across 100 cells                           |
 | Python and JAX             | Shipped     | simulation, mutation, orchestration, evidence services, and reproducible RL qualification           |
 | C++20 and pybind11         | Shipped     | native interaction metrics with randomized Python-oracle parity                                     |
@@ -102,42 +107,15 @@ point field, or reconstruction when licensed evidence is absent.
 | Command-dropout protection | Shipped     | 60 real-WOMD rollouts; 10/10 protected scenes and 80/80 frozen gates                                |
 | Assistance handoff V&V     | Shipped     | 60 real-WOMD rollouts; 10/10 exact handoffs and 90/90 frozen gates                                  |
 
-## Verification performed on this revision
+## Verification record
 
-- Ruff: all checks passed.
-- Python: 298 tests passed. Upstream warnings are identified in the CI log and
-  do not suppress failures.
-- Angular/Vitest: 66 tests passed across launch authentication, local evidence,
-  parsers, stores, navigation, reports, edge-aware trajectory labels, and
-  workbench behavior.
-- Browser sign-off covers desktop and 390 px mobile evidence surfaces, planning
-  playback, ten-frame seek controls, frame-native camera annotation changes,
-  and three independently selectable SHARP reconstruction frames.
-- Playwright: seven applicable desktop/mobile journeys passed. The local-mode
-  journey exercises queue ranking, comparison, candidate inspection,
-  sealed-record analysis, a filesystem-verified signed HTML export,
-  model/runtime navigation, the grounded Gemini response contract, refresh
-  recovery, responsive overflow, and WCAG A/AA axe checks.
-- TypeScript: application and test projects passed strict type checking.
-- Frontend formatting and optimized production build: passed; the direct app
-  payload is 410.26 kB raw, while Spark and Three.js viewers remain lazy.
-- Dependency audit: `npm audit --audit-level=moderate` reported zero known
-  vulnerabilities.
-- Python dependency audit: `pip-audit==2.10.1` reported no unreviewed
-  vulnerabilities across all locked extras and groups. Five Apache Beam
-  transitive advisory IDs remain explicit, versioned exceptions under the
-  documented local-DirectRunner reachability boundary.
-- Authenticated HTTP: frontend, health, campaign, investigation, planning runs,
-  Sensor metadata, Gaussian metadata, and proposal analysis returned success.
-- Authorization and headers: unauthenticated health returned `401`; private
-  responses included `Cache-Control: no-store` and
-  `X-Content-Type-Options: nosniff`.
-- Workspace doctor distinguishes the prior TensorRT qualification from the
-  scaled model's completed FP16 no-go decision.
-- Python source/wheel distributions and the native C++20 extension built
-  successfully for PlanMargin 3.1.0.
-- The nineteen-record aggregate-only distribution passed its independent
-  SHA-256 verifier locally. No hosted application was deployed.
+This is a program-scope inventory, not a continuously current test report.
+The previous 298-Python / 66-frontend / 7-browser counts described an older
+revision and have been removed rather than presented as current evidence.
+Use the commit-scoped [product completion record](product-completion.md) for
+the supported workflow, checks performed, remaining limits, and stopping rule.
+GitHub CI is authoritative for the exact commit it ran; no past green check
+guarantees later changes or every operating system.
 
 ## Scientific outcome
 

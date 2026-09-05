@@ -1,5 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ExperimentService, parseExperimentJob } from './experiment.service';
+import {
+  ExperimentService,
+  parseExperimentJob,
+  sameExperimentConfig,
+  validControllerConfig,
+} from './experiment.service';
 import { LocalEvidenceService } from './local-evidence.service';
 
 const JOB = {
@@ -16,6 +21,25 @@ const JOB = {
 };
 
 describe('experiment response contract', () => {
+  it('validates custom controller settings and distinguishes drafts by all parameters', () => {
+    const controller = { desired_vel_mps: 24, min_spacing_m: 3, safe_time_headway_s: 2.5 };
+    expect(validControllerConfig(controller)).toBe(true);
+    expect(validControllerConfig({ ...controller, command: 'run' })).toBe(false);
+    expect(validControllerConfig({ ...controller, desired_vel_mps: NaN })).toBe(false);
+    expect(validControllerConfig({ ...controller, safe_time_headway_s: 6 })).toBe(false);
+    const config = { ...JOB.config, tested_controller: controller };
+    expect(parseExperimentJob({ ...JOB, config }).config.tested_controller).toEqual(controller);
+    expect(sameExperimentConfig(config, { ...config, tested_controller: { ...controller } })).toBe(
+      true,
+    );
+    expect(sameExperimentConfig(config, JOB.config)).toBe(false);
+    expect(
+      sameExperimentConfig(config, {
+        ...config,
+        tested_controller: { ...controller, min_spacing_m: 4 },
+      }),
+    ).toBe(false);
+  });
   it('accepts a running job but rejects malformed metrics and configurations', () => {
     expect(parseExperimentJob(JOB).status).toBe('running');
     expect(() => parseExperimentJob({ ...JOB, job_id: '../../outside' })).toThrow();
@@ -98,5 +122,30 @@ describe('ExperimentService lifecycle', () => {
     expect(requests).toHaveLength(2);
     expect(requests[0]).toEqual(requests[1]);
     expect(experiments.error()).toBe('Test-only lost response');
+  });
+
+  it('retries equal custom parameters once but gives a changed or default controller a new identity', async () => {
+    const requests: Array<{ request_id: string; tested_controller?: object }> = [];
+    fetchMock.mockImplementation((url: string, options?: RequestInit) => {
+      if (options?.method === 'POST') {
+        requests.push(JSON.parse(options.body as string));
+        return Promise.reject(new Error('Test-only lost response'));
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify(url.endsWith('/readiness') ? { ready: true } : [])),
+      );
+    });
+    const controller = { desired_vel_mps: 24, min_spacing_m: 3, safe_time_headway_s: 2.5 };
+    await experiments.start({ ...JOB.config, tested_controller: controller });
+    await experiments.start({ ...JOB.config, tested_controller: { ...controller } });
+    await experiments.start({
+      ...JOB.config,
+      tested_controller: { ...controller, min_spacing_m: 4 },
+    });
+    await experiments.start(JOB.config);
+    expect(requests[0]).toEqual(requests[1]);
+    expect(requests[2].request_id).not.toBe(requests[1].request_id);
+    expect(requests[3].request_id).not.toBe(requests[2].request_id);
+    expect(requests[3].tested_controller).toBeUndefined();
   });
 });

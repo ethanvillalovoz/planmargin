@@ -34,8 +34,10 @@ the reference retained **4.797 m**. Both controllers still succeeded, so
 PlanMargin explicitly reports **not a qualifying regression**. The case study
 includes the configuration, metrics, provenance, and reproduction commands.
 
-The runner currently supports one lead-braking mutation family and two fixed
-Waymax IDM controller configurations. It is not a general-purpose planner
+The runner supports one lead-braking mutation family, a configurable tested
+Waymax IDM controller, and a fixed conservative reference. Start with the defaults
+or [supply your own speed, spacing, and headway](docs/running-experiments.md#try-your-own-controller-configuration).
+It is not a general-purpose planner
 plugin platform, the Waymo Driver, or a vehicle-safety certification system.
 
 ## Quick start
@@ -110,7 +112,7 @@ resource limits, rejected changes, and recovery.
 | Investigate | Rank recorded changes, inspect gates, compare attempts, open retained replays | Frozen campaign and new local experiments remain separate |
 | Test health | Inspect execution integrity, versioned coverage, and diagnostic paths | Saved test report; links to the live local job history |
 | Sensor lab | Inspect synchronized camera boxes, LiDAR, and three SHARP 3DGS reconstructions | Separate WOD Perception segment, not the planning scene |
-| Models | Review prediction and NVIDIA inference studies and promotion decisions | Research models are not silently used as planners |
+| Models | Select a study, compare it with its baseline, expand gates, and open source reports or reproduction materials | Research models are not silently used as planners |
 | Ask PlanMargin | Retrieve verified campaign facts; optionally explain them with Gemini | Bounded evidence guide, not an autonomous agent or access to new private jobs |
 
 The [workbench guide](docs/using-the-workbench.md) explains each surface. The

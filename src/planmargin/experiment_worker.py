@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import os
 import platform
@@ -52,6 +53,20 @@ class Progress:
         )
 
 
+def build_tested_controller(config: ExperimentConfig) -> Any:
+    """Leave the frozen controller untouched; identify custom specs by content."""
+    from planmargin.controller_comparison import TESTED_CONTROLLER
+
+    if config.tested_controller is None:
+        return TESTED_CONTROLLER
+    parameters = config.tested_controller.model_dump()
+    return dataclasses.replace(
+        TESTED_CONTROLLER,
+        controller_id=f"planmargin-custom-idm-{digest(parameters)[:16]}",
+        **parameters,
+    )
+
+
 def execute(root: Path, job_id: str) -> None:
     directory = confined(root, JOBS / job_id)
     request = read_json(directory / "request.json")
@@ -66,6 +81,7 @@ def execute(root: Path, job_id: str) -> None:
 
     from planmargin import (
         controller_comparison as controllers,
+        experiment_jobs,
         empirical_support,
         family_validation,
         lead_braking,
@@ -88,6 +104,7 @@ def execute(root: Path, job_id: str) -> None:
         module.__name__: Path(module.__file__)
         for module in (
             controllers,
+            experiment_jobs,
             empirical_support,
             family_validation,
             lead_braking,
@@ -135,11 +152,14 @@ def execute(root: Path, job_id: str) -> None:
         if model
         else {},
     )
-    tested, reference = controllers.TESTED_CONTROLLER, controllers.REFERENCE_CONTROLLER
+    tested, reference = (
+        build_tested_controller(config),
+        controllers.REFERENCE_CONTROLLER,
+    )
     original = adapter.evaluate_original(scenario, candidate, tested, reference)
     variant = "mutated"
     progress.stage("mutation")
-    parameters = config.model_dump(exclude={"selection_order"})
+    parameters = config.model_dump(exclude={"selection_order", "tested_controller"})
     evaluation = adapter.evaluate_attempt(
         scenario,
         candidate,
@@ -171,7 +191,11 @@ def execute(root: Path, job_id: str) -> None:
         "schema_version": "1.0.0",
         "job_id": job_id,
         "protocol": PROTOCOL,
-        "config": config.model_dump(),
+        "config": config.record(),
+        "controller_specs": {
+            "tested": tested.report(),
+            "reference": reference.report(),
+        },
         "decision": "invalid_mutation",
         "explanation": "The scenario change failed the mutation or map-validity gate. No planner failure is claimed.",
         "finding": finding,

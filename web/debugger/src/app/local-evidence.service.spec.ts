@@ -19,10 +19,28 @@ function response(value: unknown, status = 200): Response {
 }
 
 describe('LocalEvidenceService', () => {
+  it('restores an explicitly selected proposal after refresh', async () => {
+    const original = fetchMock.getMockImplementation()! as (
+      input: string | URL | Request,
+      options?: RequestInit,
+    ) => Promise<Response>;
+    fetchMock.mockImplementation((input, options) =>
+      String(input).endsWith('/cells/cell_opaque/proposals')
+        ? Promise.resolve(response([...API_PROPOSALS, { ...API_PROPOSALS[0], proposal_number: 2 }]))
+        : original(input, options),
+    );
+    window.history.replaceState(null, '', '/?cell=cell_opaque&proposal=2');
+    await service.connect('test-token-0123456789abcdef');
+    expect(service.selectedCellId()).toBe('cell_opaque');
+    expect(service.selectedProposalNumber()).toBe(2);
+    service.selectProposal(1);
+    expect(new URLSearchParams(location.search).get('proposal')).toBe('1');
+  });
   let service: LocalEvidenceService;
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    window.history.replaceState(null, '', '/');
     fetchMock = vi.fn((input: string | URL | Request, options?: RequestInit) => {
       const url = String(input);
       if (url.endsWith('/session/logout') && options?.method === 'POST') {

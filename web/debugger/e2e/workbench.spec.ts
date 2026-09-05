@@ -295,8 +295,13 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
 
   await page.getByRole('button', { name: 'Models', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Models & runtime', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Real-WOMD prediction quality' })).toBeVisible();
-  await expect(page.getByText('Scale-model deployment decision · no-go')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Trajectory prediction', exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'TensorRT deployment Scaled model · Tesla T4 Not promoted' })
+    .click();
+  await expect(page.getByText(/FP16 is not promoted: 0.101 m maximum drift/)).toBeVisible();
   const deploymentAccessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa'])
     .analyze();
@@ -309,9 +314,13 @@ test('local workspace supports an end-to-end evidence investigation', async ({ p
   await expect(
     page.getByRole('heading', { name: 'Hi. I’m ready to inspect the run.' }),
   ).toBeVisible();
+  await expect(page.getByText('Local guide · no model request', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'How did Bayesian compare with random search?' }).click();
   await expect(
     page.getByText('Bayesian search produced more feasible proposals in this measured campaign.'),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Gemini response · verified campaign aggregates', { exact: true }),
   ).toBeVisible();
   await page.getByText('Show verified facts (1)', { exact: true }).click();
   await expect(page.locator('.verified-facts')).toContainText('25 percentage points');

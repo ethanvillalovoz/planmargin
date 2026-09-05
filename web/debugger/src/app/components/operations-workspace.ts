@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  output,
+  signal,
+} from '@angular/core';
 import { TEST_OPERATIONS, TestOperationIssue, TestSuiteHealth } from '../test-operations';
 
 type OperationsSection = 'health' | 'coverage' | 'triage';
@@ -88,7 +95,7 @@ function initialOperationsSection(): OperationsSection {
                 <div>
                   <span class="eyebrow">Execution verification</span>
                   <h1 id="health-title">The saved test run passed its checks.</h1>
-                  <button type="button" (click)="openExperiments.emit()">
+                  <button type="button" class="secondary-action" (click)="openExperiments.emit()">
                     View live local experiments
                   </button>
                   <p>
@@ -323,6 +330,13 @@ function initialOperationsSection(): OperationsSection {
               <section class="inspector-block action-block">
                 <span>Resolution</span>
                 <strong>{{ selectedIssue().diagnostic.resolution }}</strong>
+                <button
+                  type="button"
+                  class="secondary-action"
+                  (click)="openModelStudy.emit(issueStudy())"
+                >
+                  Inspect model evidence
+                </button>
               </section>
               <details class="release-contract prevention">
                 <summary>Prevention</summary>
@@ -360,6 +374,24 @@ function initialOperationsSection(): OperationsSection {
     button {
       font: inherit;
     }
+    .secondary-action {
+      margin-top: 12px;
+      border: 1px solid #cddad3;
+      border-radius: 7px;
+      padding: 10px 14px;
+      background: #fff;
+      color: #174bb9;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .secondary-action:hover {
+      background: #eef3ff;
+    }
+    .secondary-action:focus-visible {
+      outline: 3px solid #1b63ef;
+      outline-offset: 3px;
+    }
     .ops-workstation {
       display: grid;
       grid-template-rows: 94px minmax(0, 1fr);
@@ -385,7 +417,7 @@ function initialOperationsSection(): OperationsSection {
     .inspector-block > span,
     .root-cause > span {
       color: #6f7782;
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -398,7 +430,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .run-context > small {
       color: #757e88;
-      font-size: 10px;
+      font-size: 12px;
     }
     .run-state {
       display: flex;
@@ -413,7 +445,7 @@ function initialOperationsSection(): OperationsSection {
       border-radius: 999px;
       background: #e8eee8;
       color: #3f4d47;
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 650;
     }
     .run-state i,
@@ -494,7 +526,7 @@ function initialOperationsSection(): OperationsSection {
     .rail-heading b,
     .context-inspector > header b {
       color: #59636f;
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
@@ -508,15 +540,15 @@ function initialOperationsSection(): OperationsSection {
     }
     .registry-summary strong {
       color: #1549a4;
-      font-size: 10px;
+      font-size: 12px;
     }
     .registry-summary span {
       color: #263044;
-      font-size: 10px;
+      font-size: 12px;
     }
     .registry-summary small {
       color: #727d89;
-      font-size: 9px;
+      font-size: 11px;
     }
     .suite-rail nav {
       display: grid;
@@ -544,17 +576,17 @@ function initialOperationsSection(): OperationsSection {
       align-items: center;
       gap: 5px;
       color: #2a794e;
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 750;
       text-transform: uppercase;
     }
     .suite-rail nav strong {
-      font-size: 10px;
+      font-size: 12px;
     }
     .suite-rail nav small {
       overflow: hidden;
       color: #747d87;
-      font-size: 9px;
+      font-size: 11px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -566,7 +598,7 @@ function initialOperationsSection(): OperationsSection {
     .suite-rail footer span,
     .context-inspector footer strong {
       color: #6a737f;
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 750;
       text-transform: uppercase;
     }
@@ -574,15 +606,16 @@ function initialOperationsSection(): OperationsSection {
     .context-inspector footer p {
       margin: 5px 0 0;
       color: #737c86;
-      font-size: 9px;
+      font-size: 11px;
       line-height: 1.45;
     }
     .review-surface {
       display: grid;
-      grid-template-rows: 58px minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
     }
     .review-toolbar {
       display: flex;
+      min-height: 58px;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
@@ -610,7 +643,7 @@ function initialOperationsSection(): OperationsSection {
       border-radius: 999px;
       background: transparent;
       color: #68717c;
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 700;
     }
     .ops-tabs button.active {
@@ -624,7 +657,7 @@ function initialOperationsSection(): OperationsSection {
       border-radius: 999px;
       background: #dde8ff;
       color: #164ca9;
-      font-size: 8px;
+      font-size: 10px;
     }
     .health-workspace,
     .coverage-workspace,
@@ -659,7 +692,7 @@ function initialOperationsSection(): OperationsSection {
       max-width: 590px;
       margin: 0;
       color: #69737e;
-      font-size: 10px;
+      font-size: 12px;
       line-height: 1.55;
     }
     .health-kpis {
@@ -681,7 +714,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .health-kpis span {
       color: #727b86;
-      font-size: 8px;
+      font-size: 10px;
       text-transform: uppercase;
     }
     .stage-panel,
@@ -706,7 +739,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .stage-panel > header b {
       color: #2d7b4f;
-      font-size: 9px;
+      font-size: 11px;
       text-transform: uppercase;
     }
     .stage-table > div {
@@ -729,19 +762,19 @@ function initialOperationsSection(): OperationsSection {
       border-radius: 50%;
       background: #f0f3f0;
       color: #6c7580;
-      font-size: 8px;
+      font-size: 10px;
     }
     .stage-name {
       display: grid;
       gap: 2px;
     }
     .stage-name strong {
-      font-size: 10px;
+      font-size: 12px;
     }
     .stage-name small,
     .stage-observed {
       color: #717a84;
-      font-size: 9px;
+      font-size: 11px;
     }
     .stage-observed {
       text-align: right;
@@ -751,7 +784,7 @@ function initialOperationsSection(): OperationsSection {
       align-items: center;
       gap: 6px;
       color: #2c7c50;
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 750;
       text-transform: uppercase;
     }
@@ -759,7 +792,7 @@ function initialOperationsSection(): OperationsSection {
       border: 0;
       background: transparent;
       color: #1769ff;
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 750;
     }
     .attention-list {
@@ -791,16 +824,16 @@ function initialOperationsSection(): OperationsSection {
     .attention-list small,
     .issue-copy small {
       color: #737c87;
-      font-size: 8px;
+      font-size: 10px;
       text-transform: uppercase;
     }
     .attention-list strong {
-      font-size: 10px;
+      font-size: 12px;
     }
     .attention-list b,
     .issue-row > b {
       color: #9b6819;
-      font-size: 8px;
+      font-size: 10px;
       text-transform: uppercase;
     }
     .severity {
@@ -842,7 +875,7 @@ function initialOperationsSection(): OperationsSection {
       min-height: 38px;
       background: #f5f7f4;
       color: #737c86;
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 750;
       text-transform: uppercase;
     }
@@ -863,27 +896,27 @@ function initialOperationsSection(): OperationsSection {
       gap: 3px;
     }
     .coverage-table strong {
-      font-size: 10px;
+      font-size: 12px;
     }
     .coverage-table small {
       color: #727b85;
-      font-size: 8px;
+      font-size: 10px;
       text-transform: capitalize;
     }
     .coverage-table code {
       color: #375b92;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 8px;
+      font-size: 10px;
     }
     .coverage-table button > span {
-      font-size: 9px;
+      font-size: 11px;
     }
     .coverage-table b {
       display: flex;
       align-items: center;
       gap: 6px;
       color: #2d7b4f;
-      font-size: 8px;
+      font-size: 10px;
       text-transform: uppercase;
     }
     .coverage-gaps {
@@ -902,16 +935,16 @@ function initialOperationsSection(): OperationsSection {
       background: #fff9ee;
     }
     .coverage-gap strong {
-      font-size: 10px;
+      font-size: 12px;
     }
     .coverage-gap p {
       margin: 3px 0 0;
       color: #7e7159;
-      font-size: 9px;
+      font-size: 11px;
     }
     .coverage-gap > b {
       color: #9b6819;
-      font-size: 8px;
+      font-size: 10px;
       text-transform: uppercase;
     }
     .triage-workspace {
@@ -941,7 +974,7 @@ function initialOperationsSection(): OperationsSection {
       border-radius: 999px;
       background: transparent;
       color: #66707b;
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 700;
     }
     .filter-row button.active {
@@ -985,7 +1018,7 @@ function initialOperationsSection(): OperationsSection {
     .issue-copy p {
       margin: 0;
       color: #68727e;
-      font-size: 9px;
+      font-size: 11px;
       line-height: 1.4;
     }
     .issue-owner {
@@ -994,12 +1027,12 @@ function initialOperationsSection(): OperationsSection {
     }
     .issue-owner small {
       color: #7a838d;
-      font-size: 8px;
+      font-size: 10px;
       text-transform: uppercase;
     }
     .issue-owner strong {
       color: #424c59;
-      font-size: 9px;
+      font-size: 11px;
     }
     .context-inspector {
       display: flex;
@@ -1023,7 +1056,7 @@ function initialOperationsSection(): OperationsSection {
       border-radius: 999px;
       background: #e2f5e9;
       color: #237447;
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 750;
       text-transform: uppercase;
     }
@@ -1039,7 +1072,7 @@ function initialOperationsSection(): OperationsSection {
     .release-contract p {
       margin: 0;
       color: #69727d;
-      font-size: 10px;
+      font-size: 12px;
       line-height: 1.5;
     }
     .suite-inspector > strong,
@@ -1062,13 +1095,13 @@ function initialOperationsSection(): OperationsSection {
     }
     .suite-inspector dt {
       color: #747d87;
-      font-size: 8px;
+      font-size: 10px;
       text-transform: uppercase;
     }
     .suite-inspector dd {
       margin: 0;
       color: #313a49;
-      font-size: 9px;
+      font-size: 11px;
       text-align: right;
     }
     .release-contract summary {
@@ -1076,7 +1109,7 @@ function initialOperationsSection(): OperationsSection {
       justify-content: space-between;
       color: #626c77;
       cursor: pointer;
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 750;
       list-style: none;
       text-transform: uppercase;
@@ -1099,11 +1132,11 @@ function initialOperationsSection(): OperationsSection {
       align-items: center;
       gap: 6px;
       color: #3d4754;
-      font-size: 8px;
+      font-size: 10px;
     }
     .release-contract > div small {
       color: #6d7680;
-      font-size: 8px;
+      font-size: 10px;
     }
     .issue-state {
       display: inline-flex;
@@ -1111,7 +1144,7 @@ function initialOperationsSection(): OperationsSection {
       border-radius: 999px;
       background: #fff2dc;
       color: #94641c;
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 750;
       text-transform: uppercase;
     }
@@ -1119,7 +1152,7 @@ function initialOperationsSection(): OperationsSection {
       display: block;
       margin-top: 6px;
       color: #75808a;
-      font-size: 9px;
+      font-size: 11px;
     }
     .root-cause ol {
       display: grid;
@@ -1154,11 +1187,11 @@ function initialOperationsSection(): OperationsSection {
       border-radius: 50%;
       background: #edf2ee;
       color: #5d6873;
-      font-size: 8px;
+      font-size: 10px;
     }
     .root-cause li span {
       color: #3d4754;
-      font-size: 9px;
+      font-size: 11px;
     }
     .action-block strong {
       color: #1549a4;
@@ -1171,7 +1204,7 @@ function initialOperationsSection(): OperationsSection {
       margin-top: 10px;
       overflow-wrap: anywhere;
       color: #68798e;
-      font-size: 8px;
+      font-size: 10px;
     }
     .context-inspector > footer {
       margin-top: auto;
@@ -1235,9 +1268,7 @@ function initialOperationsSection(): OperationsSection {
         display: none;
       }
       .review-toolbar {
-        position: sticky;
-        z-index: 5;
-        top: 112px;
+        position: static;
         align-items: stretch;
         flex-direction: column;
         padding: 10px;
@@ -1294,14 +1325,34 @@ function initialOperationsSection(): OperationsSection {
 })
 export class OperationsWorkspace {
   readonly openExperiments = output<void>();
+  readonly openModelStudy = output<string>();
+  protected issueStudy(): string {
+    const id = this.selectedIssue().id;
+    return id === 'PM-RANK-006' ? 'ranker' : id === 'PM-TRT-011' ? 'residual' : 'runtime';
+  }
   readonly openScenarioLab = output<void>();
   protected readonly report = TEST_OPERATIONS;
   protected readonly section = signal<OperationsSection>(initialOperationsSection());
   protected readonly filter = signal<IssueFilter>('all');
-  protected readonly selectedIssue = signal<TestOperationIssue>(TEST_OPERATIONS.issues[0]);
-  protected readonly selectedSuite = signal<TestSuiteHealth>(
-    TEST_OPERATIONS.test_inventory.suites[0],
+  protected readonly selectedIssue = signal<TestOperationIssue>(
+    TEST_OPERATIONS.issues.find(
+      (issue) => issue.id === new URLSearchParams(window.location.search).get('issue'),
+    ) ?? TEST_OPERATIONS.issues[0],
   );
+  protected readonly selectedSuite = signal<TestSuiteHealth>(
+    TEST_OPERATIONS.test_inventory.suites.find(
+      (suite) => suite.id === new URLSearchParams(window.location.search).get('suite'),
+    ) ?? TEST_OPERATIONS.test_inventory.suites[0],
+  );
+  constructor() {
+    effect(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('section', this.section());
+      url.searchParams.set('issue', this.selectedIssue().id);
+      url.searchParams.set('suite', this.selectedSuite().id);
+      window.history.replaceState(null, '', url.pathname + url.search);
+    });
+  }
   protected readonly sections: readonly { id: OperationsSection; label: string }[] = [
     { id: 'health', label: 'Health' },
     { id: 'coverage', label: 'Coverage' },

@@ -263,7 +263,12 @@ import { SensorViewport } from './sensor-viewport';
                 </div>
               } @else {
                 <p class="evidence-boundary">
-                  Source frame {{ paddedFrame() }} · three reconstructions available
+                  Source frame {{ paddedFrame() }} ·
+                  {{
+                    simulator.sensorMode() === 'lidar'
+                      ? 'single recorded LiDAR frame'
+                      : 'three independent reconstructions available'
+                  }}
                 </p>
               }
             }

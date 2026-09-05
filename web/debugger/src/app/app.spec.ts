@@ -4,6 +4,55 @@ import { DebuggerStore } from './debugger.store';
 import { LocalEvidenceService } from './local-evidence.service';
 
 describe('launch session bootstrap', () => {
+  it('restores the explicit retained replay on refresh instead of substituting Stage 0', async () => {
+    const requested = { runId: 'run_exact' };
+    const localLoad = vi.fn().mockResolvedValue(requested);
+    const loadRun = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: LocalEvidenceService,
+          useValue: {
+            restoreBrowserSession: vi
+              .fn()
+              .mockResolvedValue({ initialRun: { runId: 'run_stage0' } }),
+            loadRun: localLoad,
+          },
+        },
+        { provide: DebuggerStore, useValue: { loadRun } },
+      ],
+    });
+    window.history.replaceState(null, '', '/?view=evidence&run=run_exact');
+    TestBed.runInInjectionContext(() => new App());
+    await vi.waitFor(() => expect(loadRun).toHaveBeenCalledWith(requested));
+    expect(loadRun).toHaveBeenCalledOnce();
+    expect(localLoad).toHaveBeenCalledWith('run_exact');
+    TestBed.resetTestingModule();
+  });
+  it('does not substitute a different run when the requested replay is missing', async () => {
+    const error = { set: vi.fn() };
+    const loadRun = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: LocalEvidenceService,
+          useValue: {
+            restoreBrowserSession: vi
+              .fn()
+              .mockResolvedValue({ initialRun: { runId: 'run_stage0' } }),
+            loadRun: vi.fn().mockRejectedValue(new Error('missing')),
+            error,
+          },
+        },
+        { provide: DebuggerStore, useValue: { loadRun } },
+      ],
+    });
+    window.history.replaceState(null, '', '/?view=replay&run=run_missing');
+    TestBed.runInInjectionContext(() => new App());
+    await vi.waitFor(() => expect(error.set).toHaveBeenCalled());
+    expect(loadRun).not.toHaveBeenCalled();
+    TestBed.resetTestingModule();
+  });
   afterEach(() => {
     vi.useRealTimers();
     window.history.replaceState(null, '', '/');

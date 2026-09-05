@@ -156,6 +156,7 @@ export class LocalEvidenceService {
       this.selectedCellId.set(cellId);
       this.proposals.set(proposals);
       this.selectedProposalNumber.set(selected);
+      this.rememberProposal();
     } catch (error: unknown) {
       if (
         generation === this.selectionGeneration &&
@@ -175,6 +176,17 @@ export class LocalEvidenceService {
     this.selectionGeneration++;
     this.loadingProposals.set(false);
     this.selectedProposalNumber.set(proposalNumber);
+    this.rememberProposal();
+  }
+
+  private rememberProposal(): void {
+    const cell = this.selectedCellId();
+    const proposal = this.selectedProposalNumber();
+    if (!cell || proposal === undefined) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('cell', cell);
+    url.searchParams.set('proposal', String(proposal));
+    window.history.replaceState(null, '', url.pathname + url.search);
   }
 
   async selectInvestigationProposal(cellId: string, proposalNumber: number): Promise<void> {
@@ -386,13 +398,20 @@ export class LocalEvidenceService {
     const initialRun = parseLocalRun(initialRunValue);
     const investigation = parseCampaignInvestigation(investigationValue);
     const first = investigation.closestMargin[0];
-    const firstCellId = first?.cellId ?? campaign.cells[0].cellId;
+    const requested = new URLSearchParams(window.location.search);
+    const requestedCell = requested.get('cell');
+    const firstCellId = requestedCell ?? first?.cellId ?? campaign.cells[0].cellId;
     if (!campaign.cells.some((cell) => cell.cellId === firstCellId))
       throw new Error('Investigation references an unknown cell');
     const proposals = parseProposals(
       await this.get(`/cells/${encodeURIComponent(firstCellId)}/proposals`),
     );
-    const firstProposalNumber = first?.proposalNumber ?? proposals[0].proposalNumber;
+    const firstProposalNumber =
+      requestedCell && requested.has('proposal')
+        ? Number(requested.get('proposal'))
+        : requestedCell
+          ? proposals[0].proposalNumber
+          : (first?.proposalNumber ?? proposals[0].proposalNumber);
     if (!proposals.some((proposal) => proposal.proposalNumber === firstProposalNumber))
       throw new Error('Investigation references an unknown proposal');
     if (generation !== this.requestGeneration) throw new Error('Connection was superseded');

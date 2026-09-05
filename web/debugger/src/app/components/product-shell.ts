@@ -17,11 +17,12 @@ import { InvestigationReportService } from '../investigation-report.service';
 import { DebuggerStore } from '../debugger.store';
 import { LocalEvidenceService } from '../local-evidence.service';
 import { InvestigationProposal, LocalProposal, ProposalAnalysis } from '../local-evidence.types';
-import { SimulatorStore } from '../simulator.store';
+import { SensorMode, SimulatorStore } from '../simulator.store';
 import { SimulatorWorkspace } from './simulator-workspace';
 import { OperationsWorkspace } from './operations-workspace';
 import { ScenarioAssistant } from './scenario-assistant';
 import { ExperimentWorkspace } from './experiment-workspace';
+import { ModelsWorkspace } from './models-workspace';
 import { DebuggerRun } from '../debugger.types';
 
 type ProductView = 'operations' | 'investigate' | 'replay' | 'sensor' | 'experiments';
@@ -55,6 +56,7 @@ function initialEvidenceView(): EvidenceView {
     SimulatorWorkspace,
     ScenarioAssistant,
     ExperimentWorkspace,
+    ModelsWorkspace,
   ],
   providers: [
     provideIcons({
@@ -165,6 +167,7 @@ function initialEvidenceView(): EvidenceView {
         <app-operations-workspace
           (openScenarioLab)="openInvestigation()"
           (openExperiments)="setView('experiments')"
+          (openModelStudy)="openModels($event)"
         />
       } @else if (view() === 'investigate') {
         <main class="investigation-page">
@@ -207,186 +210,10 @@ function initialEvidenceView(): EvidenceView {
           </header>
 
           @if (evidenceView() === 'deployment') {
-            <section class="deployment-workbench" aria-labelledby="deployment-workbench-title">
-              <header>
-                <div>
-                  <p>Measured deployment evidence</p>
-                  <h2 id="deployment-workbench-title">Models, deployment, and promotion gates</h2>
-                </div>
-                <span class="qualification-status"><i></i>Promotion status explicit</span>
-              </header>
-              <section class="model-evidence" aria-labelledby="deployment-quality-title">
-                <header>
-                  <div>
-                    <span>1,024-scenario scale study · byte-reproducible</span>
-                    <h3 id="deployment-quality-title">Real-WOMD prediction quality</h3>
-                  </div>
-                  <b>real data · no synthetic training</b>
-                </header>
-                <div class="model-metrics">
-                  <div>
-                    <span>WOMD scenarios</span>
-                    <strong>{{ local.campaign().scaleTrajectoryModel.scenarios }}</strong>
-                    <small
-                      >{{
-                        local.campaign().scaleTrajectoryModel.windows.toLocaleString()
-                      }}
-                      windows</small
-                    >
-                  </div>
-                  <div>
-                    <span>Test ADE</span>
-                    <strong
-                      >{{ local.campaign().scaleTrajectoryModel.adeMeters.toFixed(3) }} m</strong
-                    >
-                    <small
-                      >baseline
-                      {{ local.campaign().scaleTrajectoryModel.baselineAdeMeters.toFixed(3) }}
-                      m</small
-                    >
-                  </div>
-                  <div>
-                    <span>Test FDE</span>
-                    <strong
-                      >{{ local.campaign().scaleTrajectoryModel.fdeMeters.toFixed(3) }} m</strong
-                    >
-                    <small
-                      >baseline
-                      {{ local.campaign().scaleTrajectoryModel.baselineFdeMeters.toFixed(3) }}
-                      m</small
-                    >
-                  </div>
-                  <div>
-                    <span>Test evidence</span>
-                    <strong>{{
-                      local.campaign().scaleTrajectoryModel.testWindows.toLocaleString()
-                    }}</strong>
-                    <small>complete-scenario windows</small>
-                  </div>
-                </div>
-                <div class="deployment-divider">
-                  <span
-                    >Scaled 1,024-scenario model · {{ local.campaign().scaleInference.gpu }} · 500
-                    measured</span
-                  >
-                  <b
-                    >TensorRT {{ local.campaign().scaleInference.tensorrtVersion }} · measured
-                    no-go</b
-                  >
-                </div>
-                <div class="model-metrics" aria-label="Measured NVIDIA inference evidence">
-                  <div>
-                    <span>FP32 · batch 1 E2E</span>
-                    <strong
-                      >{{
-                        local.campaign().scaleInference.fp32Batch1EndToEndP50Ms.toFixed(3)
-                      }}
-                      ms</strong
-                    >
-                    <small>p50 pinned-host latency</small>
-                  </div>
-                  <div>
-                    <span>FP16 · batch 1 E2E</span>
-                    <strong
-                      >{{
-                        local.campaign().scaleInference.fp16Batch1EndToEndP50Ms.toFixed(3)
-                      }}
-                      ms</strong
-                    >
-                    <small>p50 pinned-host latency</small>
-                  </div>
-                  <div>
-                    <span>FP16 · batch 256</span>
-                    <strong
-                      >{{
-                        (
-                          local.campaign().scaleInference.fp16Batch256Throughput / 1_000_000
-                        ).toFixed(2)
-                      }}M/s</strong
-                    >
-                    <small>end-to-end throughput</small>
-                  </div>
-                  <div>
-                    <span>C++17 · batch 1 E2E</span>
-                    <strong
-                      >{{
-                        local.campaign().scaleInference.cppBatch1EndToEndP50Ms.toFixed(3)
-                      }}
-                      ms</strong
-                    >
-                    <small>independent pinned-host runner</small>
-                  </div>
-                </div>
-              </section>
-              <div class="deployment-notes">
-                <article class="stopped-gate">
-                  <span>Scale-model FP16 promotion gate · stopped</span>
-                  <strong>One preregistered numerical-drift gate did not pass.</strong>
-                  <p>
-                    {{ (local.campaign().scaleInference.fp16RmseMeters * 100).toFixed(2) }} cm RMSE
-                    passed;
-                    {{ (local.campaign().scaleInference.fp16MaxDriftMeters * 100).toFixed(2) }} cm
-                    maximum drift exceeded the frozen 7.50 cm limit at batch 256. FP32 parity and
-                    GPU end-to-end latency passed.
-                  </p>
-                </article>
-                <article>
-                  <span>Protocol boundary</span>
-                  <strong>Quality and deployment probes are kept separate.</strong>
-                  <p>
-                    ADE/FDE use the real WOMD scenario split. Deterministic physical probes are used
-                    only for TensorRT timing and numerical parity.
-                  </p>
-                </article>
-                <article>
-                  <span>Reproducible artifact chain</span>
-                  <strong>Weights, ONNX, reports, versions, and hashes are public.</strong>
-                  <p>
-                    TensorRT engines are rebuilt per GPU; the free-T4 notebook verifies each source
-                    hash before engine creation and compiles the C++17 cross-check.
-                  </p>
-                </article>
-                <article>
-                  <span>Earlier model · qualified reference</span>
-                  <strong>The 128-scenario model retains its independent T4 result.</strong>
-                  <p>
-                    FP32 {{ local.campaign().inference.fp32Batch1P50Ms.toFixed(3) }} ms · FP16
-                    {{ local.campaign().inference.fp16Batch1P50Ms.toFixed(3) }} ms · C++17
-                    {{ local.campaign().inference.cppBatch1P50Ms.toFixed(3) }} ms batch-1 device
-                    p50. These numbers are not attributed to the scaled model.
-                  </p>
-                </article>
-                <article class="stopped-gate">
-                  <span>Active-risk promotion gate · stopped</span>
-                  <strong>The learned ranker did not generalize across scenes.</strong>
-                  <p>
-                    {{ local.campaign().activeRisk.examples.toLocaleString() }} real proposal
-                    targets · Spearman {{ local.campaign().activeRisk.meanSpearman.toFixed(3) }} ·
-                    matched random at budget 8 in
-                    {{ local.campaign().activeRisk.budgetEightWins }} of
-                    {{ local.campaign().activeRisk.scenarios }} scenes. No selector was promoted.
-                  </p>
-                </article>
-                <article class="stopped-gate">
-                  <span>Neighbor-context ablation · stopped</span>
-                  <strong>Nearest-actor pooling was worse than ego history alone.</strong>
-                  <p>
-                    ADE {{ local.campaign().interactionStudy.interactionAdeMeters.toFixed(3) }} m
-                    with neighbors versus
-                    {{ local.campaign().interactionStudy.egoOnlyAdeMeters.toFixed(3) }} m ego-only
-                    on the same 102-scenario test split.
-                  </p>
-                </article>
-                <article class="stopped-gate">
-                  <span>Scale-model deployment decision · no-go</span>
-                  <strong>The complete T4 protocol ran; FP16 was not promoted.</strong>
-                  <p>
-                    FP32 remains a measured deployment path. The failed FP16 max-drift gate is
-                    preserved without relaxing its threshold after observation.
-                  </p>
-                </article>
-              </div>
-            </section>
+            <app-models-workspace
+              [initialStudy]="modelStudy()"
+              (studySelected)="modelStudy.set($event)"
+            />
           } @else if (!local.connected() || !local.campaignAvailable()) {
             <section class="public-workbench">
               <header class="public-result">
@@ -1093,6 +920,9 @@ export class ProductShell {
     if (this.view() === 'sensor') this.simulator.selectMode('camera');
   }
   protected readonly evidenceView = signal<EvidenceView>(initialEvidenceView());
+  protected readonly modelStudy = signal(
+    new URLSearchParams(window.location.search).get('study') ?? 'prediction',
+  );
   protected readonly sort = signal<ProposalSort>('criticality');
   protected readonly filter = signal<ProposalFilter>('all');
   protected readonly rank = signal<InvestigationRank>('closest');
@@ -1136,7 +966,8 @@ export class ProductShell {
     this.evidenceView.set('campaign');
     this.setView('investigate');
   }
-  protected openModels(): void {
+  protected openModels(study?: string): void {
+    if (study) this.modelStudy.set(study);
     this.evidenceView.set('deployment');
     this.setView('investigate');
   }
@@ -1214,10 +1045,22 @@ export class ProductShell {
               ? 'sensors'
               : 'replay',
     );
-    if (view === 'investigate' && this.evidenceView() === 'deployment')
+    if (view === 'investigate' && this.evidenceView() === 'deployment') {
       url.searchParams.set('panel', 'runtime');
-    else url.searchParams.delete('panel');
-    if (view !== 'replay') url.searchParams.delete('experiment');
+      url.searchParams.set('study', this.modelStudy());
+    } else url.searchParams.delete('panel');
+    // Preserve the exact planning record across supporting pages and refresh.
+    // These are opaque local record identifiers, never tokens or file paths.
+    if (this.debuggerStore.hasRun()) {
+      const runId = this.debuggerStore.run().runId;
+      if (runId.startsWith('experiment_')) {
+        url.searchParams.set('experiment', runId.slice('experiment_'.length));
+        url.searchParams.delete('run');
+      } else {
+        url.searchParams.set('run', runId);
+        url.searchParams.delete('experiment');
+      }
+    }
     window.history.replaceState(null, '', url.pathname + url.search);
   }
   protected openExperimentReplay(run: DebuggerRun): void {
@@ -1241,11 +1084,9 @@ export class ProductShell {
     );
   }
   protected onWorkspaceMode(mode: string): void {
-    this.view.set(mode === 'planning' ? 'replay' : 'sensor');
-    const url = new URL(window.location.href);
-    url.searchParams.set('view', mode === 'planning' ? 'replay' : 'sensors');
-    url.searchParams.delete('panel');
-    window.history.replaceState(null, '', url.pathname + url.search);
+    // setView('sensor') defaults to camera, so restore the explicit selection.
+    this.setView(mode === 'planning' ? 'replay' : 'sensor');
+    this.simulator.selectMode(mode as SensorMode);
   }
   protected toggleAssistant(): void {
     this.simulator.assistantOpen.update((value) => !value);

@@ -1,5 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
-import { ExperimentJob, ExperimentService } from '../experiment.service';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  output,
+  signal,
+} from '@angular/core';
+import {
+  ExperimentConfig,
+  ExperimentJob,
+  ExperimentService,
+  sameExperimentConfig,
+} from '../experiment.service';
 import { LocalEvidenceService } from '../local-evidence.service';
 import { DebuggerRun } from '../debugger.types';
 
@@ -99,9 +112,56 @@ import { DebuggerRun } from '../debugger.types';
                 >0.75–1.00 × recorded speed. For example, 0.90 means 90%.</small
               >
               <div class="controller-note">
-                <strong>Two fixed controller configurations</strong>
-                <span>Tested: default Waymax IDM</span
-                ><span>Reference: conservative Waymax IDM</span>
+                <strong>Controller comparison</strong>
+                <label for="tested-controller-mode">Tested planner configuration</label>
+                <select
+                  id="tested-controller-mode"
+                  [value]="customController() ? 'custom' : 'default'"
+                  (change)="customController.set($any($event.target).value === 'custom')"
+                >
+                  <option value="default">Default Waymax IDM</option>
+                  <option value="custom">Custom IDM settings</option>
+                </select>
+                @if (customController()) {
+                  <label for="controller-speed">Desired speed (m/s)</label>
+                  <input
+                    id="controller-speed"
+                    type="number"
+                    min="1"
+                    max="40"
+                    step="0.1"
+                    required
+                    [value]="desiredSpeed()"
+                    (input)="desiredSpeed.set(+$any($event.target).value)"
+                  />
+                  <label for="controller-spacing">Minimum spacing (m)</label>
+                  <input
+                    id="controller-spacing"
+                    type="number"
+                    min="0.5"
+                    max="10"
+                    step="0.1"
+                    required
+                    [value]="spacing()"
+                    (input)="spacing.set(+$any($event.target).value)"
+                  />
+                  <label for="controller-headway">Safe time headway (s)</label>
+                  <input
+                    id="controller-headway"
+                    type="number"
+                    min="0.5"
+                    max="5"
+                    step="0.1"
+                    required
+                    [value]="headway()"
+                    (input)="headway.set(+$any($event.target).value)"
+                  />
+                  <small
+                    >Changes only the tested IDM policy in this new run. Not a custom model,
+                    production controller, or change to the frozen campaign.</small
+                  >
+                }
+                <span>Reference: conservative Waymax IDM · fixed</span>
                 <small>Original and changed cases each run twice per controller.</small>
               </div>
               <button
@@ -126,12 +186,29 @@ import { DebuggerRun } from '../debugger.types';
             <span class="eyebrow">2 · Execute and inspect</span>
             <h2 id="execution-title">Experiment result</h2>
             @if (experiments.selected(); as job) {
+              <p class="result-context" [class.different]="!draftMatchesResult()" role="status">
+                {{
+                  draftMatchesResult()
+                    ? 'Saved run · matches the configuration on the left'
+                    : 'Previous run · does not match your current configuration'
+                }}
+                <span
+                  >The result below belongs to run {{ job.job_id.slice(0, 8) }}. Editing the form
+                  does not execute it.</span
+                >
+              </p>
               <div class="job-heading">
                 <div>
                   <strong>Scenario {{ job.config.selection_order }}</strong>
                   <span
                     >+{{ job.config.braking_onset_offset_s.toFixed(1) }} s onset ·
                     {{ job.config.speed_multiplier }}× speed</span
+                  >
+                  <small
+                    >{{
+                      job.config.tested_controller ? 'Custom tested IDM' : 'Default tested IDM'
+                    }}
+                    · fixed conservative reference</small
                   >
                 </div>
                 <span class="status" [class.bad]="!!job.error">{{ statusLabel(job) }}</span>
@@ -268,6 +345,13 @@ import { DebuggerRun } from '../debugger.types';
                   </div>
                   <details>
                     <summary>Finding gates and integrity</summary>
+                    @if (job.config.tested_controller; as controller) {
+                      <p>
+                        Tested IDM: desired speed {{ controller.desired_vel_mps }} m/s · minimum
+                        spacing {{ controller.min_spacing_m }} m · headway
+                        {{ controller.safe_time_headway_s }} s.
+                      </p>
+                    }
                     <dl class="gates">
                       @for (gate of gateEntries(result.gates); track gate[0]) {
                         <div>
@@ -345,12 +429,13 @@ import { DebuggerRun } from '../debugger.types';
               <button
                 type="button"
                 [class.selected]="experiments.selectedId() === job.job_id"
-                (click)="experiments.selectedId.set(job.job_id)"
+                (click)="experiments.selectJob(job.job_id)"
               >
                 <strong>Scenario {{ job.config.selection_order }}</strong
                 ><span
                   >+{{ job.config.braking_onset_offset_s.toFixed(1) }} s ·
-                  {{ job.config.speed_multiplier }}×</span
+                  {{ job.config.speed_multiplier }}× ·
+                  {{ job.config.tested_controller ? 'Custom IDM' : 'Default IDM' }}</span
                 >
                 <span>{{ statusLabel(job) }}</span
                 ><span>{{ duration(job.elapsed_seconds) }}</span
@@ -372,24 +457,55 @@ export class ExperimentWorkspace {
   readonly replayRequested = output<DebuggerRun>();
   protected readonly scenarios = Array.from({ length: 10 }, (_, index) => index + 1);
   protected readonly offsets = [0, 0.1, 0.2, 0.3, 0.4, 0.5];
-  protected readonly scenario = signal(1);
-  protected readonly onset = signal(0);
-  protected readonly speed = signal(0.9);
+  protected readonly scenario = signal(this.experiments.draft().selection_order);
+  protected readonly onset = signal(this.experiments.draft().braking_onset_offset_s);
+  protected readonly speed = signal(this.experiments.draft().speed_multiplier);
+  protected readonly customController = signal(!!this.experiments.draft().tested_controller);
+  protected readonly desiredSpeed = signal(
+    this.experiments.draft().tested_controller?.desired_vel_mps ?? 30,
+  );
+  protected readonly spacing = signal(
+    this.experiments.draft().tested_controller?.min_spacing_m ?? 2,
+  );
+  protected readonly headway = signal(
+    this.experiments.draft().tested_controller?.safe_time_headway_s ?? 2,
+  );
+  protected readonly draftConfig = computed<ExperimentConfig>(() => ({
+    selection_order: this.scenario(),
+    braking_onset_offset_s: this.onset(),
+    speed_multiplier: this.speed(),
+    ...(this.customController()
+      ? {
+          tested_controller: {
+            desired_vel_mps: this.desiredSpeed(),
+            min_spacing_m: this.spacing(),
+            safe_time_headway_s: this.headway(),
+          },
+        }
+      : {}),
+  }));
+  protected readonly draftMatchesResult = computed(() => {
+    const job = this.experiments.selected();
+    return job !== undefined && sameExperimentConfig(this.draftConfig(), job.config);
+  });
+  constructor() {
+    effect(() => this.experiments.draft.set(this.draftConfig()));
+  }
   protected readonly loadingReplay = signal(false);
   protected readonly actionError = signal<string | undefined>(undefined);
   protected start(event: Event): void {
     event.preventDefault();
     this.actionError.set(undefined);
-    void this.experiments.start({
-      selection_order: this.scenario(),
-      braking_onset_offset_s: this.onset(),
-      speed_multiplier: this.speed(),
-    });
+    void this.experiments.start(this.draftConfig());
   }
   protected reuse(job: ExperimentJob): void {
     this.scenario.set(job.config.selection_order);
     this.onset.set(job.config.braking_onset_offset_s);
     this.speed.set(job.config.speed_multiplier);
+    this.customController.set(!!job.config.tested_controller);
+    this.desiredSpeed.set(job.config.tested_controller?.desired_vel_mps ?? 30);
+    this.spacing.set(job.config.tested_controller?.min_spacing_m ?? 2);
+    this.headway.set(job.config.tested_controller?.safe_time_headway_s ?? 2);
     document.getElementById('experiment-scenario')?.focus();
   }
   protected async replay(jobId: string): Promise<void> {

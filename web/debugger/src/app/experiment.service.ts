@@ -7,6 +7,44 @@ export interface ExperimentConfig {
   selection_order: number;
   braking_onset_offset_s: number;
   speed_multiplier: number;
+  tested_controller?: TestedControllerConfig;
+}
+export interface TestedControllerConfig {
+  desired_vel_mps: number;
+  min_spacing_m: number;
+  safe_time_headway_s: number;
+}
+export function validControllerConfig(value: unknown): value is TestedControllerConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const config = value as Record<string, unknown>;
+  const bounds = {
+    desired_vel_mps: [1, 40],
+    min_spacing_m: [0.5, 10],
+    safe_time_headway_s: [0.5, 5],
+  };
+  return (
+    Object.keys(config).length === 3 &&
+    Object.entries(bounds).every(
+      ([key, [min, max]]) =>
+        typeof config[key] === 'number' &&
+        Number.isFinite(config[key]) &&
+        (config[key] as number) >= min &&
+        (config[key] as number) <= max,
+    )
+  );
+}
+export function sameExperimentConfig(a: ExperimentConfig, b: ExperimentConfig): boolean {
+  return (
+    a.selection_order === b.selection_order &&
+    a.braking_onset_offset_s === b.braking_onset_offset_s &&
+    a.speed_multiplier === b.speed_multiplier &&
+    (a.tested_controller === undefined
+      ? b.tested_controller === undefined
+      : b.tested_controller !== undefined &&
+        Object.entries(a.tested_controller).every(
+          ([key, value]) => b.tested_controller![key as keyof TestedControllerConfig] === value,
+        ))
+  );
 }
 export interface ExperimentResult {
   decision: 'qualified' | 'not_qualified' | 'invalid_mutation';
@@ -70,6 +108,8 @@ export function parseExperimentJob(value: unknown): ExperimentJob {
     !Number.isFinite(item.config.speed_multiplier) ||
     item.config.speed_multiplier < 0.75 ||
     item.config.speed_multiplier > 1 ||
+    (item.config.tested_controller !== undefined &&
+      !validControllerConfig(item.config.tested_controller)) ||
     !Number.isFinite(item.elapsed_seconds) ||
     !Number.isFinite(item.created_at) ||
     typeof item.stage_label !== 'string' ||
@@ -121,7 +161,16 @@ export class ExperimentService {
   private readonly root = `http://${window.location.hostname === 'localhost' ? 'localhost' : '127.0.0.1'}:8765/api/v1/experiments`;
   readonly jobs = signal<readonly ExperimentJob[]>([]);
   readonly readiness = signal<ExperimentReadiness | undefined>(undefined);
-  readonly selectedId = signal<string | undefined>(undefined);
+  readonly selectedId = signal<string | undefined>(
+    new URLSearchParams(window.location.search).get('job') ??
+      new URLSearchParams(window.location.search).get('experiment') ??
+      undefined,
+  );
+  readonly draft = signal<ExperimentConfig>({
+    selection_order: 1,
+    braking_onset_offset_s: 0,
+    speed_multiplier: 0.9,
+  });
   readonly selected = computed(() => this.jobs().find((job) => job.job_id === this.selectedId()));
   readonly active = computed(() => this.jobs().find((job) => job.status === 'running'));
   readonly error = signal<string | undefined>(undefined);
@@ -130,6 +179,14 @@ export class ExperimentService {
   private refreshSequence = 0;
   private timer?: ReturnType<typeof setTimeout>;
   private pending?: ExperimentConfig & { request_id: string };
+
+  selectJob(jobId: string): void {
+    if (!this.jobs().some((job) => job.job_id === jobId)) return;
+    this.selectedId.set(jobId);
+    const url = new URL(window.location.href);
+    url.searchParams.set('job', jobId);
+    window.history.replaceState(null, '', url.pathname + url.search);
+  }
 
   constructor() {
     effect(() => {
@@ -222,19 +279,18 @@ export class ExperimentService {
     const generation = this.generation;
     this.busy.set(true);
     this.error.set(undefined);
-    if (
-      !this.pending ||
-      Object.entries(config).some(
-        ([key, value]) => this.pending?.[key as keyof ExperimentConfig] !== value,
-      )
-    ) {
+    if (!this.pending || !sameExperimentConfig(this.pending, config)) {
       this.pending = { ...config, request_id: crypto.randomUUID() };
     }
     try {
       const job = parseExperimentJob(await this.request('', this.pending));
       if (generation !== this.generation) return;
       this.pending = undefined;
-      this.selectedId.set(job.job_id);
+      this.jobs.update((jobs) => [
+        job,
+        ...jobs.filter((existing) => existing.job_id !== job.job_id),
+      ]);
+      this.selectJob(job.job_id);
       await this.refresh();
     } catch (error) {
       if (generation !== this.generation) return;

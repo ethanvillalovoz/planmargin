@@ -1,0 +1,5 @@
+{
+  "desired_vel_mps": 24.0,
+  "min_spacing_m": 3.0,
+  "safe_time_headway_s": 2.5
+}
