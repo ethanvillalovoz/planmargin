@@ -814,7 +814,7 @@ import { SensorViewport } from './sensor-viewport';
       font-size: 0.64rem;
     }
     .layer-heading small {
-      color: #647781;
+      color: #94a7b2;
       font-size: 0.52rem;
       font-weight: 600;
       letter-spacing: 0.06em;
@@ -1042,8 +1042,8 @@ import { SensorViewport } from './sensor-viewport';
       display: flex;
       justify-content: space-between;
       margin-top: 0.45rem;
-      color: #647781;
-      font-size: 0.49rem;
+      color: #94a7b2;
+      font-size: 0.625rem;
     }
     .speed-button {
       display: flex;

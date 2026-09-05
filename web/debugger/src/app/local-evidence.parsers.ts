@@ -269,6 +269,27 @@ export function parseLocalRun(value: unknown): DebuggerRun {
       throw new Error('Run timeline does not follow its fixed step');
     }
   });
+  const footprintValue = hypothesisValue['vehicle_footprints'];
+  let vehicleFootprints: DebuggerHypothesis['vehicleFootprints'];
+  if (footprintValue !== undefined && footprintValue !== null) {
+    const source = object(footprintValue, 'vehicle_footprints');
+    const frames = (kind: string): readonly (readonly Point2d[])[] => {
+      const result = array(source[kind], `vehicle_footprints.${kind}`).map((frame, index) => {
+        const corners = points(frame, `vehicle_footprints.${kind}[${index}]`);
+        if (corners.length !== 4) throw new Error('Vehicle footprints require four corners');
+        return corners;
+      });
+      if (result.length !== metrics.length)
+        throw new Error('Vehicle footprint timelines are not aligned');
+      return result;
+    };
+    vehicleFootprints = {
+      tested: frames('tested'),
+      reference: frames('reference'),
+      recorded: frames('recorded'),
+      lead: frames('lead'),
+    };
+  }
   const hypothesis: DebuggerHypothesis = {
     id: text(hypothesisValue['id'], 'run.hypothesis.id'),
     label: text(hypothesisValue['label'], 'run.hypothesis.label'),
@@ -295,6 +316,7 @@ export function parseLocalRun(value: unknown): DebuggerRun {
       recorded: points(trajectoriesValue['recorded'], 'trajectories.recorded'),
     },
     metrics,
+    ...(vehicleFootprints ? { vehicleFootprints } : {}),
   };
   for (const trajectory of Object.values(hypothesis.trajectories)) {
     if (trajectory.length !== metrics.length) throw new Error('Run trajectories are not aligned');

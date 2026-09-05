@@ -60,6 +60,9 @@ the terminal running. The UI is `http://127.0.0.1:4200`; the API binds only to
 4. Click **Open this experiment replay**, then **Inspect minimum clearance**.
    Play or step through the trajectories. The original tested trajectory is the
    same tested controller **before** the change, not a third traffic participant.
+   Vehicle footprints use the recorded dimensions and headings at each step,
+   in the same world coordinates as the clearance metric. Older imported
+   records without footprint geometry retain explicitly labeled schematic markers.
 5. Return to experiments. Export result JSON or reuse the configuration.
 
 Changing a control does not alter an existing record. Each submission creates a

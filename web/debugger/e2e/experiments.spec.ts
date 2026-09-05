@@ -74,6 +74,17 @@ test('experiment config, progress, cancellation, completion, replay and reload',
           ...API_RUN.hypothesis,
           id: 'interactive-counterfactual',
           label: 'New local experiment',
+          vehicle_footprints: Object.fromEntries(
+            ['tested', 'reference', 'recorded', 'lead'].map((kind) => [
+              kind,
+              [0, 1].map((x) => [
+                { x: x + 2, y: 1 },
+                { x: x - 2, y: 1 },
+                { x: x - 2, y: -1 },
+                { x: x + 2, y: -1 },
+              ]),
+            ]),
+          ),
         },
       };
     else if (path === `/experiments/${jobId}/result`) value = state?.['result'];
@@ -161,6 +172,13 @@ test('experiment config, progress, cancellation, completion, replay and reload',
   await expect(page.locator('polyline.tested')).toHaveCSS('fill', 'none');
   await expect(page.locator('polyline.lead')).toHaveCSS('fill', 'none');
   await expect(page.locator('app-scene-viewport canvas')).toHaveCount(0);
+  await expect(page.locator('polygon.vehicle-footprint')).toHaveCount(4);
+  await expect(page.locator('app-scene-viewport rect')).toHaveCount(0);
+  await expect(page.locator('polygon.tested')).toHaveCSS('fill', 'rgba(118, 215, 134, 0.18)');
+  const replayAudit = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(replayAudit.violations).toEqual([]);
   await expect(page.getByRole('tab', { name: 'Camera', exact: true })).toBeDisabled();
   await page.reload();
   await expect(page.getByRole('button', { name: 'Return to experiments' })).toBeVisible();

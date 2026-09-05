@@ -12,10 +12,13 @@ interface FallbackScene {
     readonly kind: TrajectoryKind;
     readonly points: string;
     readonly current: Point2d;
+    readonly footprint: string;
   }[];
   readonly leadTrajectory: string;
   readonly leadOriginalTrajectory: string;
   readonly leadCurrent: Point2d;
+  readonly leadFootprint: string;
+  readonly exactFootprints: boolean;
   readonly markerRadius: number;
   readonly scaleX: number;
   readonly scaleY: number;
@@ -41,25 +44,36 @@ interface FallbackScene {
         }
         @for (trajectory of fallbackScene().trajectories; track trajectory.kind) {
           <polyline [attr.class]="trajectory.kind" [attr.points]="trajectory.points" />
+          @if (trajectory.footprint) {
+            <polygon
+              [attr.class]="'vehicle-footprint ' + trajectory.kind"
+              [attr.points]="trajectory.footprint"
+            />
+          } @else {
+            <rect
+              [attr.class]="trajectory.kind"
+              [attr.x]="trajectory.current.x - fallbackScene().markerRadius * 1.8"
+              [attr.y]="-trajectory.current.y - fallbackScene().markerRadius"
+              [attr.width]="fallbackScene().markerRadius * 3.6"
+              [attr.height]="fallbackScene().markerRadius * 2"
+              [attr.rx]="fallbackScene().markerRadius * 0.35"
+            />
+          }
+        }
+        <polyline class="lead-original" [attr.points]="fallbackScene().leadOriginalTrajectory" />
+        <polyline class="lead" [attr.points]="fallbackScene().leadTrajectory" />
+        @if (fallbackScene().leadFootprint) {
+          <polygon class="vehicle-footprint lead" [attr.points]="fallbackScene().leadFootprint" />
+        } @else {
           <rect
-            [attr.class]="trajectory.kind"
-            [attr.x]="trajectory.current.x - fallbackScene().markerRadius * 1.8"
-            [attr.y]="-trajectory.current.y - fallbackScene().markerRadius"
+            class="lead"
+            [attr.x]="fallbackScene().leadCurrent.x - fallbackScene().markerRadius * 1.8"
+            [attr.y]="-fallbackScene().leadCurrent.y - fallbackScene().markerRadius"
             [attr.width]="fallbackScene().markerRadius * 3.6"
             [attr.height]="fallbackScene().markerRadius * 2"
             [attr.rx]="fallbackScene().markerRadius * 0.35"
           />
         }
-        <polyline class="lead-original" [attr.points]="fallbackScene().leadOriginalTrajectory" />
-        <polyline class="lead" [attr.points]="fallbackScene().leadTrajectory" />
-        <rect
-          class="lead"
-          [attr.x]="fallbackScene().leadCurrent.x - fallbackScene().markerRadius * 1.8"
-          [attr.y]="-fallbackScene().leadCurrent.y - fallbackScene().markerRadius"
-          [attr.width]="fallbackScene().markerRadius * 3.6"
-          [attr.height]="fallbackScene().markerRadius * 2"
-          [attr.rx]="fallbackScene().markerRadius * 0.35"
-        />
       </g>
       <g class="metric-scale" aria-hidden="true">
         <line
@@ -85,7 +99,11 @@ interface FallbackScene {
     <div class="planning-guide">
       <strong>Planner rollout · {{ store.timeSeconds().toFixed(1) }} s</strong>
       <span>Green, yellow, and gray compare ego planners. Pink is the mutated lead vehicle.</span>
-      <span>Markers are schematic; clearance uses recorded vehicle geometry.</span>
+      @if (fallbackScene().exactFootprints) {
+        <span>Vehicle footprints use the recorded dimensions and headings, to scale.</span>
+      } @else {
+        <span>Markers are schematic; this older replay has no vehicle footprints.</span>
+      }
     </div>
   `,
   styles: `
@@ -141,6 +159,18 @@ interface FallbackScene {
     }
     .fallback rect.tested {
       fill: var(--tested);
+    }
+    .vehicle-footprint.tested {
+      fill: rgb(118 215 134 / 18%);
+    }
+    .vehicle-footprint.reference {
+      fill: rgb(231 221 85 / 12%);
+    }
+    .vehicle-footprint.recorded {
+      fill: none;
+    }
+    .vehicle-footprint.lead {
+      fill: rgb(240 155 180 / 18%);
     }
     .fallback .tested {
       stroke: var(--tested);
@@ -216,7 +246,7 @@ interface FallbackScene {
       border: 1px solid var(--divider);
       background: #080d11dd;
       color: #b8c5ce;
-      font-size: 0.6rem;
+      font-size: 0.625rem;
     }
     .legend span {
       display: flex;
@@ -260,7 +290,7 @@ interface FallbackScene {
     }
     .planning-guide span {
       color: #91a2ad;
-      font-size: 0.56rem;
+      font-size: 0.625rem;
     }
     @media (max-width: 760px) {
       .fallback {
@@ -347,6 +377,9 @@ export class SceneViewport {
     const points = (line: readonly Point2d[]): string =>
       line.map((point) => `${point.x},${-point.y}`).join(' ');
     const markerRadius = Math.max(width, height) * 0.0065;
+    const footprints = hypothesis.vehicleFootprints;
+    const footprint = (kind: TrajectoryKind | 'lead'): string =>
+      footprints ? points(footprints[kind][index].map(transform)) : '';
     return {
       viewBox: `${centerX - viewWidth / 2} ${-(centerY + viewHeight / 2)} ${viewWidth} ${viewHeight}`,
       roadCenterlines: roadCenterlines.map(points),
@@ -357,11 +390,14 @@ export class SceneViewport {
           kind,
           points: points(trajectories[kind]),
           current,
+          footprint: footprint(kind),
         };
       }),
       leadTrajectory: points(leadTrajectory),
       leadOriginalTrajectory: points(leadOriginal),
       leadCurrent: currentLead,
+      leadFootprint: footprint('lead'),
+      exactFootprints: !!footprints,
       markerRadius,
       scaleX: centerX - viewWidth / 2 + 2,
       scaleY: -centerY + viewHeight / 2 - 2,

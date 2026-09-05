@@ -5,16 +5,19 @@ from __future__ import annotations
 import hashlib
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
 import duckdb
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 from planmargin import analytics
 from planmargin import evidence_assistant
 from planmargin import evidence_api
+from planmargin import interaction_metrics
 from planmargin import random_search
 
 
@@ -110,6 +113,44 @@ def _collection() -> dict[str, Any]:
             _record("counterfactual", "reference", 1.2),
         ],
     }
+
+
+def test_vehicle_footprints_reproduce_clearance_with_recorded_dimensions_and_yaw(
+    tmp_path: Path,
+) -> None:
+    collection = _collection()
+    collection["records"][2]["trajectory"]["yaw_rad"] = [0.0, math.pi / 4]
+    repository = evidence_api.EvidenceRepository(
+        evidence_api.EvidencePaths.from_root(tmp_path)
+    )
+    run = repository.project_run(collection, "run_test", "Test", "test", "Test")
+    hypothesis = run["hypothesis"]
+    footprints = hypothesis["vehicle_footprints"]
+    evidence_api.RunEvidence.model_validate(run)
+    for index, metric in enumerate(hypothesis["metrics"]):
+        tested = np.array(
+            [[point["x"], point["y"]] for point in footprints["tested"][index]]
+        )
+        lead = np.array(
+            [[point["x"], point["y"]] for point in footprints["lead"][index]]
+        )
+        assert interaction_metrics.signed_oriented_box_separation(
+            tested, lead
+        ) == pytest.approx(metric["signed_separation_meters"], abs=1e-6)
+        assert np.linalg.norm(tested[1] - tested[0]) == pytest.approx(4.8)
+        assert np.linalg.norm(tested[2] - tested[1]) == pytest.approx(2.0)
+    assert footprints["tested"][0] != footprints["tested"][1]
+    assert set(footprints) == {"tested", "reference", "recorded", "lead"}
+    assert all(len(frames) == 2 for frames in footprints.values())
+
+
+def test_vehicle_footprints_reject_invalid_timeline_states() -> None:
+    track = _track(0.0)
+    track["valid"][1] = False
+    with pytest.raises(ValueError, match="aligned valid trace"):
+        evidence_api.EvidenceRepository._vehicle_footprints(
+            track, {"length_m": 4.8, "width_m": 2.0}
+        )
 
 
 @pytest.fixture

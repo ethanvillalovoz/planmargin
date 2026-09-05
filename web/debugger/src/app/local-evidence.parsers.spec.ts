@@ -18,6 +18,39 @@ import {
 } from './local-evidence.test-fixtures';
 
 describe('local evidence response parsers', () => {
+  it('preserves optional recorded footprints and rejects partial or malformed geometry', () => {
+    const corners = [
+      { x: 2, y: 1 },
+      { x: -2, y: 1 },
+      { x: -2, y: -1 },
+      { x: 2, y: -1 },
+    ];
+    const footprints = Object.fromEntries(
+      ['tested', 'reference', 'recorded', 'lead'].map((kind) => [kind, [corners, corners]]),
+    );
+    const payload = {
+      ...API_RUN,
+      hypothesis: { ...API_RUN.hypothesis, vehicle_footprints: footprints },
+    };
+    expect(parseLocalRun(payload).hypotheses[0].vehicleFootprints?.tested[0]).toEqual(corners);
+    expect(parseLocalRun(API_RUN).hypotheses[0].vehicleFootprints).toBeUndefined();
+    for (const invalid of [
+      [corners],
+      [corners.slice(0, 3), corners],
+      [corners.map((p) => ({ ...p, x: NaN })), corners],
+    ]) {
+      expect(() =>
+        parseLocalRun({
+          ...payload,
+          hypothesis: {
+            ...payload.hypothesis,
+            vehicle_footprints: { ...footprints, tested: invalid },
+          },
+        }),
+      ).toThrow();
+    }
+  });
+
   it('maps real aggregate evidence without widening the claim boundary', () => {
     const result = parseCampaign(API_CAMPAIGN, API_METHODS, API_HYPOTHESES, API_CELLS);
 
