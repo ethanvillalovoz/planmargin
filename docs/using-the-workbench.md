@@ -199,3 +199,25 @@ Google's project billing settings. The default offline provider costs nothing.
   stop it first, install dependencies, and relaunch.
 
 Nothing in these steps publishes the app or its data.
+
+## Verify the local sensor layout
+
+After preparing and launching the **full** local sensor workspace, you can run
+the opt-in browser check from `web/debugger`:
+
+```bash
+read -r -s PLANMARGIN_LOCAL_TOKEN
+export PLANMARGIN_LOCAL_TOKEN
+npm run verify:sensors
+unset PLANMARGIN_LOCAL_TOKEN
+```
+
+At the silent prompt, paste the session token from the workbench's local URL
+(the value after `#token=`), then press Enter. This is **not** a Gemini API key.
+The check loads your real local camera, LiDAR, and 3DGS assets at desktop and
+phone widths, checks that overlays do not intersect, and exercises a novel
+viewpoint. It requires the Playwright Chromium installation used by `npm run
+e2e`; install it with `npx playwright install chromium` if missing. It does not
+download a dataset, create a model request, save screenshots, or publish data.
+This is separate from data-free CI and cannot run without the full authorized
+sensor workspace. Passing it is not a complete visual or accessibility audit.
