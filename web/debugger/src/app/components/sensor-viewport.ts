@@ -49,7 +49,12 @@ import { SimulatorStore } from '../simulator.store';
               />
             }
           } @else {
-            <div #splatViewport class="splat-viewport" [attr.aria-label]="splatLabel()"></div>
+            <div
+              #splatViewport
+              class="splat-viewport"
+              role="img"
+              [attr.aria-label]="splatLabel()"
+            ></div>
           }
           <canvas
             #overlay

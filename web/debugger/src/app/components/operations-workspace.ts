@@ -416,7 +416,7 @@ function initialOperationsSection(): OperationsSection {
     .context-inspector > header span,
     .inspector-block > span,
     .root-cause > span {
-      color: #6f7782;
+      color: #576471;
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.08em;
@@ -429,7 +429,7 @@ function initialOperationsSection(): OperationsSection {
       text-transform: capitalize;
     }
     .run-context > small {
-      color: #757e88;
+      color: #576471;
       font-size: 12px;
     }
     .run-state {
@@ -547,7 +547,7 @@ function initialOperationsSection(): OperationsSection {
       font-size: 12px;
     }
     .registry-summary small {
-      color: #727d89;
+      color: #576471;
       font-size: 11px;
     }
     .suite-rail nav {
@@ -585,7 +585,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .suite-rail nav small {
       overflow: hidden;
-      color: #747d87;
+      color: #576471;
       font-size: 11px;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -597,7 +597,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .suite-rail footer span,
     .context-inspector footer strong {
-      color: #6a737f;
+      color: #576471;
       font-size: 11px;
       font-weight: 750;
       text-transform: uppercase;
@@ -605,7 +605,7 @@ function initialOperationsSection(): OperationsSection {
     .suite-rail footer p,
     .context-inspector footer p {
       margin: 5px 0 0;
-      color: #737c86;
+      color: #576471;
       font-size: 11px;
       line-height: 1.45;
     }
@@ -642,7 +642,7 @@ function initialOperationsSection(): OperationsSection {
       border: 0;
       border-radius: 999px;
       background: transparent;
-      color: #68717c;
+      color: #576471;
       font-size: 12px;
       font-weight: 700;
     }
@@ -691,7 +691,7 @@ function initialOperationsSection(): OperationsSection {
     .coverage-intro p {
       max-width: 590px;
       margin: 0;
-      color: #69737e;
+      color: #576471;
       font-size: 12px;
       line-height: 1.55;
     }
@@ -713,7 +713,7 @@ function initialOperationsSection(): OperationsSection {
       letter-spacing: -0.03em;
     }
     .health-kpis span {
-      color: #727b86;
+      color: #576471;
       font-size: 10px;
       text-transform: uppercase;
     }
@@ -761,7 +761,7 @@ function initialOperationsSection(): OperationsSection {
       place-items: center;
       border-radius: 50%;
       background: #f0f3f0;
-      color: #6c7580;
+      color: #576471;
       font-size: 10px;
     }
     .stage-name {
@@ -773,7 +773,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .stage-name small,
     .stage-observed {
-      color: #717a84;
+      color: #576471;
       font-size: 11px;
     }
     .stage-observed {
@@ -823,7 +823,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .attention-list small,
     .issue-copy small {
-      color: #737c87;
+      color: #576471;
       font-size: 10px;
       text-transform: uppercase;
     }
@@ -832,7 +832,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .attention-list b,
     .issue-row > b {
-      color: #9b6819;
+      color: #805414;
       font-size: 10px;
       text-transform: uppercase;
     }
@@ -874,7 +874,7 @@ function initialOperationsSection(): OperationsSection {
     .coverage-table > header {
       min-height: 38px;
       background: #f5f7f4;
-      color: #737c86;
+      color: #576471;
       font-size: 10px;
       font-weight: 750;
       text-transform: uppercase;
@@ -899,7 +899,7 @@ function initialOperationsSection(): OperationsSection {
       font-size: 12px;
     }
     .coverage-table small {
-      color: #727b85;
+      color: #576471;
       font-size: 10px;
       text-transform: capitalize;
     }
@@ -943,7 +943,7 @@ function initialOperationsSection(): OperationsSection {
       font-size: 11px;
     }
     .coverage-gap > b {
-      color: #9b6819;
+      color: #805414;
       font-size: 10px;
       text-transform: uppercase;
     }
@@ -973,7 +973,7 @@ function initialOperationsSection(): OperationsSection {
       border: 0;
       border-radius: 999px;
       background: transparent;
-      color: #66707b;
+      color: #576471;
       font-size: 10px;
       font-weight: 700;
     }
@@ -1017,7 +1017,7 @@ function initialOperationsSection(): OperationsSection {
     }
     .issue-copy p {
       margin: 0;
-      color: #68727e;
+      color: #576471;
       font-size: 11px;
       line-height: 1.4;
     }
@@ -1026,7 +1026,7 @@ function initialOperationsSection(): OperationsSection {
       gap: 3px;
     }
     .issue-owner small {
-      color: #7a838d;
+      color: #576471;
       font-size: 10px;
       text-transform: uppercase;
     }
@@ -1071,7 +1071,7 @@ function initialOperationsSection(): OperationsSection {
     .inspector-block p,
     .release-contract p {
       margin: 0;
-      color: #69727d;
+      color: #576471;
       font-size: 12px;
       line-height: 1.5;
     }
@@ -1094,7 +1094,7 @@ function initialOperationsSection(): OperationsSection {
       border-top: 1px solid #edf0ed;
     }
     .suite-inspector dt {
-      color: #747d87;
+      color: #576471;
       font-size: 10px;
       text-transform: uppercase;
     }
@@ -1135,7 +1135,7 @@ function initialOperationsSection(): OperationsSection {
       font-size: 10px;
     }
     .release-contract > div small {
-      color: #6d7680;
+      color: #576471;
       font-size: 10px;
     }
     .issue-state {
@@ -1151,7 +1151,7 @@ function initialOperationsSection(): OperationsSection {
     .inspector-block > small {
       display: block;
       margin-top: 6px;
-      color: #75808a;
+      color: #576471;
       font-size: 11px;
     }
     .root-cause ol {
@@ -1203,7 +1203,7 @@ function initialOperationsSection(): OperationsSection {
       display: block;
       margin-top: 10px;
       overflow-wrap: anywhere;
-      color: #68798e;
+      color: #576471;
       font-size: 10px;
     }
     .context-inspector > footer {
