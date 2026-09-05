@@ -236,20 +236,16 @@ h1 {
 }
 .investigation-layout {
   display: grid;
-  grid-template-columns: minmax(430px, 1fr) minmax(450px, 1.02fr);
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.35fr);
   gap: 20px;
   align-items: start;
 }
-.campaign-index,
 .investigation-workspace,
 .public-evidence {
   border: 1px solid #dce5df;
   border-radius: 16px;
   background: #fff;
   overflow: hidden;
-}
-.campaign-index > header {
-  padding: 22px 22px 0;
 }
 h2 {
   font-size: 20px;
@@ -260,115 +256,6 @@ h2 {
 h3 {
   font-size: 16px;
   line-height: 1.4;
-}
-.rank-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 18px;
-  border-bottom: 1px solid #e2e9e5;
-  padding-bottom: 12px;
-}
-.rank-tabs button {
-  border: 0;
-  padding: 8px 11px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #5b6863;
-}
-.rank-tabs button.active {
-  color: #0954c9;
-  background: #eaf1ff;
-}
-.queue-controls {
-  padding: 14px 22px 18px;
-}
-.queue-controls p {
-  font-size: 12px;
-  color: #5b6863;
-  line-height: 1.55;
-  margin: 0 0 8px;
-}
-.queue-controls button {
-  border: 0;
-  background: none;
-  padding: 0;
-  color: #0754cd;
-  font-size: 12px;
-}
-.campaign-table {
-  max-height: 660px;
-  overflow: auto;
-}
-.campaign-row {
-  display: grid;
-  grid-template-columns: minmax(160px, 1fr) 110px 78px;
-  gap: 10px;
-  padding: 15px 22px;
-  align-items: center;
-  border-top: 1px solid #e6ece8;
-}
-.campaign-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: #f5f8f6;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #617169;
-  padding-block: 11px;
-}
-.campaign-row.selected {
-  background: #edf3ff;
-  box-shadow: inset 3px 0 #1769ff;
-}
-.case-summary {
-  display: grid;
-  gap: 7px;
-  font-size: 12px;
-}
-.case-summary strong {
-  font-size: 13px;
-}
-.case-summary strong small {
-  display: block;
-  margin-top: 4px;
-  font-weight: 400;
-}
-.case-summary small {
-  color: #536457;
-  font-size: 11px;
-}
-.gap-value {
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 650;
-}
-.gap-value small {
-  display: block;
-  font-size: 10px;
-  color: #536457;
-  font-weight: 400;
-  margin-top: 6px;
-}
-.row-actions {
-  display: grid;
-  gap: 5px;
-}
-.row-actions button {
-  font-size: 11px;
-  padding: 7px 8px;
-}
-.row-actions button + button {
-  border: 0;
-  background: transparent;
-  color: #647267;
-  font-weight: 400;
-}
-.row-actions button[aria-pressed='true'] {
-  color: #0b54bd;
-  background: #e5edfa;
 }
 .proposal-detail {
   padding: 24px;
@@ -521,8 +408,6 @@ dd {
   font-size: 12px;
 }
 .grounded-analysis dl > div,
-.comparison-dock dl > div,
-.cell-summary > div,
 .decision-card dl > div {
   display: flex;
   justify-content: space-between;
@@ -561,10 +446,8 @@ code {
   color: #5a6960;
 }
 .comparison-dock {
-  margin: 18px;
-  border: 1px solid #bed0ea;
-  border-radius: 12px;
-  padding: 16px;
+  margin: 0;
+  padding: 22px;
 }
 .comparison-dock > header {
   display: flex;
@@ -573,180 +456,115 @@ code {
   font-size: 13px;
   margin-bottom: 15px;
 }
-.comparison-dock > div {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-.comparison-dock article > span {
-  font-size: 11px;
-  color: #617169;
-}
-.comparison-dock h3 {
-  margin: 6px 0;
-}
-.comparison-dock article > button {
-  margin-top: 12px;
-  font-size: 12px;
-}
-.investigation-layout.browsing-cells {
-  grid-template-columns: 1fr;
-}
-.browsing-cells .investigation-workspace {
-  display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-}
-.cell-rail {
-  padding: 20px;
-  border-right: 1px solid #dfe7e1;
-}
-.rail-heading h2 {
-  font-size: 16px;
-  margin: 0 0 6px;
-}
-.rail-heading > span,
-.cell-legend {
-  font-size: 11px;
-  color: #617169;
-}
-.cell-legend {
+.inspector-tabs {
   display: flex;
-  gap: 12px;
-  margin: 16px 0;
-}
-.cell-legend i {
-  width: 7px;
-  height: 7px;
-  background: #7696b3;
-  margin-right: 5px;
-}
-.cell-legend i.bayesian {
-  background: #379b80;
-}
-.cell-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 5px;
-}
-.cell-grid button {
-  height: 25px;
-  padding: 0;
-  border-radius: 4px;
-  background: #d9e6f3;
-  font-size: 9px;
-  color: #375647;
-}
-.run-picker {
-  display: block;
-  margin: 20px 0;
-}
-.run-picker select {
-  width: 100%;
-  font-size: 11px;
-}
-.run-matrix summary {
-  cursor: pointer;
-  font-size: 12px;
-  color: #536c5f;
-}
-.cell-grid button.bayesian {
-  background: #cee9df;
-}
-.cell-grid button.active {
-  outline: 2px solid #1769ff;
-  outline-offset: 1px;
-}
-.cell-summary {
-  margin-top: 20px;
-}
-.cell-summary > div {
-  display: block;
-}
-.cell-summary dd {
-  margin-top: 4px;
-}
-.proposal-toolbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 22px;
-}
-.proposal-toolbar h2 {
-  margin-bottom: 5px;
-}
-.proposal-toolbar p {
-  font-size: 12px;
-  color: #647168;
-}
-.toolbar-filters {
-  display: flex;
-  gap: 10px;
-}
-label {
-  font-size: 11px;
-  color: #607169;
-}
-select {
-  display: block;
-  padding: 8px;
-  margin-top: 5px;
-  border: 1px solid #d6e1d9;
-  border-radius: 7px;
-  background: #fff;
-  color: #243b30;
-}
-.gate-funnel {
-  display: flex;
-  justify-content: space-around;
-  gap: 10px;
-  padding: 15px 22px;
-  background: #f3f7f4;
-}
-.gate-funnel strong,
-.gate-funnel span {
-  display: block;
-}
-.gate-funnel strong {
-  font-size: 17px;
-}
-.gate-funnel span {
-  font-size: 10px;
-  color: #65726b;
-  margin-top: 5px;
-}
-.proposal-layout.with-list {
-  display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-}
-.proposal-list {
-  max-height: 750px;
-  overflow: auto;
-  border-right: 1px solid #e4ebe6;
-}
-.proposal-list button {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  width: 100%;
-  border: 0;
-  border-bottom: 1px solid #e4ebe6;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 12px 18px;
   border-radius: 0;
-  padding: 16px;
+  border-bottom: 1px solid #dce5df;
+  background: #fff;
+  scroll-margin-top: 16px;
+}
+.inspector-tabs button {
+  font-size: 13px;
+  padding: 10px 12px;
+}
+.inspector-tabs button[aria-pressed='true'] {
+  color: #124dbd;
+  background: #eaf1ff;
+}
+.comparison-dock h2 {
+  margin: 6px 0 0;
+}
+.comparison-dock header p {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #526258;
+}
+.comparison-instruction,
+.comparison-boundary,
+.comparison-limit {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #526258;
+}
+.comparison-boundary {
+  padding: 12px;
+  background: #f4f7f5;
+  border-radius: 8px;
+}
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+.comparison-table th,
+.comparison-table td {
   text-align: left;
+  vertical-align: top;
+  padding: 14px 10px;
+  border-bottom: 1px solid #e2e9e5;
+  overflow-wrap: anywhere;
+}
+.comparison-table tbody th {
+  color: #526258;
+  font-size: 12px;
+  font-weight: 500;
+}
+.comparison-table thead th {
+  background: #f4f7f5;
+}
+.comparison-table thead strong,
+.comparison-table small {
+  display: block;
+  margin-top: 7px;
+}
+.comparison-table small {
+  font-size: 11px;
+  color: #526258;
+  font-weight: 400;
+}
+.comparison-slot {
+  display: inline-block;
+  border-radius: 5px;
+  padding: 3px 8px;
+  color: #124dbd;
+  background: #e6eeff;
+  font-weight: 700;
+}
+.comparison-actions button,
+.comparison-actions span {
+  display: block;
+  margin-bottom: 9px;
   font-size: 12px;
 }
-.proposal-list button.active {
-  background: #edf3ff;
+.comparison-limit {
+  margin: 16px 0 0;
 }
-.proposal-list small {
-  display: block;
-  margin-top: 5px;
-  font-size: 10px;
-  font-weight: 400;
+.investigation-workspace {
+  min-width: 0;
 }
-.proposal-list b {
-  font-size: 10px;
-  font-weight: 400;
+@media (min-width: 901px) {
+  .investigation-workspace {
+    position: sticky;
+    top: 90px;
+  }
+}
+@media (max-width: 600px) {
+  .comparison-dock {
+    padding: 14px;
+  }
+  .comparison-table th,
+  .comparison-table td {
+    padding: 10px 5px;
+    font-size: 12px;
+  }
+  .inspector-tabs {
+    flex-wrap: nowrap;
+  }
 }
 .public-evidence {
   padding: 26px;
@@ -939,11 +757,6 @@ select {
     grid-template-columns: minmax(340px, 0.85fr) minmax(400px, 1fr);
     gap: 14px;
   }
-  .campaign-row {
-    grid-template-columns: minmax(130px, 1fr) 90px 67px;
-    padding-inline: 15px;
-    gap: 6px;
-  }
   .detail-help {
     max-width: 80px;
   }
@@ -958,9 +771,6 @@ select {
   .investigation-layout {
     grid-template-columns: 1fr;
   }
-  .campaign-table {
-    max-height: 450px;
-  }
   .evidence-commandbar {
     align-items: start;
     gap: 16px;
@@ -970,24 +780,6 @@ select {
   }
   .campaign-outcome strong {
     font-size: 13px;
-  }
-  .browsing-cells .investigation-workspace {
-    grid-template-columns: 1fr;
-  }
-  .cell-rail {
-    border-right: 0;
-    border-bottom: 1px solid #e1e9e3;
-  }
-  .cell-grid {
-    grid-template-columns: repeat(20, 1fr);
-  }
-  .cell-summary {
-    display: flex;
-    justify-content: space-between;
-    gap: 15px;
-  }
-  .proposal-layout.with-list {
-    grid-template-columns: 200px 1fr;
   }
 }
 @media (max-width: 600px) {
@@ -1026,26 +818,8 @@ select {
   .campaign-outcome {
     margin-top: 17px;
   }
-  .campaign-index > header,
   .proposal-detail {
     padding: 18px;
-  }
-  .rank-tabs button {
-    font-size: 11px;
-    padding: 8px;
-  }
-  .campaign-row {
-    grid-template-columns: minmax(0, 1fr) 87px 63px;
-    padding-inline: 12px;
-  }
-  .gap-value {
-    font-size: 16px;
-  }
-  .case-summary strong {
-    font-size: 12px;
-  }
-  .case-summary > span {
-    font-size: 11px;
   }
   .parameter-strip {
     padding: 14px;
@@ -1057,26 +831,9 @@ select {
   .controller-comparison strong {
     font-size: 12px;
   }
-  .comparison-dock > div,
   .public-analysis,
   .public-boundary {
     grid-template-columns: 1fr;
-  }
-  .cell-grid {
-    grid-template-columns: repeat(10, 1fr);
-  }
-  .cell-summary {
-    display: block;
-  }
-  .proposal-layout.with-list {
-    grid-template-columns: 1fr;
-  }
-  .proposal-list {
-    max-height: 250px;
-    border-bottom: 1px solid #e1e9e3;
-  }
-  .proposal-toolbar {
-    display: block;
   }
   .public-kpis {
     grid-template-columns: 1fr 1fr;

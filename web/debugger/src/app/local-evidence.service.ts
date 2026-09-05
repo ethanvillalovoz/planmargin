@@ -101,6 +101,7 @@ export class LocalEvidenceService {
   }
 
   async restoreBrowserSession(): Promise<LocalEvidenceSnapshot | undefined> {
+    const wasConnected = this.connected();
     const generation = ++this.requestGeneration;
     this.state.set('connecting');
     this.error.set(undefined);
@@ -108,7 +109,11 @@ export class LocalEvidenceService {
       return await this.loadSnapshot(generation);
     } catch (error: unknown) {
       if (generation !== this.requestGeneration) throw error;
-      if (error instanceof Error && error.message === 'The local evidence token was rejected') {
+      if (
+        !wasConnected &&
+        error instanceof Error &&
+        (error.message === 'The local evidence token was rejected' || error.name === 'TypeError')
+      ) {
         this.state.set('disconnected');
         this.error.set(undefined);
         return undefined;

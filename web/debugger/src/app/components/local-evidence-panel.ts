@@ -46,9 +46,9 @@ import { SimulatorStore } from '../simulator.store';
           <form (submit)="connect($event)">
             <label for="local-token">Manual session recovery</label>
             <p>
-              <code>uv run --frozen planmargin-workbench</code> normally connects automatically.
-              Paste the launcher's ephemeral session token here only if this browser was opened
-              separately.
+              <code>uv run --frozen planmargin-workbench --planning-only</code> normally connects
+              automatically. Paste the launcher's ephemeral session token here only if this browser
+              was opened separately.
             </p>
             <input
               id="local-token"
@@ -85,34 +85,37 @@ import { SimulatorStore } from '../simulator.store';
           <section class="session-summary" aria-labelledby="session-ready-title">
             <div>
               <p>Authenticated loopback session</p>
-              <h2 id="session-ready-title">The engineering workspace is ready.</h2>
+              <h2 id="session-ready-title">Your local runner is connected.</h2>
               <span>
-                Use Workbench for the retained planning replay, Sensors for recorded perception, and
-                Evidence for the sealed counterfactual campaign.
+                Open Investigate → New experiment to check planning inputs and run a behavior test.
+                Test health separates live job diagnostics from saved campaign checks.
+                @if (!local.campaignAvailable()) {
+                  Sensor lab and the private campaign require the separate full-workspace setup.
+                }
               </span>
             </div>
             <dl>
-              <div>
-                <dt>Campaign evidence</dt>
-                <dd>{{ local.campaign().proposals }} proposals</dd>
-              </div>
-              <div>
-                <dt>Matched experiment cells</dt>
-                <dd>{{ local.cells().length }} verified</dd>
-              </div>
-              <div>
-                <dt>Planning replay</dt>
-                <dd>{{ local.runs().length }} available</dd>
-              </div>
+              @if (local.campaignAvailable()) {
+                <div>
+                  <dt>Campaign evidence</dt>
+                  <dd>{{ local.campaign().proposals }} proposals</dd>
+                </div>
+                <div>
+                  <dt>Matched experiment cells</dt>
+                  <dd>{{ local.cells().length }} verified</dd>
+                </div>
+                <div>
+                  <dt>Planning replay</dt>
+                  <dd>{{ local.runs().length }} available</dd>
+                </div>
+              }
               <div>
                 <dt>Data handling</dt>
                 <dd>Local only · no uploads</dd>
               </div>
             </dl>
             <div class="session-actions">
-              <button class="primary" type="button" (click)="close.emit()">
-                Continue to workbench
-              </button>
+              <button class="primary" type="button" (click)="close.emit()">Continue</button>
             </div>
           </section>
         }

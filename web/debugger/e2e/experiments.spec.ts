@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { API_RUN } from '../src/app/local-evidence.test-fixtures';
+import { readFile } from 'node:fs/promises';
 
 // Data-free UI contract tests. Real Waymax execution is verified separately;
 // these fixtures never enter product evidence or the published application.
@@ -33,13 +34,26 @@ test('experiment config, progress, cancellation, completion, replay and reload',
         setup_command: 'uv run --frozen planmargin-prepare-planning --accept-waymo-terms',
         boundary: 'Exploratory local runs, separate from the frozen campaign.',
       };
+    else if (path === '/experiments/health')
+      value = {
+        status: 'healthy',
+        total_jobs: state ? 1 : 0,
+        active_incidents: 0,
+        resolved_incidents: 0,
+        deadline_measured_jobs: 0,
+        on_time_completed_jobs: 0,
+        unmeasured_jobs: state ? 1 : 0,
+        incidents: [],
+      };
     else if (path === '/experiments' && req.method() === 'POST') {
       createCount++;
-      const { request_id, ...config } = req.postDataJSON();
+      const { request_id, completion_deadline_seconds, rerun_of, ...config } = req.postDataJSON();
       expect(request_id).toMatch(/^[0-9a-f-]{36}$/);
       state = {
         job_id: jobId,
         config,
+        completion_deadline_seconds,
+        rerun_of,
         status: 'running',
         stage: 'loading',
         stage_label: 'Loading the selected WOMD scenario',
@@ -105,7 +119,7 @@ test('experiment config, progress, cancellation, completion, replay and reload',
     });
   });
   await page.goto('/?view=experiments');
-  await expect(page.getByRole('heading', { name: 'Test a scenario change' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Run a behavior test' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run experiment', exact: true })).toBeEnabled();
   // A relaunch URL can be a same-document fragment navigation, not a page load.
   await page.goto('/?view=experiments#token=relaunched-local-session-123');
@@ -167,11 +181,16 @@ test('experiment config, progress, cancellation, completion, replay and reload',
   await expect(
     page.getByRole('heading', { name: 'Not a qualifying regression', exact: true }),
   ).toBeVisible();
-  await page.getByText('Finding gates and integrity', { exact: true }).click();
+  await page.getByText('Test gates and integrity', { exact: true }).click();
   await expect(page.getByRole('region', { name: 'Experiment result' })).toContainText(
     'tested planner fails',
   );
   await expect(page.getByRole('region', { name: 'Experiment result' })).toContainText('Not passed');
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export result JSON' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(`planmargin-experiment-${jobId.slice(0, 8)}.json`);
+  expect(JSON.parse(await readFile((await download.path())!, 'utf8'))).toEqual(state!['result']);
   const audit = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .analyze();
@@ -199,7 +218,7 @@ test('experiment config, progress, cancellation, completion, replay and reload',
   await page.reload();
   await expect(page.getByRole('button', { name: 'Return to experiments' })).toBeVisible();
   await page.getByRole('button', { name: 'Return to experiments' }).click();
-  await expect(page.getByRole('heading', { name: 'Test a scenario change' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Run a behavior test' })).toBeVisible();
   await page.getByRole('button', { name: 'Sensor lab', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Sensor lab is not loaded in planning-only mode' }),

@@ -213,6 +213,18 @@ import { SensorViewport } from './sensor-viewport';
                 <button type="button" class="review-records" (click)="jumpToMinimum()">
                   Inspect minimum clearance
                 </button>
+                @if (debuggerStore.selectedHypothesis().behaviorEvents; as events) {
+                  <p class="field-label">Observed behavior events</p>
+                  @for (event of events; track event.step) {
+                    <button
+                      type="button"
+                      class="review-records"
+                      (click)="debuggerStore.seek(event.step)"
+                    >
+                      {{ event.timeSeconds.toFixed(1) }} s · {{ event.label }}
+                    </button>
+                  }
+                }
                 <label class="field-label">Recorded mutation</label>
                 <div class="select-control">
                   <span>{{ mutationLabel() }}</span
@@ -225,8 +237,10 @@ import { SensorViewport } from './sensor-viewport';
                   >
                 </div>
                 <p class="evidence-boundary">
-                  Tested and reference show the changed scenario. Original tested shows the same
-                  tested planner before the change.
+                  {{
+                    debuggerStore.selectedHypothesis().behaviorBoundary ??
+                      'Tested and reference show the changed scenario. Original tested shows the same tested planner before the change.'
+                  }}
                 </p>
                 <dl class="live-metrics" aria-label="Current planning metrics">
                   <div>
@@ -235,8 +249,14 @@ import { SensorViewport } from './sensor-viewport';
                   </div>
                   <div>
                     <dt>Separation</dt>
-                    <dd [class.risk]="debuggerStore.metricSample().signedSeparationMeters <= 0">
-                      {{ debuggerStore.metricSample().signedSeparationMeters.toFixed(2) }} m
+                    <dd
+                      [class.risk]="(debuggerStore.metricSample().signedSeparationMeters ?? 1) <= 0"
+                    >
+                      {{
+                        debuggerStore.metricSample().signedSeparationMeters === null
+                          ? '—'
+                          : debuggerStore.metricSample().signedSeparationMeters?.toFixed(2) + ' m'
+                      }}
                     </dd>
                   </div>
                   <div>
@@ -244,15 +264,32 @@ import { SensorViewport } from './sensor-viewport';
                     <dd>{{ currentTtc() }}</dd>
                   </div>
                 </dl>
-                <div class="controller-outcome">
-                  <span
-                    >Tested {{ debuggerStore.selectedHypothesis().controllerOutcome.tested }}</span
-                  >
-                  <span
-                    >Reference
-                    {{ debuggerStore.selectedHypothesis().controllerOutcome.reference }}</span
-                  >
-                </div>
+                @if (debuggerStore.metricSample().signedSeparationMeters === null) {
+                  <p class="evidence-boundary">
+                    Recorded lead not observed at this frame. No separation or TTC measurement is
+                    available.
+                  </p>
+                }
+                @if (debuggerStore.selectedHypothesis().behaviorDecision) {
+                  <p class="evidence-boundary">
+                    Validity alone does not require progress. Inspect the behavior gates and
+                    recovered distance in the experiment result.
+                  </p>
+                } @else {
+                  <div class="controller-outcome">
+                    <span
+                      >{{ debuggerStore.selectedHypothesis().trajectoryLabels?.tested ?? 'Tested' }}
+                      {{ debuggerStore.selectedHypothesis().controllerOutcome.tested }}</span
+                    >
+                    <span
+                      >{{
+                        debuggerStore.selectedHypothesis().trajectoryLabels?.reference ??
+                          'Reference'
+                      }}
+                      {{ debuggerStore.selectedHypothesis().controllerOutcome.reference }}</span
+                    >
+                  </div>
+                }
               } @else if (simulator.sensorMode() === 'camera') {
                 <p class="evidence-boundary">
                   WOD Perception segment · native frame-specific labels
@@ -1194,7 +1231,7 @@ import { SensorViewport } from './sensor-viewport';
         position: sticky;
         z-index: 1;
         top: 0;
-        background: rgb(5 13 20 / 98%);
+        background: #050d14;
       }
       .scene-stage:not(.spatial-stage) .scenario-controls:not(.collapsed) + .view-controls {
         opacity: 0;
@@ -1260,11 +1297,15 @@ export class SimulatorWorkspace {
   }
 
   protected isCandidateRegression(): boolean {
+    if (this.debuggerStore.selectedHypothesis().behaviorDecision) return false;
     const outcome = this.debuggerStore.selectedHypothesis().controllerOutcome;
     return outcome.tested === 'fails' && outcome.reference === 'succeeds';
   }
 
   protected workbenchDecisionTitle(): string {
+    const behavior = this.debuggerStore.selectedHypothesis().behaviorDecision;
+    if (behavior)
+      return behavior === 'checks_passed' ? 'Behavior checks passed' : 'Behavior checks failed';
     const outcome = this.debuggerStore.selectedHypothesis().controllerOutcome;
     if (outcome.reference === 'fails') return 'Reference planner also fails';
     return outcome.tested === 'fails'
@@ -1273,6 +1314,8 @@ export class SimulatorWorkspace {
   }
 
   protected workbenchDecisionSummary(): string {
+    if (this.debuggerStore.selectedHypothesis().behaviorDecision)
+      return 'Compare primary baseline, unprotected command loss, and protection. Jump to observed events in the planning controls.';
     const outcome = this.debuggerStore.selectedHypothesis().controllerOutcome;
     if (outcome.reference === 'fails') {
       return 'The control baseline fails under the same change, so this case cannot isolate the tested planner.';
@@ -1310,7 +1353,10 @@ export class SimulatorWorkspace {
     const metrics = this.debuggerStore.selectedHypothesis().metrics;
     const index = metrics.reduce(
       (best, item, current) =>
-        item.signedSeparationMeters < metrics[best].signedSeparationMeters ? current : best,
+        (item.signedSeparationMeters ?? Infinity) <
+        (metrics[best].signedSeparationMeters ?? Infinity)
+          ? current
+          : best,
       0,
     );
     this.simulator.showPlanningFrame(index);

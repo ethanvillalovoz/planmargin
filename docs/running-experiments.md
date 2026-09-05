@@ -1,8 +1,10 @@
-# Run a new planning experiment
+# Run a new behavior test
 
 The experiment runner changes a real recorded lead vehicle's braking timing
 and speed, executes tested and reference Waymax IDM controller configurations, and saves
-an exact replay. It is a local tool, not a hosted simulation service.
+an exact replay. Two additional plans exercise command-loss protection and
+deterministic recovery on unchanged recorded traffic. It is a local tool,
+not a hosted simulation service.
 
 You do **not** need Gemini, a sensor reconstruction, a GPU, or the complete
 research campaign to use it. You do need an authorized Waymo Open Dataset
@@ -56,14 +58,14 @@ the terminal running. The UI is `http://127.0.0.1:4200`; the API binds only to
 
 1. Keep **Scenario 1**, **+0.0 seconds**, and **0.90** speed.
 2. Click **Run experiment**. Stage labels and elapsed times come from the worker.
-3. Read the outcome and expand **Finding gates and integrity**.
+3. Read the outcome and expand **Test gates and integrity**.
 4. Click **Open this experiment replay**, then **Inspect minimum clearance**.
    Play or step through the trajectories. The original tested trajectory is the
    same tested controller **before** the change, not a third traffic participant.
    Vehicle footprints use the recorded dimensions and headings at each step,
    in the same world coordinates as the clearance metric. Older imported
    records without footprint geometry retain explicitly labeled schematic markers.
-5. Return to experiments. Export result JSON or reuse the configuration.
+5. Return to experiments. Export result JSON or **Prepare linked rerun**.
 
 Changing a control does not alter an existing record. Each submission creates a
 new job. History survives a server restart. A lost HTTP response can be retried
@@ -118,7 +120,7 @@ remain separate from the frozen campaign; a new experiment cannot rewrite its
 results or promotion decisions.
 
 The result panel identifies its saved run and warns when the current draft
-differs. **Use this configuration again** fills the form; only **Run experiment**
+differs. **Prepare linked rerun** fills the form; only **Run experiment**
 executes it. Draft edits survive navigation within the running app, but not a
 full browser reload. Run-history selection and exact-replay identity are
 restored from the URL and reverified locally.
@@ -129,6 +131,70 @@ the recorded route. The workflow validates the original case, validates the
 mutation, executes each controller twice, and checks outcomes and identical
 trajectory hashes. An accepted change produces eight 80-step planner rollouts
 (original/changed × tested/reference × two repetitions), plus map-validity work.
+
+## Command faults and recovery
+
+Choose **Command loss · fallback protection** or **Command loss · recovery
+handoff** in the test-plan selector. Both reuse the existing qualification
+protocol, not a second approximate implementation:
+
+- At 2.0 simulated seconds, the primary command stream is lost. The unprotected
+  policy holds its last commanded pose; protection switches to conservative IDM.
+- In recovery mode only, a deterministic test signal at 3.0 seconds resumes
+  the protected policy's primary IDM. There is no human operator or LLM in this loop.
+- The baseline, unprotected and protected policies each run twice: **six
+  physical rollouts**, 80 steps each. The replay's two original roles share the
+  single measured no-fault baseline; they are not extra executions.
+- Results include the existing progress, validity, exact transition and
+  repeatability gates. **Behavior checks passed** requires all named gates;
+  completing the worker alone is insufficient.
+
+Open the exact replay and click an **Observed behavior event** to seek to its
+measured step. Labels distinguish **Unprotected**, **Protected**, **Primary
+baseline**, and unchanged **Recorded lead**. The observed event times come from
+the worker trace; a missing transition is not replaced by an expected event.
+
+If the recorded lead leaves the observation timeline, its marker disappears and
+separation/TTC become unavailable for those frames. The ego-policy traces continue;
+the workbench neither freezes nor interpolates an unobserved traffic actor.
+
+CLI equivalents (stop the workbench supervisor first):
+
+```bash
+uv run --frozen planmargin-run-experiment \
+  --test-plan command_dropout --selection-order 1 --onset 0 --speed 1
+uv run --frozen planmargin-run-experiment \
+  --test-plan assistance_handoff --selection-order 1 --onset 0 --speed 1
+```
+
+Fault plans require unchanged traffic (`--onset 0 --speed 1`) and fixed
+controllers. They do not use the lead-mutation empirical-support score and do
+not claim to discover realistic traffic regressions.
+
+## Live health, deadlines, and traceable reruns
+
+**Test health → Live local runs** reads the authenticated supervisor's current
+history. The separate **Saved campaign** view remains immutable.
+
+Every new job declares a **10–900 second completion deadline** (default 120).
+This measures local execution time, including loading and JAX compilation—not
+simulated driving time. A late job is flagged and continues so its result can
+be inspected. The independent 900-second hard limit still terminates the worker.
+Older jobs with no declared deadline remain unmeasured; no objective is assigned
+retroactively. The denominator excludes running and cancelled jobs.
+
+Diagnostics distinguish failed execution, late completion, and failed behavior
+checks. A lead-braking result of **not a qualifying regression** is not an
+infrastructure failure. Select **Inspect run** for its stage and recovery action,
+then **Prepare linked rerun**. This fills the original configuration without
+executing it; click **Run experiment** to start the new job. You may declare a
+different deadline, but the old miss stays visible. Changing the scenario or
+policy creates a separate investigation, not a resolution of the old one.
+
+A successful, on-time, same-configuration linked rerun resolves its ancestor
+diagnostics. Failed behavior gates cannot resolve an incident. Original failed
+records remain in history with the resolving run's ID. This is local test
+operations, not a rolling production SLO, fleet dashboard, or reliability estimate.
 
 | UI result | What it means | What to do |
 | --- | --- | --- |
@@ -192,8 +258,8 @@ are refused; archive completed folders outside the workspace if needed. Never
 move an active job. Closing the server marks its active job interrupted.
 
 Results are not added to the frozen 3,200-proposal campaign, its denominators,
-or the saved Test health report. The **View live local experiments** action in
-Test health opens this separate lifecycle view. Gemini's **campaign guide**
+or the saved Test health report. **Live local runs** reflects this separate
+lifecycle. Gemini's **campaign guide**
 explains the saved public aggregates, not these new private experiment results.
 
 API requests require the local session; state-changing browser requests also

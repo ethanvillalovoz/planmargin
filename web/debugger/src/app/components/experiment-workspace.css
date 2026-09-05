@@ -43,6 +43,7 @@ p {
   color: #53605e;
 }
 .experiment-grid {
+  margin-bottom: 24px;
   display: grid;
   grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1.4fr);
   gap: 24px;

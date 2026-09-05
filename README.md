@@ -1,58 +1,69 @@
 # PlanMargin
 
-**Change a driving scenario. Test two planners. Inspect exactly what happened.**
+**Stress-test a driving planner. Reproduce what happened.**
 
-<!-- prettier-ignore -->
-[![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB) ![Node 24](https://img.shields.io/badge/Node-24-5FA04E) [![License](https://img.shields.io/badge/Code-Apache--2.0-blue.svg)](LICENSE)
+An independent, local workbench for stress-testing driving planners on real
+Waymo Open Motion Dataset scenarios—from a controlled change or command fault to
+an exact replay, a traceable diagnosis, and a verified rerun.
 
-PlanMargin is a local **counterfactual planner-testing workbench**. It takes a
-recorded Waymo Open Motion Dataset scenario, changes the lead vehicle's braking
-timing and speed, then compares a tested controller with a conservative reference.
+[![CI](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml/badge.svg)](https://github.com/ethanvillalovoz/planmargin/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/Code-Apache--2.0-blue.svg)](LICENSE)
 
-The question is specific: **can a small, realistic change make the tested
-planner fail while the reference still succeeds?** You get the result,
-the decision gates, and the exact trajectories—not just a dashboard of scores.
-
+[Try it locally](#try-it-locally) ·
+[Reproduce a real case](docs/case-study-close-clearance.md) ·
 [Run an experiment](docs/running-experiments.md) ·
-[Follow a real case study](docs/case-study-close-clearance.md) ·
 [Workbench guide](docs/using-the-workbench.md) ·
 [Contribute](CONTRIBUTING.md)
 
-## The workflow
+[![PlanMargin: choose a real scenario and run a command-loss recovery test, with a fixed protocol and a declared completion deadline.](docs/assets/planmargin-new-experiment.png)](docs/running-experiments.md)
 
-1. **Configure** a lead-vehicle change on one of ten selected real scenarios.
-2. **Run** both controllers on the original and changed scene, twice each.
-   Follow actual execution stages, cancel a run, or return to its saved history.
-3. **Understand the decision.** Compare before-and-after clearance, planner
-   outcomes, physical validity, repeatability, and recorded-behavior support.
-4. **Inspect the exact replay.** Jump to minimum clearance, play or step through
-   the trajectory, refresh the same run, and export its verified result.
+*Actual first-run screen after preparing a clean local workspace. Configure,
+execute, inspect, and replay a test in one place. No fabricated result or
+licensed scene content is shown in this capture.*
 
-For example, [one reproduced change](docs/case-study-close-clearance.md) narrowed
-the tested controller's minimum signed clearance from **0.295 m to 0.032 m**;
-the reference retained **4.797 m**. Both controllers still succeeded, so
-PlanMargin explicitly reports **not a qualifying regression**. The case study
-includes the configuration, metrics, provenance, and reproduction commands.
+## What happens when a scenario changes?
 
-The runner supports one lead-braking mutation family, a configurable tested
-Waymax IDM controller, and a fixed conservative reference. Start with the defaults
-or [supply your own speed, spacing, and headway](docs/running-experiments.md#try-your-own-controller-configuration).
-It is not a general-purpose planner
-plugin platform, the Waymo Driver, or a vehicle-safety certification system.
+A planner can finish its route and still leave very little room for error.
+PlanMargin helps you investigate that difference: change the lead vehicle's
+braking, run a tested controller and a conservative reference, then inspect the
+outcome and the exact trajectories that produced it.
 
-## Quick start
+1. **Choose a test.** Lead braking, command-loss protection, or deterministic
+   recovery handoff. Select a recorded scenario and declare a completion deadline.
+2. **Run it locally.** Follow real worker stages, cancel, or return later. Each
+   policy runs twice to check exact trajectory repeatability.
+3. **Diagnose the outcome.** Separate execution failure from a behavior-test
+   failure. Inspect the failed gate, timing, clearance, or recovered progress.
+4. **Replay and reproduce.** Jump to clearance or fault/recovery events, download
+   the verified JSON, and prepare a linked rerun. Resolution never erases failure history.
 
-Choose the amount of setup you need:
-
-| Goal | Data required | Start here |
+| Test plan | Question it answers | What runs |
 | --- | --- | --- |
-| Browse the measured research results | None; aggregate records are included | Public application below |
-| Execute a new planning experiment | Authorized WOMD access and ten validated scenarios | Planning-only setup below |
-| Reproduce the full campaign, sensors, and model studies | Larger licensed local workspace | [Full reproduction runbook](docs/reproducing-the-workspace.md) |
+| Lead braking | Does a bounded traffic change expose a failure the reference avoids? | Original/changed × tested/reference × two repetitions |
+| Command-loss protection | Does the fallback preserve valid motion after primary-command loss? | Baseline, unprotected, protected × two repetitions |
+| Recovery handoff | Does the protected controller resume primary operation at the expected step? | Baseline, unprotected, protected with a scripted recovery signal × two repetitions |
 
-### Public application — no dataset account needed
+**Test health** has separate **Live local runs** and **Saved campaign** views.
+Live diagnostics include worker failures, missed declared deadlines, failed
+behavior gates, and explicit rerun resolution—not fabricated fleet telemetry.
 
-Requires Node 24.15/npm 11. With `nvm` installed:
+### A real case: less room, but no qualifying failure
+
+With a **+0.2 s braking shift** and **0.879× lead speed**, the tested controller's
+minimum signed clearance fell from **29.5 cm to 3.2 cm**. The reference retained
+**4.80 m**. Both controllers still succeeded.
+
+PlanMargin reports **not a qualifying regression**: proximity alone does not
+establish a failure that the reference avoids. The same run was reproduced in
+a separate checkout on the same Mac, with matching trajectory hashes and outcomes.
+
+[See the configuration, gates, and reproduction commands →](docs/case-study-close-clearance.md)
+
+## Try it locally
+
+### Explore the included results — no dataset account required
+
+Requires **Node 24.15 / npm 11**. With `nvm` installed:
 
 ```bash
 git clone https://github.com/ethanvillalovoz/planmargin.git
@@ -64,109 +75,127 @@ npm ci
 npm start
 ```
 
-Open [localhost:4200](http://127.0.0.1:4200). Aggregate evidence works immediately.
-The app identifies unavailable private capabilities; it does not invent camera
-frames or substitute synthetic scenarios.
-There is intentionally no hosted dashboard in this release.
+Open [localhost:4200](http://127.0.0.1:4200). Start with **Test health → Triage**
+to inspect a held decision, or **Models** to compare a study with its baseline.
+The included results are real public aggregates. Running new experiments and
+viewing scene replays requires your own authorized local dataset workspace.
 
-### Planning-only — execute real experiments
+### Run your own scenario change
 
-Also requires Python 3.11, [uv](https://docs.astral.sh/uv/), a C++20 compiler,
-the Google Cloud CLI, and an account authorized for the Waymo Open Dataset.
-From the repository root, after the frontend installation above:
+The planning workflow needs **Python 3.11, uv, a C++20 compiler, Google Cloud CLI,
+and authorized Waymo Open Dataset access**. No GPU, Gemini key, or paid cloud
+resource is required.
+
+<details>
+<summary><strong>Planning setup and first experiment</strong></summary>
+
+Install the frontend above, then stop its `npm start` process: the combined
+workbench also uses port 4200. From the repository root:
 
 ```bash
 uv sync --frozen
 gcloud auth login
 gcloud auth application-default login
 ./scripts/verify_womd_access.sh
+```
+
+Review [the dataset terms](https://waymo.com/open/terms/) and obtain access
+before using the acceptance flag:
+
+```bash
 uv run --frozen planmargin-prepare-planning --accept-waymo-terms
 uv run --frozen planmargin-workbench --planning-only
 ```
 
-Review [the dataset terms](https://waymo.com/open/terms/) and obtain access
-**before** accepting the terms flag. Stop the frontend-only `npm start` process
-before launching the workbench; both use port 4200.
-
 The launcher opens an authenticated local session. Choose **Scenario 1**, keep
-**+0.0 s / 0.90×**, and click **Run experiment**. No GPU, Gemini key, paid cloud
-resource, or sensor reconstruction is needed. The Python lock includes research
-dependencies; planning-only mode reduces data preparation, not installation size.
+**+0.0 s / 0.90×**, and click **Run experiment**. Keep the launcher terminal open.
+Planning-only mode reduces data preparation, not the Python dependency installation.
 
-An empirical-support model is optional for execution, but required to qualify
-a regression. Prepare it with:
+To evaluate the recorded-behavior support gate, also prepare its empirical model:
 
 ```bash
 uv run --frozen planmargin-build-empirical-support
 ```
 
-This scans 16 specified real WOMD shards and resumes interrupted preparation.
-Without it, the support gate is explicitly unavailable. See the
-[experiment guide](docs/running-experiments.md) for setup, CLI execution,
-resource limits, rejected changes, and recovery.
+This resumable command scans 16 prescribed WOMD shards. Without it, simulation
+can run, but realism qualification remains explicitly unavailable.
 
-## What else is in the workbench?
+[Detailed setup, CLI, resource limits, and recovery](docs/running-experiments.md) ·
+[Full campaign and sensor reproduction](docs/reproducing-the-workspace.md)
 
-| Surface | Engineering task | Boundary |
-| --- | --- | --- |
-| Investigate | Rank recorded changes, inspect gates, compare attempts, open retained replays | Frozen campaign and new local experiments remain separate |
-| Test health | Inspect execution integrity, versioned coverage, and diagnostic paths | Saved test report; links to the live local job history |
-| Sensor lab | Inspect synchronized camera boxes, LiDAR, and three SHARP 3DGS reconstructions | Separate WOD Perception segment, not the planning scene |
-| Models | Select a study, compare it with its baseline, expand gates, and open source reports or reproduction materials | Research models are not silently used as planners |
-| Ask PlanMargin | Retrieve verified campaign facts; optionally explain them with Gemini | Bounded evidence guide, not an autonomous agent or access to new private jobs |
+</details>
 
-The [workbench guide](docs/using-the-workbench.md) explains each surface. The
-[research overview](docs/research-evidence.md) preserves the complete measured
-results, model comparisons, architecture, and explicit no-go decisions.
+## Explore the workbench
 
-The original campaign evaluated **3,200 proposals across ten recorded scenes**
-and found **zero qualifying regressions**. Search validity improved under the
-tested Bayesian method; failure-discovery superiority was not demonstrated.
-Interactive runs do not retroactively change that experiment.
+| Your question | Where to go |
+| --- | --- |
+| Which change deserves a closer look? | **Investigate** — rank changes, compare attempts, and open retained proposal replays |
+| What did the planner actually do? | **Replay** — play the selected trajectories and inspect the closest approach |
+| Did the tests execute correctly? | **Test health** — inspect saved integrity checks, versioned coverage, and triage paths; follow live local jobs separately |
+| What do the sensors show? | **Sensor lab** — camera annotations, LiDAR, and three SHARP 3D Gaussian reconstructions from a separate Perception segment |
+| Is a model ready to promote? | **Models** — six studies with baselines, qualification gates, source reports, and reproduction materials |
+| What does the campaign evidence mean? | **Ask PlanMargin** — verified campaign facts with optional Gemini explanations |
 
-## How it works
+### Compare a model with its evidence
 
-```text
-Real WOMD scenario + bounded change
-  → isolated, cancellable Waymax worker
-  → original and changed × tested and reference × repeated execution
-  → C++ interaction metrics + independent finding gates
-  → hash-sealed local result and exact trajectory collection
-  → authenticated FastAPI → Angular investigation and replay
-```
+[![Models: a selectable trajectory-prediction study with baseline error comparison, qualification gates, and source and reproduction links.](docs/assets/planmargin-models.png)](docs/research-evidence.md)
 
-The wider research pipeline includes Beam/Parquet/DuckDB analytics, JAX and
-PyTorch prediction models, and separately measured ONNX/TensorRT inference.
-See [architecture and implementation responsibilities](docs/research-evidence.md#system-architecture).
+*Actual public Models screen. Each study keeps its measurements and promotion
+decision together. These research models do not silently replace the planning controller.*
 
-## Data, privacy, and limitations
+<details>
+<summary><strong>Inspect the saved campaign's test health</strong></summary>
 
-- **Real data stays local.** Public code and aggregate results are included;
-  licensed scenarios, trajectories, camera frames, and reconstructions are not.
-  Preparation requires your own authorized access and may need network access
-  again when a source scenario is loaded.
-- **Bounded execution.** One worker per workspace, a 15-minute per-run limit,
-  200 retained jobs, strict parameter validation, and explicit failure/cancel
-  states. Results survive server restarts. This is a single-user local tool.
-- **Verified does not mean safe.** Hashes verify integrity, not authorship or
-  correctness by themselves. Physical, support, determinism, and planner
-  outcome gates are shown separately.
-- **Gemini is optional.** It requires your key and explicit free-tier
-  confirmation. Only public aggregate facts are sent; hosted output is
-  validated and fallback is labeled. It does not inspect new private jobs.
-  See [assistant setup and scope](docs/evidence-assistant.md).
-- **Research boundaries remain visible.** Some model and RL hypotheses failed
-  qualification. Historical synthetic RL qualification is labeled as such;
-  no synthetic scenario substitutes for the interactive real-data workflow.
+[![Saved campaign checks, coverage, and held engineering decisions.](docs/assets/planmargin-test-health.png)](docs/using-the-workbench.md)
 
-No setup command hosts the application or publishes licensed data. See
-[data handling](data/README.md), [security](SECURITY.md), and
-[known dependency exceptions](docs/dependency-security.md).
+This screen uses real public aggregate reports included in the repo. New
+experiment diagnostics appear separately under **Live local runs**.
 
-## Development and verification
+</details>
 
-macOS Apple silicon is exercised locally; Ubuntu x86-64 is covered by CI.
-Windows/WSL and other browser engines are not verified targets.
+## Under the hood
+
+| Layer | Implementation |
+| --- | --- |
+| Scenario execution | Python / JAX / Waymax; isolated, cancellable worker; original and changed scenes × tested and reference controllers × repeated execution |
+| Metrics and evidence | C++20 interaction metrics, independent finding gates, and hash-sealed result/replay records |
+| Data and test coverage | Apache Beam, Parquet, and DuckDB/SQL analytics over the recorded campaign |
+| Local workbench | Authenticated FastAPI service and Angular investigation, comparison, and replay UI |
+| Supporting research | PyTorch prediction, ONNX/TensorRT measurements, and a separate C++17 inference benchmark |
+
+[Architecture and component responsibilities](docs/research-evidence.md#system-architecture) ·
+[Research results](docs/research-evidence.md) ·
+[Verification record](docs/product-completion.md)
+
+## Scope and evidence
+
+- **A specific testing problem.** Ten selected lead-braking scenarios,
+  configurable tested Waymax IDM, and a fixed conservative reference—not
+  arbitrary planner plugins or the production Waymo Driver.
+- **Real results, including negative ones.** The frozen campaign evaluated
+  3,200 proposals and found zero qualifying regressions. Bayesian search improved
+  valid-proposal yield; superior failure discovery was not demonstrated.
+  New local experiments do not rewrite that campaign.
+- **Local data, public aggregates.** Licensed scenes, trajectories, camera
+  frames, and reconstructions stay out of Git. The screenshots above show only
+  the public application. There is intentionally no hosted dashboard in this release
+  and no automatic publishing.
+- **Separate research surfaces.** The three SHARP assets are independent
+  single-image reconstructions, not a fused dynamic world. Some model/RL
+  hypotheses failed qualification; historical synthetic RL evidence is labeled.
+- **Optional, bounded Gemini.** Your key and free-tier confirmation are required.
+  Only allowlisted public campaign aggregates are sent. Fallback is labeled;
+  the assistant is not an autonomous agent over private experiment jobs.
+
+[Data handling](data/README.md) · [Security](SECURITY.md) ·
+[Dependency exceptions](docs/dependency-security.md) ·
+[Assistant setup](docs/evidence-assistant.md)
+
+## Develop and contribute
+
+The documented workflow has been exercised on macOS Apple silicon; CI covers
+data-free checks on Ubuntu x86-64. Windows/WSL and other browser engines are
+not verified targets. Stop the dev server before replacing dependencies with `npm ci`.
 
 ```bash
 uv run --frozen ruff check .
@@ -177,27 +206,20 @@ npm run check
 npm run e2e
 ```
 
-Tests cover numerical parity, evidence contracts, auth, worker lifecycle,
-idempotency, cancellation, replay integrity, and desktop/mobile interactions.
-Browser contract tests use fixtures; the [case study](docs/case-study-close-clearance.md)
-documents the separately executed real-data path. The commit-scoped
-[completion record](docs/product-completion.md) lists the final workflow checks,
-independent-checkout reproduction, and explicit remaining boundaries.
-Stop the development server
-before `npm ci`; replacing dependencies underneath it can break the running app.
+Tests cover numerical parity, evidence contracts, authentication, worker lifecycle,
+cancellation, replay integrity, and desktop/mobile interactions. Browser contract
+tests use fixtures; the [real-data case study](docs/case-study-close-clearance.md)
+and [completion record](docs/product-completion.md) document separately executed verification.
 
-| Directory | Responsibility |
-| --- | --- |
-| [src/planmargin](src/planmargin) | Simulation, search, jobs, evidence API, setup, and analysis |
-| [cpp](cpp) | C++20 metrics and the separate C++17 TensorRT runner |
-| [web/debugger](web/debugger) | Angular workbench and browser tests |
-| [schemas](schemas) / [tests](tests) | Versioned contracts and verification |
-| [docs](docs) | Reproduction guides, protocols, decisions, and measured results |
+Start with the [contribution guide](CONTRIBUTING.md). Open an issue with the
+expected behavior, actual behavior, and a reproducible configuration. Keep
+licensed records and credentials out of public reports; report security issues
+through [private vulnerability reporting](SECURITY.md).
 
 ## License and affiliation
 
-PlanMargin is independent and is **not affiliated with, endorsed by, or
-representative of Waymo LLC**. It does not evaluate the production Waymo Driver.
+PlanMargin is independent and **not affiliated with, endorsed by, or
+representative of Waymo LLC**. It does not certify vehicle safety.
 
 This software was made using the Waymo Open Dataset, provided by Waymo LLC
 under the [Waymo Dataset License Agreement for Non-Commercial Use](https://waymo.com/open/terms/).

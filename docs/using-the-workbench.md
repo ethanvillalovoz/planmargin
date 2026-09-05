@@ -13,8 +13,9 @@ follow the [planning-only setup](running-experiments.md#first-time-setup), then 
 uv run --frozen planmargin-workbench --planning-only
 ```
 
-This opens **New experiment**. Choose a scenario and braking change, run both
-controllers, and open that job's exact replay. Progress, cancellation, gate
+This opens the **Run a behavior test** form under Investigate. Choose a scenario
+and test plan: lead braking, command-loss protection, or recovery handoff.
+Execute it and open that job's exact replay. Progress, cancellation, gate
 decisions, and history are live local job data—not saved campaign answers.
 
 From an installed, authorized workspace:
@@ -45,12 +46,15 @@ explicit data boundary, not a broken download or a synthetic fallback.
 
 ## Investigate — start here
 
-The default local view shows two panes: ranked changes and the selected
-change's evidence. The nearest approach is selected initially.
+The local view has two panes: a scenario browser on the left, and the selected
+proposal or a two-proposal comparison on the right. A proposal means one tested
+change to a lead vehicle's timing and speed, not a separate camera scene.
 
 1. Read the campaign outcome. The current campaign has **zero qualifying
    regressions**, even though some changes produce very small gaps.
-2. Select **Inspect** on a row. The detail pane shows the scenario, method,
+2. Choose **Recorded scenario**. The priority shortlist spans the campaign;
+   choosing a numbered scenario exposes its search method and repetition.
+   Click a proposal row. The detail pane shows the scenario, method,
    seed, proposal, braking shift, speed scale, and both planner outcomes.
 3. Read the decision explanation. Use **Explain decision** to reveal the
    individual gates when needed.
@@ -63,10 +67,22 @@ change's evidence. The nearest approach is selected initially.
    an identity-authenticated digital signature. Treat exported local evidence
    according to the dataset terms.
 
-The three rankings emphasize proximity, edit size, or empirical support.
-**Compare** holds up to two rows. **Browse all 100 search runs** exposes the
-scenario × seed × method matrix and each run's 32 attempts; these advanced
-controls are intentionally hidden during the first investigation.
+**Sort proposals** emphasizes gap, edit size, support, or original proposal
+number. Each scenario has two search methods and five repetitions (seeds), with
+32 proposals per search run. **Filter outcomes** exposes validity and realism
+filters without hiding the main browsing controls.
+
+Click **Compare** on a row to place it in slot A. Change scenarios or search runs
+and click **Compare** on another row to fill B. The right pane immediately shows
+their measurements side by side. **Inspect A/B** opens either record; **Open
+replay A/B** opens its saved trajectory when available. A and B remain selected
+while browsing within the app; remove one before choosing a third. This is a
+measurement comparison, not simultaneous playback of two separate scenes.
+
+**Saved replays only** filters the current selection. An empty filtered list
+means no trajectory was retained for that selection; **Show all proposals**
+restores its measured results. The Sensor lab's Perception camera scenes are
+independent of these WOMD planning scenarios.
 
 “Minimum gap” is recovered from criticality as
 `max(1 / criticality - 1, 0)` metres. It saturates at zero at contact and is not
@@ -86,6 +102,10 @@ percentage of speed or time. A small gap or small edit alone is not a finding.
   recording. New experiment replays use recorded vehicle dimensions and headings;
   older imports without footprint geometry are explicitly labeled schematic.
 - **Inspect minimum clearance** seeks the frame with the smallest tested gap.
+- Fault-test replays label **Unprotected**, **Protected**, and **Primary baseline**
+  outcomes. Pink traffic is unchanged. Use the observed 2.0-second fault and
+  3.0-second recovery buttons to jump to measured transitions; recovery is a
+  deterministic test signal, not human remote assistance.
 - **Review candidate records** returns to Investigate and preserves the
   selected change.
 - Opening Replay directly before selecting a retained proposal shows the
@@ -101,23 +121,30 @@ percentage of speed or time. A small gap or small edit alone is not a finding.
 The failure decision is made by the frozen gates—not by a single displayed
 separation or time-to-collision value.
 
-## Test health — inspect a completed run
+## Test health — live jobs and saved campaigns
 
-This page displays a **saved, sealed report**, not live fleet telemetry or a
-continuously refreshing incident feed.
+Choose **Live local runs** for current worker failures, declared completion
+deadlines, behavior-check failures, and linked rerun resolution. Inspect a job,
+prepare an identical rerun, and execute it; a verified successful rerun resolves
+the diagnostic while preserving the original record. These are this machine's
+test jobs, not fleet telemetry. See [deadlines and reruns](running-experiments.md#live-health-deadlines-and-traceable-reruns).
+
+Choose **Saved campaign** for the existing sealed report:
 
 - **Health:** execution and integrity checks; completion does not prove
   planner safety.
 - **Coverage:** three versioned test plans, their gates and explicit gaps.
 - **Triage:** measured blocked, stopped, or pending engineering decisions with
   diagnostic and resolution paths. **Inspect model evidence** opens the
-  corresponding Models study. The selected issue/coverage suite remains in
-  the URL when you leave and return.
+  corresponding Models study. Returning within the running app restores the
+  selected health source, issue, and coverage suite. Each page keeps only its
+  relevant query parameters; refreshing Test health restores its URL selection.
 
-The inventory contains 100 search cells plus ten fault-dropout and ten handoff
+The saved inventory contains 100 search cells plus ten fault-dropout and ten handoff
 cases. These reuse ten recorded scenarios; they are not 120 independent
-scenes. The schema has SLI/objective fields, but no rolling time-window
-availability or preregistered deadline was measured. Regenerate the report with
+scenes. No rolling time-window availability or preregistered deadline was
+measured for that historical campaign; its static checks are not the new local
+deadline measurements. Regenerate the saved report with
 `planmargin-build-test-operations` after completing a new authorized campaign.
 
 ## Sensor lab — separate perception research

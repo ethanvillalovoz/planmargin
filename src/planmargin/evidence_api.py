@@ -268,13 +268,13 @@ class PointEvidence(EvidenceModel):
 
 class MetricEvidence(EvidenceModel):
     time_seconds: float
-    signed_separation_meters: float
+    signed_separation_meters: float | None
     longitudinal_ttc_seconds: float | None
 
 
 class MutationTargetEvidence(EvidenceModel):
-    original: list[PointEvidence]
-    counterfactual: list[PointEvidence]
+    original: list[PointEvidence | None]
+    counterfactual: list[PointEvidence | None]
 
 
 class ControllerOutcomeEvidence(EvidenceModel):
@@ -292,7 +292,7 @@ class VehicleFootprintsEvidence(EvidenceModel):
     tested: list[list[PointEvidence]]
     reference: list[list[PointEvidence]]
     recorded: list[list[PointEvidence]]
-    lead: list[list[PointEvidence]]
+    lead: list[list[PointEvidence] | None]
 
 
 class ReplayHypothesisEvidence(EvidenceModel):
@@ -1288,10 +1288,17 @@ class EvidenceRepository:
         original_tested = records[("original", "tested")]
         scene = collection["scene_context"]
         lead = scene["actors"]["mutation_target"]["counterfactual"]
-        metrics = self._timeline_metrics(
-            counterfactual_tested["trajectory"], lead, scene["actors"]["sdc"]
-        )
         mutation = counterfactual_tested["mutation"]
+        allow_missing_lead = mutation["mutation_type"] in {
+            "command_dropout",
+            "assistance_handoff",
+        }
+        metrics = self._timeline_metrics(
+            counterfactual_tested["trajectory"],
+            lead,
+            scene["actors"]["sdc"],
+            allow_missing_lead=allow_missing_lead,
+        )
         onset = float(mutation["parameters"].get("braking_onset_offset_s", 0.0))
         speed = self._first_valid_speed(lead)
         checks = [
@@ -1317,9 +1324,10 @@ class EvidenceRepository:
             ],
             "mutation_target": {
                 "original": self._points(
-                    scene["actors"]["mutation_target"]["original"]
+                    scene["actors"]["mutation_target"]["original"],
+                    preserve_gaps=allow_missing_lead,
                 ),
-                "counterfactual": self._points(lead),
+                "counterfactual": self._points(lead, preserve_gaps=allow_missing_lead),
             },
             "hypothesis": {
                 "id": hypothesis_id,
@@ -1355,7 +1363,9 @@ class EvidenceRepository:
                             ("recorded", original_tested),
                         )
                     },
-                    "lead": self._vehicle_footprints(lead),
+                    "lead": self._vehicle_footprints(
+                        lead, allow_missing=allow_missing_lead
+                    ),
                 },
             },
             "privacy": {
@@ -1633,13 +1643,15 @@ class EvidenceRepository:
         return value
 
     @staticmethod
-    def _points(track: dict[str, Any]) -> list[dict[str, float]]:
+    def _points(
+        track: dict[str, Any], *, preserve_gaps: bool = False
+    ) -> list[dict[str, float] | None]:
         return [
-            {"x": float(x), "y": float(y)}
+            {"x": float(x), "y": float(y)} if valid else None
             for x, y, valid in zip(
                 track["x_m"], track["y_m"], track["valid"], strict=True
             )
-            if valid
+            if valid or preserve_gaps
         ]
 
     @staticmethod
@@ -1659,12 +1671,18 @@ class EvidenceRepository:
 
     @staticmethod
     def _vehicle_footprints(
-        track: dict[str, Any], shape: dict[str, Any] | None = None
-    ) -> list[list[dict[str, float]]]:
+        track: dict[str, Any],
+        shape: dict[str, Any] | None = None,
+        *,
+        allow_missing: bool = False,
+    ) -> list[list[dict[str, float]] | None]:
         """Project the same oriented geometry used by the clearance metric."""
         result = []
         for index, valid in enumerate(track["valid"]):
             if not valid:
+                if allow_missing:
+                    result.append(None)
+                    continue
                 raise ValueError("Vehicle footprints require an aligned valid trace")
             corners = interaction_metrics.oriented_box_corners(
                 x_m=float(track["x_m"][index]),
@@ -1680,7 +1698,11 @@ class EvidenceRepository:
 
     @staticmethod
     def _timeline_metrics(
-        sdc: dict[str, Any], lead: dict[str, Any], sdc_shape: dict[str, Any]
+        sdc: dict[str, Any],
+        lead: dict[str, Any],
+        sdc_shape: dict[str, Any],
+        *,
+        allow_missing_lead: bool = False,
     ) -> list[dict[str, float | None]]:
         count = len(sdc["x_m"])
         if len(lead["x_m"]) != count:
@@ -1688,8 +1710,21 @@ class EvidenceRepository:
         result: list[dict[str, float | None]] = []
         lead_velocity = EvidenceRepository._derived_velocity(lead)
         for index in range(count):
-            if not sdc["valid"][index] or not lead["valid"][index]:
+            if not sdc["valid"][index] or (
+                not lead["valid"][index] and not allow_missing_lead
+            ):
                 raise ValueError("Debugger evidence contains an invalid timeline state")
+            if not lead["valid"][index]:
+                result.append(
+                    {
+                        "time_seconds": round(
+                            index * speed_mutation.TIME_INTERVAL_S, 6
+                        ),
+                        "signed_separation_meters": None,
+                        "longitudinal_ttc_seconds": None,
+                    }
+                )
+                continue
             first = interaction_metrics.oriented_box_corners(
                 x_m=float(sdc["x_m"][index]),
                 y_m=float(sdc["y_m"][index]),
@@ -1704,18 +1739,23 @@ class EvidenceRepository:
                 length_m=float(lead["length_m"][index]),
                 width_m=float(lead["width_m"][index]),
             )
-            ttc = interaction_metrics.longitudinal_ttc_s(
-                sdc_x_m=float(sdc["x_m"][index]),
-                sdc_y_m=float(sdc["y_m"][index]),
-                sdc_yaw_rad=float(sdc["yaw_rad"][index]),
-                sdc_vel_x_mps=float(sdc["vel_x_mps"][index]),
-                sdc_vel_y_mps=float(sdc["vel_y_mps"][index]),
-                sdc_length_m=float(sdc_shape["length_m"]),
-                lead_x_m=float(lead["x_m"][index]),
-                lead_y_m=float(lead["y_m"][index]),
-                lead_vel_x_mps=lead_velocity[index][0],
-                lead_vel_y_mps=lead_velocity[index][1],
-                lead_length_m=float(lead["length_m"][index]),
+            velocity = lead_velocity[index]
+            ttc = (
+                interaction_metrics.longitudinal_ttc_s(
+                    sdc_x_m=float(sdc["x_m"][index]),
+                    sdc_y_m=float(sdc["y_m"][index]),
+                    sdc_yaw_rad=float(sdc["yaw_rad"][index]),
+                    sdc_vel_x_mps=float(sdc["vel_x_mps"][index]),
+                    sdc_vel_y_mps=float(sdc["vel_y_mps"][index]),
+                    sdc_length_m=float(sdc_shape["length_m"]),
+                    lead_x_m=float(lead["x_m"][index]),
+                    lead_y_m=float(lead["y_m"][index]),
+                    lead_vel_x_mps=velocity[0],
+                    lead_vel_y_mps=velocity[1],
+                    lead_length_m=float(lead["length_m"][index]),
+                )
+                if velocity is not None
+                else None
             )
             result.append(
                 {
@@ -1734,12 +1774,23 @@ class EvidenceRepository:
         return result
 
     @staticmethod
-    def _derived_velocity(track: dict[str, Any]) -> list[tuple[float, float]]:
+    def _derived_velocity(track: dict[str, Any]) -> list[tuple[float, float] | None]:
         result = []
         final = len(track["x_m"]) - 1
         for index in range(final + 1):
             left = max(0, index - 1)
             right = min(final, index + 1)
+            # Never differentiate across a missing observation or its sentinel coordinates.
+            if not track["valid"][index]:
+                result.append(None)
+                continue
+            if not track["valid"][left]:
+                left = index
+            if not track["valid"][right]:
+                right = index
+            if left == right:
+                result.append(None)
+                continue
             elapsed = (right - left) * speed_mutation.TIME_INTERVAL_S
             result.append(
                 (

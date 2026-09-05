@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from planmargin import rollout_record
+from planmargin.experiment_health import summarize_health
 from planmargin.experiment_jobs import (
     BusyError,
     ExperimentJobs,
@@ -41,6 +42,10 @@ def experiment_router(
     def history() -> list[dict[str, Any]]:
         return jobs.list()
 
+    @router.get("/health")
+    def live_health() -> dict[str, Any]:
+        return summarize_health(jobs.list())
+
     @router.post("", status_code=202, dependencies=[Depends(authorize_write)])
     async def create(request: Request) -> dict[str, Any]:
         if request.headers.get("content-type", "").split(";")[0] != "application/json":
@@ -59,7 +64,7 @@ def experiment_router(
         except ValueError as error:
             raise HTTPException(
                 status_code=422,
-                detail="Choose scenario 1–10, onset 0–0.5 s in 0.1 s steps, speed 0.75–1.00, and a unique request ID. No other fields are accepted.",
+                detail="Invalid bounded test configuration. Choose a supported test plan, scenario 1–10 and deadline 10–900 s. Fault plans require unchanged traffic (onset 0, speed 1) and fixed controllers.",
             ) from error
         try:
             return jobs.start(config)
@@ -68,7 +73,7 @@ def experiment_router(
         except ValueError as error:
             raise HTTPException(
                 status_code=422,
-                detail="Planning inputs are missing or the request ID was reused with different parameters.",
+                detail="Planning inputs are missing, the request ID was reused, or the linked rerun does not match a finished configuration.",
             ) from error
 
     @router.get("/{job_id}")
@@ -117,7 +122,22 @@ def experiment_router(
                 "interactive-counterfactual",
                 "New local experiment",
             )
-            projected["hypothesis"]["supported"] = summary["gates"]["empirical_support"]
+            projected["hypothesis"]["supported"] = summary["gates"].get(
+                "empirical_support", False
+            )
+            if summary["config"].get("test_plan", "lead_braking") != "lead_braking":
+                projected["hypothesis"].update(
+                    behavior_events=summary["behavior_events"],
+                    behavior_decision=summary["decision"],
+                    behavior_boundary=summary["boundary"],
+                    trajectory_labels={
+                        "tested": "Unprotected",
+                        "reference": "Protected",
+                        "recorded": "Primary baseline",
+                    },
+                    label=summary["config"]["test_plan"].replace("_", " ").capitalize(),
+                    onset_seconds=2.0,
+                )
             return projected
         except (ValueError, OSError, KeyError) as error:
             raise HTTPException(

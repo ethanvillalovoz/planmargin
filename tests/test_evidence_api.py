@@ -144,6 +144,56 @@ def test_vehicle_footprints_reproduce_clearance_with_recorded_dimensions_and_yaw
     assert all(len(frames) == 2 for frames in footprints.values())
 
 
+@pytest.mark.parametrize("plan", ["command_dropout", "assistance_handoff"])
+def test_fault_replay_preserves_missing_recorded_lead_frames(
+    tmp_path: Path, plan: str
+) -> None:
+    collection = _collection()
+    for record in collection["records"]:
+        record["mutation"]["mutation_type"] = plan
+        for values in record["trajectory"].values():
+            if isinstance(values, list):
+                values.append(values[-1])
+    lead = collection["scene_context"]["actors"]["mutation_target"]["counterfactual"]
+    for values in lead.values():
+        if isinstance(values, list):
+            values.append(values[-1])
+    lead["valid"][2] = False
+    lead["x_m"][2] = -9999.0
+    repository = evidence_api.EvidenceRepository(
+        evidence_api.EvidencePaths.from_root(tmp_path)
+    )
+    run = repository.project_run(collection, "fault", "Test", "fault", "Test")
+    evidence_api.RunEvidence.model_validate(run)
+    assert run["mutation_target"]["counterfactual"][2] is None
+    assert run["hypothesis"]["vehicle_footprints"]["lead"][2] is None
+    assert len(run["hypothesis"]["trajectories"]["tested"]) == 3
+    assert run["hypothesis"]["metrics"][2] == {
+        "time_seconds": 0.2,
+        "signed_separation_meters": None,
+        "longitudinal_ttc_seconds": None,
+    }
+    assert run["hypothesis"]["metrics"][0]["signed_separation_meters"] is not None
+    # Missing primary states are still invalid, even in fault replays.
+    collection["records"][2]["trajectory"]["valid"][1] = False
+    with pytest.raises(ValueError, match="invalid timeline"):
+        repository.project_run(collection, "fault", "Test", "fault", "Test")
+
+
+def test_velocity_never_uses_missing_observations() -> None:
+    track = {
+        "x_m": [0.0, 1.0, -9999.0, 10.0],
+        "y_m": [0.0] * 4,
+        "valid": [True, True, False, True],
+    }
+    assert evidence_api.EvidenceRepository._derived_velocity(track) == [
+        (10.0, 0.0),
+        (10.0, 0.0),
+        None,
+        None,
+    ]
+
+
 def test_vehicle_footprints_reject_invalid_timeline_states() -> None:
     track = _track(0.0)
     track["valid"][1] = False

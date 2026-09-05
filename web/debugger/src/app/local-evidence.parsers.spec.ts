@@ -18,6 +18,44 @@ import {
 } from './local-evidence.test-fixtures';
 
 describe('local evidence response parsers', () => {
+  it('keeps missing lead observations aligned without inventing measurements', () => {
+    const payload = {
+      ...API_RUN,
+      mutation_target: {
+        original: [API_RUN.mutation_target.original[0], null],
+        counterfactual: [API_RUN.mutation_target.counterfactual[0], null],
+      },
+      hypothesis: {
+        ...API_RUN.hypothesis,
+        mutation_type: 'command_dropout',
+        metrics: [
+          API_RUN.hypothesis.metrics[0],
+          {
+            ...API_RUN.hypothesis.metrics[1],
+            signed_separation_meters: null,
+            longitudinal_ttc_seconds: null,
+          },
+        ],
+      },
+    };
+    const run = parseLocalRun(payload);
+    expect(run.mutationTarget.counterfactual).toHaveLength(2);
+    expect(run.mutationTarget.counterfactual[1]).toBeNull();
+    expect(run.hypotheses[0].metrics[1].signedSeparationMeters).toBeNull();
+    expect(() =>
+      parseLocalRun({
+        ...payload,
+        hypothesis: { ...payload.hypothesis, metrics: API_RUN.hypothesis.metrics },
+      }),
+    ).toThrowError('not aligned');
+    expect(() =>
+      parseLocalRun({
+        ...payload,
+        hypothesis: { ...payload.hypothesis, mutation_type: 'lead_braking' },
+      }),
+    ).toThrowError('observation gaps');
+  });
+
   it('preserves optional recorded footprints and rejects partial or malformed geometry', () => {
     const corners = [
       { x: 2, y: 1 },

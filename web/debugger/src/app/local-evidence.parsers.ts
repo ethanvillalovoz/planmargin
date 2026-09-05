@@ -251,7 +251,7 @@ export function parseLocalRun(value: unknown): DebuggerRun {
       const item = object(candidate, `run.hypothesis.metrics[${index}]`);
       return {
         timeSeconds: number(item['time_seconds'], `metrics[${index}].time_seconds`),
-        signedSeparationMeters: number(
+        signedSeparationMeters: nullableNumber(
           item['signed_separation_meters'],
           `metrics[${index}].signed_separation_meters`,
         ),
@@ -273,8 +273,9 @@ export function parseLocalRun(value: unknown): DebuggerRun {
   let vehicleFootprints: DebuggerHypothesis['vehicleFootprints'];
   if (footprintValue !== undefined && footprintValue !== null) {
     const source = object(footprintValue, 'vehicle_footprints');
-    const frames = (kind: string): readonly (readonly Point2d[])[] => {
+    const frames = (kind: string): readonly (readonly Point2d[] | null)[] => {
       const result = array(source[kind], `vehicle_footprints.${kind}`).map((frame, index) => {
+        if (frame === null && kind === 'lead') return null;
         const corners = points(frame, `vehicle_footprints.${kind}[${index}]`);
         if (corners.length !== 4) throw new Error('Vehicle footprints require four corners');
         return corners;
@@ -290,7 +291,35 @@ export function parseLocalRun(value: unknown): DebuggerRun {
       lead: frames('lead'),
     };
   }
+  let behavior: Partial<DebuggerHypothesis> = {};
+  if (hypothesisValue['behavior_events'] !== undefined) {
+    const events = array(hypothesisValue['behavior_events'], 'behavior_events').map(
+      (value, index) => {
+        const event = object(value, `behavior_events[${index}]`);
+        const step = integer(event['step'], 'behavior event step');
+        const timeSeconds = number(event['time_seconds'], 'behavior event time');
+        if (step < 0 || step >= metrics.length || Math.abs(timeSeconds - step * stepSeconds) > 1e-6)
+          throw new Error('Behavior event does not align with replay');
+        return { step, timeSeconds, label: text(event['label'], 'behavior event label') };
+      },
+    );
+    const decision = hypothesisValue['behavior_decision'];
+    if (decision !== 'checks_passed' && decision !== 'checks_failed')
+      throw new Error('Invalid behavior decision');
+    const labels = object(hypothesisValue['trajectory_labels'], 'trajectory_labels');
+    behavior = {
+      behaviorEvents: events,
+      behaviorDecision: decision,
+      behaviorBoundary: text(hypothesisValue['behavior_boundary'], 'behavior boundary'),
+      trajectoryLabels: {
+        tested: text(labels['tested'], 'tested label'),
+        reference: text(labels['reference'], 'reference label'),
+        recorded: text(labels['recorded'], 'baseline label'),
+      },
+    };
+  }
   const hypothesis: DebuggerHypothesis = {
+    ...behavior,
     id: text(hypothesisValue['id'], 'run.hypothesis.id'),
     label: text(hypothesisValue['label'], 'run.hypothesis.label'),
     onsetSeconds: number(hypothesisValue['onset_seconds'], 'run.hypothesis.onset_seconds'),
@@ -321,9 +350,13 @@ export function parseLocalRun(value: unknown): DebuggerRun {
   for (const trajectory of Object.values(hypothesis.trajectories)) {
     if (trajectory.length !== metrics.length) throw new Error('Run trajectories are not aligned');
   }
+  const observedPoints = (value: unknown, path: string) =>
+    array(value, path).map((entry, index) =>
+      entry === null ? null : point(entry, `${path}[${index}]`),
+    );
   const mutationTarget = {
-    original: points(mutationTargetValue['original'], 'run.mutation_target.original'),
-    counterfactual: points(
+    original: observedPoints(mutationTargetValue['original'], 'run.mutation_target.original'),
+    counterfactual: observedPoints(
       mutationTargetValue['counterfactual'],
       'run.mutation_target.counterfactual',
     ),
@@ -334,6 +367,22 @@ export function parseLocalRun(value: unknown): DebuggerRun {
   ) {
     throw new Error('Mutation target trajectories are not aligned');
   }
+  metrics.forEach((sample, index) => {
+    const missing = mutationTarget.counterfactual[index] === null;
+    if (
+      missing !== (sample.signedSeparationMeters === null) ||
+      (missing && sample.longitudinalTtcSeconds !== null) ||
+      (vehicleFootprints && missing !== (vehicleFootprints.lead[index] === null))
+    ) {
+      throw new Error('Missing observations and measurements are not aligned');
+    }
+    if (
+      (missing || mutationTarget.original[index] === null) &&
+      !['command_dropout', 'assistance_handoff'].includes(hypothesis.mutationType)
+    ) {
+      throw new Error('Only recorded traffic in fault replays may contain observation gaps');
+    }
+  });
   return {
     schemaVersion: 'planmargin.debugger.v1',
     runId: text(run['run_id'], 'run.run_id'),

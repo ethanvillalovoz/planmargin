@@ -131,7 +131,10 @@ export class SimulatorStore {
     const metrics = this.debuggerStore.selectedHypothesis().metrics;
     const conflictIndex = metrics.reduce(
       (best, sample, index) =>
-        sample.signedSeparationMeters < metrics[best].signedSeparationMeters ? index : best,
+        (sample.signedSeparationMeters ?? Infinity) <
+        (metrics[best].signedSeparationMeters ?? Infinity)
+          ? index
+          : best,
       0,
     );
     const firstFrame = Math.max(0, conflictIndex - 12);
