@@ -1152,7 +1152,7 @@ def _qualitative_provider_text(value: str) -> str:
         (r"\bproduction Waymo Driver\b", "deployed driving system"),
         (r"\bWaymo Driver\b", "deployed driving system"),
         (r"\bproduction\b", "deployed"),
-        (r"\bheld[ -]?out\b", "independent"),
+        (r"\bheld[ -]?out\b", "evaluation-split"),
         (r"\bsafet(?:y|ies)\b", "deployment readiness"),
         (r"\bcaus(?:al|ality|ation)\w*\b", "explanatory"),
     )
@@ -1167,7 +1167,7 @@ HOSTED_FACT_TEXT = {
     "campaign.rollouts": "The campaign completed the recorded physical rollout workload.",
     "campaign.steps": "The campaign completed the recorded Waymax rollout workload.",
     "campaign.findings": "Neither search method produced a qualifying finding.",
-    "campaign.held_out": "No independent comparative campaign was run.",
+    "campaign.held_out": "This search comparison used development data only; no separate evaluation-split search campaign was run.",
     "method.random_valid_rate": "Random search produced eligible proposals at a lower rate than constrained Bayesian search.",
     "method.bayesian_valid_rate": "Constrained Bayesian search produced eligible proposals at a higher rate than random search.",
     "method.valid_rate_delta": "The constrained Bayesian eligible-proposal yield was higher than the random-search yield.",
@@ -1183,13 +1183,13 @@ HOSTED_FACT_TEXT = {
     "claim.not_discovery": "The evidence does not establish better failure discovery or smaller failure-inducing mutations.",
     "claim.not_waymo": "PlanMargin does not evaluate a deployed driving system.",
     "claim.development": "The result covers a selected development subset and is not a broad statistical generalization.",
-    "claim.held_out": "No independent comparative evaluation was run.",
+    "claim.held_out": "No separate evaluation-split search comparison was run; this statement concerns the search campaign, not other model studies or code reviews.",
     "beam.records": "The verified integration consumed its recorded WOMD source set.",
     "beam.events": "The pipeline retained its accepted feature events.",
     "beam.shards": "The run consumed every sealed source-shard checkpoint.",
     "beam.partitions": "Every deterministic partition was reconciled.",
     "beam.integrity": "Every published pipeline integrity gate passed.",
-    "beam.held_out": "The pipeline did not open independent evaluation data.",
+    "beam.held_out": "The pipeline did not open the separate evaluation data split.",
     "model.scenarios": "The model study used its declared real-data scenario set.",
     "model.windows": "The model study evaluated its declared trajectory-window set.",
     "model.ade": "The learned model had lower average displacement error than the baseline.",
@@ -1265,7 +1265,10 @@ class GeminiProvider:
                 "outperformer. A method comparison may say only that eligible-proposal "
                 "yield or feasible hypervolume was higher, and must preserve the fact "
                 "that neither method found a qualifying failure. Cite only supplied "
-                "fact IDs. Keep summary and limitation under two hundred forty "
+                "fact IDs. Missing evaluation-split campaign evidence says nothing "
+                "about independent code reviews or external assessments. Do not "
+                "claim that the investigation was thorough, comprehensive, or "
+                "externally validated. Keep summary and limitation under two hundred forty "
                 "characters each, and interpretation under four hundred forty "
                 "characters."
             ),
